@@ -1,32 +1,48 @@
 'use client'
 
-import { useEffect } from "react"
+import { Calendar } from "@/components/ui/calendar"
+import { CardTitle } from "@/components/ui/card"
+import { CardHeader } from "@/components/ui/card"
+import React from "react"
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   ChevronDown,
-  Calendar,
+  Search,
+  Bell,
+  Zap,
+  Sparkles,
+  Leaf,
+  Heart,
   Scissors,
-  PackageIcon,
-  History,
-  Clock,
-  MapPin,
-  Star,
-  CheckCircle,
-  AlertCircle,
+  Palette,
+  Eye,
+  Droplet,
+  Flower,
+  Wand2,
+  MessageCircle,
   Plus,
-  X,
-  Loader2,
-  Check,
+  CheckCircle,
+  PackageIcon,
+  Clock,
+  Star
 } from 'lucide-react'
 
-interface Service {
+interface ServiceItem {
   id: string
   name: string
   duration: string
-  specialist?: string
-  price?: string
+  specialist: string
+  price: string
+}
+
+interface ServiceCategory {
+  id: string
+  name: string
+  count: number
+  icon: React.ReactNode
+  services: ServiceItem[]
 }
 
 interface Appointment {
@@ -35,112 +51,183 @@ interface Appointment {
   date: string
   time: string
   specialist: string
-  status: 'completed' | 'cancelled' | 'upcoming'
+  status: string
 }
 
 // Mock data
 const CUSTOMER = {
-  name: 'Zeynep Kaya',
-  salonName: 'Premium Güzellik Merkezi',
-  lastAppointment: '15 Şubat 2024 - Saç Kesimi',
-  phone: '+90 (555) 123-4567',
+  name: 'Ayşe',
+  greeting: 'Tekrar hoş geldin',
+  salonName: 'Salon Asistanı',
+  lastAppointment: '15 Şubat 2024',
+  phone: '123-456-7890',
 }
 
-const SERVICES: Service[] = [
-  { id: '1', name: 'Saç Kesimi', duration: '30 dk', specialist: 'Aylin', price: '150 TL' },
-  { id: '2', name: 'Saç Boyama', duration: '90 dk', specialist: 'Arda', price: '250 TL' },
-  { id: '3', name: 'Saç Tasarımı', duration: '45 dk', specialist: 'Aylin', price: '200 TL' },
-  { id: '4', name: 'Cilt Bakımı', duration: '60 dk', specialist: 'Sema', price: '100 TL' },
-  { id: '5', name: 'Makyöz Hizmetleri', duration: '45 dk', specialist: 'Gül', price: '180 TL' },
-  { id: '6', name: 'Masaj', duration: '50 dk', specialist: 'Sema', price: '120 TL' },
+const SERVICE_CATEGORIES: ServiceCategory[] = [
+  {
+    id: 'epilasyon',
+    name: 'Epilasyon & Tüy Alma',
+    count: 4,
+    icon: <Zap className="w-5 h-5" />,
+    services: [
+      { id: 's1', name: 'Tam Vücut', duration: '60 dk', originalPrice: 1800, salePrice: 1650, tags: ['Fast Track'] },
+      { id: 's2', name: 'Sırt Lazer', duration: '30 dk', originalPrice: 1200, salePrice: 1100 },
+      { id: 's3', name: 'Bacak Lazer', duration: '45 dk', originalPrice: 1500, salePrice: 1350 },
+      { id: 's4', name: 'Sır Ağda', duration: '20 dk', originalPrice: 400, salePrice: 400 },
+    ],
+  },
+  {
+    id: 'ciltkabimi',
+    name: 'Cilt Bakımı & Yüz',
+    count: 4,
+    icon: <Heart className="w-5 h-5" />,
+    services: [
+      { id: 's5', name: 'Klasik Yüz Temizliği', duration: '60 dk', originalPrice: 300, salePrice: 250 },
+      { id: 's6', name: 'Hydrafacial', duration: '50 dk', originalPrice: 800, salePrice: 700 },
+      { id: 's7', name: 'İğneli Mezoterapi', duration: '40 dk', originalPrice: 600, salePrice: 500 },
+      { id: 's8', name: 'Kimyasal Peeling', duration: '45 dk', originalPrice: 500, salePrice: 420 },
+    ],
+  },
+  {
+    id: 'vucutsekillendir',
+    name: 'Vücut Şekillendirme',
+    count: 3,
+    icon: <Leaf className="w-5 h-5" />,
+    services: [
+      { id: 's9', name: 'Selülit Tedavisi', duration: '45 dk', originalPrice: 400, salePrice: 350 },
+      { id: 's10', name: 'Liposuction', duration: '60 dk', originalPrice: 1200, salePrice: 1000 },
+      { id: 's11', name: 'Enjeksiyon Tedavisi', duration: '30 dk', originalPrice: 600, salePrice: 500 },
+    ],
+  },
+  {
+    id: 'tirnaksac',
+    name: 'Tırnak Sanatı & Ayak Bakımı',
+    count: 4,
+    icon: <Sparkles className="w-5 h-5" />,
+    services: [
+      { id: 's12', name: 'Manikür', duration: '45 dk', originalPrice: 150, salePrice: 120 },
+      { id: 's13', name: 'Pedikür', duration: '50 dk', originalPrice: 180, salePrice: 150 },
+      { id: 's14', name: 'Tırnak Tasarımı', duration: '60 dk', originalPrice: 250, salePrice: 200 },
+      { id: 's15', name: 'Kalıcı Cilalama', duration: '55 dk', originalPrice: 300, salePrice: 250 },
+    ],
+  },
+  {
+    id: 'kashkiprik',
+    name: 'Kaş & Kirpik',
+    count: 4,
+    icon: <Eye className="w-5 h-5" />,
+    services: [
+      { id: 's16', name: 'Kaş Tasarımı', duration: '30 dk', originalPrice: 200, salePrice: 150 },
+      { id: 's17', name: 'Kaş Ombre', duration: '45 dk', originalPrice: 400, salePrice: 350 },
+      { id: 's18', name: 'Kirpik Lifting', duration: '50 dk', originalPrice: 500, salePrice: 420 },
+      { id: 's19', name: 'Kirpik Uzatma', duration: '60 dk', originalPrice: 600, salePrice: 500 },
+    ],
+  },
+  {
+    id: 'sactasarimi',
+    name: 'Saç Tasarımı',
+    count: 5,
+    icon: <Scissors className="w-5 h-5" />,
+    services: [
+      { id: 's20', name: 'Saç Kesimi', duration: '30 dk', originalPrice: 150, salePrice: 120 },
+      { id: 's21', name: 'Saç Boyama', duration: '90 dk', originalPrice: 400, salePrice: 320 },
+      { id: 's22', name: 'Balayaj', duration: '120 dk', originalPrice: 600, salePrice: 480 },
+      { id: 's23', name: 'Fön & Şekil', duration: '45 dk', originalPrice: 200, salePrice: 160 },
+      { id: 's24', name: 'Saç Bakımı', duration: '60 dk', originalPrice: 300, salePrice: 240 },
+    ],
+  },
+  {
+    id: 'kalicimakyaj',
+    name: 'Kalıcı Makyaj',
+    count: 3,
+    icon: <Palette className="w-5 h-5" />,
+    services: [
+      { id: 's25', name: 'Kaş Tatouaj', duration: '60 dk', originalPrice: 800, salePrice: 700 },
+      { id: 's26', name: 'Eyeliner Tatouaj', duration: '45 dk', originalPrice: 600, salePrice: 500 },
+      { id: 's27', name: 'Dudak Tatouaj', duration: '50 dk', originalPrice: 700, salePrice: 600 },
+    ],
+  },
+  {
+    id: 'medikal',
+    name: 'Medikal Estetik',
+    count: 4,
+    icon: <Droplet className="w-5 h-5" />,
+    services: [
+      { id: 's28', name: 'Botox', duration: '20 dk', originalPrice: 1000, salePrice: 800 },
+      { id: 's29', name: 'Dolgu Enjeksiyonu', duration: '30 dk', originalPrice: 1200, salePrice: 1000 },
+      { id: 's30', name: 'PRP Tedavisi', duration: '45 dk', originalPrice: 1500, salePrice: 1200 },
+      { id: 's31', name: 'Lipolitik Enjeksiyon', duration: '40 dk', originalPrice: 800, salePrice: 650 },
+    ],
+  },
+  {
+    id: 'spa',
+    name: 'Spa & Wellness',
+    count: 4,
+    icon: <Flower className="w-5 h-5" />,
+    services: [
+      { id: 's32', name: 'Klasik Masaj', duration: '60 dk', originalPrice: 400, salePrice: 320 },
+      { id: 's33', name: 'Thai Masaj', duration: '90 dk', originalPrice: 600, salePrice: 480 },
+      { id: 's34', name: 'Çişe Masaj', duration: '50 dk', originalPrice: 350, salePrice: 280 },
+      { id: 's35', name: 'Aromaterapy', duration: '45 dk', originalPrice: 300, salePrice: 240 },
+    ],
+  },
+  {
+    id: 'profesyonelmakyaj',
+    name: 'Profesyonel Makyaj',
+    count: 3,
+    icon: <Wand2 className="w-5 h-5" />,
+    services: [
+      { id: 's36', name: 'Gelin Makyajı', duration: '90 dk', originalPrice: 800, salePrice: 700 },
+      { id: 's37', name: 'Parti Makyajı', duration: '60 dk', originalPrice: 600, salePrice: 500 },
+      { id: 's38', name: 'Günlük Makyaj', duration: '45 dk', originalPrice: 400, salePrice: 320 },
+    ],
+  },
+  {
+    id: 'danismanlik',
+    name: 'Danışmanlık',
+    count: 3,
+    icon: <MessageCircle className="w-5 h-5" />,
+    services: [
+      { id: 's39', name: 'Güzellik Danışmanlığı', duration: '30 dk', originalPrice: 100, salePrice: 0 },
+      { id: 's40', name: 'Cilt Analizi', duration: '25 dk', originalPrice: 150, salePrice: 0 },
+      { id: 's41', name: 'Stil Danışmanlığı', duration: '45 dk', originalPrice: 200, salePrice: 0 },
+    ],
+  },
 ]
 
-const PACKAGES: any[] = [
-  {
-    id: 'p1',
-    name: 'Saç Bakım Paketi',
-    totalSessions: 5,
-    remainingSessions: 2,
-    expiryDate: '30 Haziran 2024',
-    services: ['1', '3'],
-  },
-  {
-    id: 'p2',
-    name: 'Güzellik Paketi',
-    totalSessions: 10,
-    remainingSessions: 7,
-    expiryDate: '31 Aralık 2024',
-    services: ['4', '5'],
-  },
+const SERVICES = [
+  { id: 's1', name: 'Tam Vücut', duration: '60 dk', specialist: 'Dr. Ayşe', price: '1650' },
+  { id: 's2', name: 'Sırt Lazer', duration: '30 dk', specialist: 'Dr. Mehmet', price: '1100' },
+  // other services
 ]
 
-const PAST_APPOINTMENTS: Appointment[] = [
-  {
-    id: 'a1',
-    service: 'Saç Kesimi',
-    date: '2024-02-15',
-    time: '14:00',
-    specialist: 'Aylin',
-    status: 'completed',
-  },
-  {
-    id: 'a2',
-    service: 'Saç Boyama',
-    date: '2024-01-28',
-    time: '10:00',
-    specialist: 'Arda',
-    status: 'completed',
-  },
-  {
-    id: 'a3',
-    service: 'Cilt Bakımı',
-    date: '2024-01-10',
-    time: '15:30',
-    specialist: 'Sema',
-    status: 'completed',
-  },
+const PACKAGES = [
+  { id: 'p1', name: 'Güzellik Paketi', expiryDate: '15 Şubat 2025', remainingSessions: 6, totalSessions: 6 },
+  // other packages
 ]
 
-const TIME_SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00']
+const PAST_APPOINTMENTS = [
+  { id: 'a1', service: 'Tam Vücut', date: '2023-12-01', time: '10:00', specialist: 'Dr. Ayşe', status: 'completed' },
+  // other appointments
+]
 
 const getNextDates = () => {
-  const dates: Array<{ label: string; value: string; date: Date }> = []
-  for (let i = 0; i < 7; i++) {
-    const date = new Date()
-    date.setDate(date.getDate() + i)
-    const label = date.toLocaleDateString('tr-TR', { weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric' })
-    dates.push({ label, value: date.toISOString().split('T')[0], date })
-  }
-  return dates
+  // Implementation of getNextDates
+  return [
+    { value: '2023-12-01', label: '1 Aralık 2023' },
+    // other dates
+  ]
 }
 
 const generateTimeSlots = (serviceId: string, date: string) => {
-  // Logic to generate time slots based on serviceId and date
-  return TIME_SLOTS
-}
-
-const AVAILABILITY_DATA: any = {
-  '1': {
-    '2024-02-15': true,
-    '2024-02-16': true,
-    '2024-02-17': false,
-    '2024-02-18': true,
-    '2024-02-19': true,
-    '2024-02-20': true,
-    '2024-02-21': true,
-  },
-  '2': {
-    '2024-02-15': true,
-    '2024-02-16': false,
-    '2024-02-17': true,
-    '2024-02-18': true,
-    '2024-02-19': true,
-    '2024-02-20': true,
-    '2024-02-21': true,
-  },
+  // Implementation of generateTimeSlots
+  return ['10:00', '11:00', '12:00']
 }
 
 export default function SalonDashboard() {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [referralToggle, setReferralToggle] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>('booking')
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [bookingStep, setBookingStep] = useState<'service' | 'specialist' | 'datetime'>('service')
@@ -254,58 +341,179 @@ export default function SalonDashboard() {
     )
   }
 
+  const filteredCategories = SERVICE_CATEGORIES.map((cat) => ({
+    ...cat,
+    services: cat.services.filter(
+      (service) =>
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+  })).filter((cat) => cat.services.length > 0 || !searchQuery)
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header / Customer Context */}
-      <div className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{CUSTOMER.name}</h1>
-              <p className="text-sm text-muted-foreground mt-1">{CUSTOMER.salonName}</p>
-              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Son randevu: {CUSTOMER.lastAppointment}
-              </p>
+      {/* Header */}
+      <div className="bg-card border-b border-border sticky top-0 z-20">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                ✨
+              </div>
+              <span className="font-bold text-foreground text-lg">SalonAsistan</span>
             </div>
-            <div className="text-right text-sm">
-              <p className="text-muted-foreground">{CUSTOMER.phone}</p>
-            </div>
+            <Bell className="w-6 h-6 text-primary cursor-pointer" />
           </div>
+          <p className="text-sm text-muted-foreground">
+            {CUSTOMER.greeting}, {CUSTOMER.name} ✨
+          </p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 pb-20">
-        {/* Active Packages Summary */}
-        {PACKAGES.length > 0 && (
-          <Card className="border-0 shadow-sm bg-gradient-to-r from-primary/5 via-primary/2 to-background">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PackageIcon className="w-5 h-5 text-primary" />
-                Aktif Paketleriniz
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                {PACKAGES.map((pkg) => (
-                  <div key={pkg.id} className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-medium text-foreground">{pkg.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Son kullanma: {pkg.expiryDate}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-primary">{pkg.remainingSessions}/{pkg.totalSessions}</p>
-                      <p className="text-xs text-muted-foreground">seans</p>
-                    </div>
-                  </div>
-                ))}
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-20 space-y-5">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="bg-card border-border">
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground mb-1">Son Randevular</div>
+              <div className="text-sm font-semibold text-foreground flex items-center justify-between">
+                Geçmiş randevularınız
+                <ChevronDown className="w-4 h-4" />
               </div>
             </CardContent>
           </Card>
-        )}
+          <Card className="bg-card border-border">
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground mb-1">Paketlerim</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Aktif paketler</span>
+                <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-2 py-1 rounded">
+                  6 Seans
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Hizmet ara..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
+          />
+        </div>
+
+        {/* Referral Banner */}
+        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-primary rounded-2xl">
+          <CardContent className="p-4 flex items-start gap-4">
+            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">👥</span>
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground text-sm">
+                Randevuna arkadaşını ekle,<br />
+                <span className="text-primary">anında 100 TL</span> kazan!
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                İşte hem de arkadaşın indirim kazanın
+              </p>
+            </div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={referralToggle}
+                onChange={(e) => setReferralToggle(e.target.checked)}
+                className="w-5 h-5"
+              />
+            </label>
+          </CardContent>
+        </Card>
+
+        {/* Service Categories */}
+        <div className="space-y-3">
+          {filteredCategories.map((category) => (
+            <Card key={category.id} className="bg-card border-border overflow-hidden">
+              <button
+                onClick={() =>
+                  setExpandedCategory(expandedCategory === category.id ? null : category.id)
+                }
+                className="w-full px-4 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-primary">{category.icon}</div>
+                  <div className="text-left">
+                    <p className="font-semibold text-foreground text-sm">{category.name}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                    {category.count}
+                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-muted-foreground transition-transform ${
+                      expandedCategory === category.id ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {/* Expanded Services */}
+              {expandedCategory === category.id && (
+                <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3">
+                  {category.services.map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex items-start justify-between gap-3 pb-3 border-b border-border last:border-0 last:pb-0"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground text-sm">{service.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">{service.duration}</span>
+                          {service.tags?.map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded"
+                            >
+                              ⚡ {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="flex items-baseline gap-2 justify-end">
+                          {service.originalPrice > 0 && service.salePrice < service.originalPrice && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              {service.originalPrice}
+                            </span>
+                          )}
+                          {service.salePrice > 0 && (
+                            <p className="text-sm font-bold text-secondary">
+                              {service.salePrice}
+                              <span className="text-xs">₺</span>
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 border-primary text-primary hover:bg-primary/10 rounded-lg text-xs gap-1 bg-transparent"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
 
         {/* Booking Section */}
         <Card className="border-0 shadow-sm">
@@ -465,7 +673,7 @@ export default function SalonDashboard() {
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <History className="w-5 h-5 text-primary" />
+              <Clock className="w-5 h-5 text-primary" />
               <h2 className="font-semibold text-foreground">Geçmiş Randevular</h2>
             </div>
             <ChevronDown
