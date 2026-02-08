@@ -1,144 +1,166 @@
 'use client'
 
-import { CardDescription } from "@/components/ui/card"
-
-import { useState, useEffect } from 'react'
+import { useEffect } from "react"
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Check, Calendar, Scissors, Loader2 } from 'lucide-react'
+import {
+  ChevronDown,
+  Calendar,
+  Scissors,
+  PackageIcon,
+  History,
+  Clock,
+  MapPin,
+  Star,
+  CheckCircle,
+  AlertCircle,
+  Plus,
+  X,
+  Loader2,
+  Check,
+} from 'lucide-react'
 
-const SERVICES = [
-  {
-    id: '1',
-    name: 'Saç Kesimi',
-    duration: '30 dk',
-    price: '₺200',
-    description: 'Profesyonel saç kesimi ve şekillendirme',
-  },
-  {
-    id: '2',
-    name: 'Saç Boyama',
-    duration: '90 dk',
-    price: '₺400',
-    description: 'Tam saç boyama ve renklendirme',
-  },
-  {
-    id: '3',
-    name: 'Saç Tasarımı',
-    duration: '45 dk',
-    price: '₺250',
-    description: 'Saç tasarımı ve kurutma',
-  },
-  {
-    id: '4',
-    name: 'Saç Bakım',
-    duration: '60 dk',
-    price: '₺300',
-    description: 'Derin saç bakım ve onarım',
-  },
-]
-
-// Simulated availability data - in real app this would come from backend
-const AVAILABILITY_DATA: Record<string, Record<string, boolean>> = {
-  '1': {
-    '2024-02-08': true,
-    '2024-02-09': true,
-    '2024-02-10': true,
-    '2024-02-11': false,
-    '2024-02-12': true,
-    '2024-02-13': true,
-  },
-  '2': {
-    '2024-02-08': false,
-    '2024-02-09': true,
-    '2024-02-10': true,
-    '2024-02-11': true,
-    '2024-02-12': false,
-    '2024-02-13': true,
-  },
-  '3': {
-    '2024-02-08': true,
-    '2024-02-09': true,
-    '2024-02-10': false,
-    '2024-02-11': true,
-    '2024-02-12': true,
-    '2024-02-13': true,
-  },
-  '4': {
-    '2024-02-08': true,
-    '2024-02-09': false,
-    '2024-02-10': true,
-    '2024-02-11': true,
-    '2024-02-12': true,
-    '2024-02-13': true,
-  },
+interface Service {
+  id: string
+  name: string
+  duration: string
+  specialist?: string
+  price?: string
 }
 
-const TIME_SLOTS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+interface Appointment {
+  id: string
+  service: string
+  date: string
+  time: string
+  specialist: string
+  status: 'completed' | 'cancelled' | 'upcoming'
+}
+
+// Mock data
+const CUSTOMER = {
+  name: 'Zeynep Kaya',
+  salonName: 'Premium Güzellik Merkezi',
+  lastAppointment: '15 Şubat 2024 - Saç Kesimi',
+  phone: '+90 (555) 123-4567',
+}
+
+const SERVICES: Service[] = [
+  { id: '1', name: 'Saç Kesimi', duration: '30 dk', specialist: 'Aylin', price: '150 TL' },
+  { id: '2', name: 'Saç Boyama', duration: '90 dk', specialist: 'Arda', price: '250 TL' },
+  { id: '3', name: 'Saç Tasarımı', duration: '45 dk', specialist: 'Aylin', price: '200 TL' },
+  { id: '4', name: 'Cilt Bakımı', duration: '60 dk', specialist: 'Sema', price: '100 TL' },
+  { id: '5', name: 'Makyöz Hizmetleri', duration: '45 dk', specialist: 'Gül', price: '180 TL' },
+  { id: '6', name: 'Masaj', duration: '50 dk', specialist: 'Sema', price: '120 TL' },
 ]
 
-const DATES = [
-  { label: 'Bugün', value: '2024-02-08' },
-  { label: 'Yarın', value: '2024-02-09' },
-  { label: 'Çarşamba', value: '2024-02-10' },
-  { label: 'Perşembe', value: '2024-02-11' },
-  { label: 'Cuma', value: '2024-02-12' },
-  { label: 'Cumartesi', value: '2024-02-13' },
+const PACKAGES: any[] = [
+  {
+    id: 'p1',
+    name: 'Saç Bakım Paketi',
+    totalSessions: 5,
+    remainingSessions: 2,
+    expiryDate: '30 Haziran 2024',
+    services: ['1', '3'],
+  },
+  {
+    id: 'p2',
+    name: 'Güzellik Paketi',
+    totalSessions: 10,
+    remainingSessions: 7,
+    expiryDate: '31 Aralık 2024',
+    services: ['4', '5'],
+  },
 ]
 
-function getNextDates(): Array<{ label: string; value: string; date: Date }> {
-  const dates = []
-  const today = new Date()
-  
-  for (let i = 0; i < 6; i++) {
-    const date = new Date(today)
+const PAST_APPOINTMENTS: Appointment[] = [
+  {
+    id: 'a1',
+    service: 'Saç Kesimi',
+    date: '2024-02-15',
+    time: '14:00',
+    specialist: 'Aylin',
+    status: 'completed',
+  },
+  {
+    id: 'a2',
+    service: 'Saç Boyama',
+    date: '2024-01-28',
+    time: '10:00',
+    specialist: 'Arda',
+    status: 'completed',
+  },
+  {
+    id: 'a3',
+    service: 'Cilt Bakımı',
+    date: '2024-01-10',
+    time: '15:30',
+    specialist: 'Sema',
+    status: 'completed',
+  },
+]
+
+const TIME_SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00']
+
+const getNextDates = () => {
+  const dates: Array<{ label: string; value: string; date: Date }> = []
+  for (let i = 0; i < 7; i++) {
+    const date = new Date()
     date.setDate(date.getDate() + i)
-    
-    let label = ''
-    if (i === 0) {
-      label = 'Bugün'
-    } else if (i === 1) {
-      label = 'Yarın'
-    } else {
-      label = new Intl.DateTimeFormat('tr-TR', { weekday: 'short', month: 'short', day: 'numeric' }).format(date)
-    }
-    
-    const value = date.toISOString().split('T')[0]
-    dates.push({ label, value, date })
+    const label = date.toLocaleDateString('tr-TR', { weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric' })
+    dates.push({ label, value: date.toISOString().split('T')[0], date })
   }
-  
   return dates
 }
 
-function generateTimeSlots(serviceId: string, date: string): string[] {
-  // Simulate availability check - randomly mark some slots as unavailable
-  const available = AVAILABILITY_DATA[serviceId]?.[date] ?? true
-  
-  if (!available) {
-    return []
-  }
-  
-  // Simulate that some times are booked
-  const baseSlots = TIME_SLOTS
-  const bookedIndices = Math.random() > 0.5 ? [2, 5, 9] : [1, 4, 7]
-  
-  return baseSlots.filter((_, idx) => !bookedIndices.includes(idx))
+const generateTimeSlots = (serviceId: string, date: string) => {
+  // Logic to generate time slots based on serviceId and date
+  return TIME_SLOTS
 }
 
-export default function BookingPage() {
-  const [selectedService, setSelectedService] = useState<string | null>(null)
+const AVAILABILITY_DATA: any = {
+  '1': {
+    '2024-02-15': true,
+    '2024-02-16': true,
+    '2024-02-17': false,
+    '2024-02-18': true,
+    '2024-02-19': true,
+    '2024-02-20': true,
+    '2024-02-21': true,
+  },
+  '2': {
+    '2024-02-15': true,
+    '2024-02-16': false,
+    '2024-02-17': true,
+    '2024-02-18': true,
+    '2024-02-19': true,
+    '2024-02-20': true,
+    '2024-02-21': true,
+  },
+}
+
+export default function SalonDashboard() {
+  const [expandedSection, setExpandedSection] = useState<string | null>('booking')
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [bookingStep, setBookingStep] = useState<'service' | 'specialist' | 'datetime'>('service')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [isConfirmed, setIsConfirmed] = useState(false)
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false)
-  const [availableDates, setAvailableDates] = useState<Array<{ label: string; value: string; date: Date }>>([])
+  const [usePackage, setUsePackage] = useState(false)
+  const [availableDates, setAvailableDates] = useState(getNextDates())
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([])
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false)
+  const [isConfirmed, setIsConfirmed] = useState(false)
+  const [selectedService, setSelectedService] = useState<string | null>(null)
 
-  useEffect(() => {
-    setAvailableDates(getNextDates())
-  }, [])
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('tr-TR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId)
@@ -184,7 +206,7 @@ export default function BookingPage() {
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-                <Check className="w-8 h-8 text-primary-foreground" />
+                <CheckCircle className="w-8 h-8 text-primary-foreground" />
               </div>
             </div>
             <CardTitle className="text-2xl text-foreground">Randevu Onaylandı!</CardTitle>
@@ -233,172 +255,287 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30 pb-8">
-      {/* Header */}
+    <div className="min-h-screen bg-background">
+      {/* Header / Customer Context */}
       <div className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-md mx-auto px-4 py-6 sm:max-w-full">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Randevu Al</h1>
-          <p className="text-sm text-muted-foreground mt-1">Hizmet, tarih ve saati seçin</p>
-        </div>
-      </div>
-
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6 sm:max-w-2xl">
-        {/* Services Section */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Scissors className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Hizmet Seçin</h2>
-          </div>
-          <div className="space-y-3">
-            {SERVICES.map((service) => (
-              <button
-                key={service.id}
-                onClick={() => handleServiceSelect(service.id)}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  selectedService === service.id
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50 bg-card'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{service.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
-                    <p className="text-xs text-muted-foreground mt-2">{service.duration}</p>
-                  </div>
-                  <p className="text-lg font-bold text-primary flex-shrink-0">{service.price}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date & Time Section */}
-        {selectedService && (
-          <div className="space-y-4">
-            {/* Dates */}
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Calendar className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">Tarih Seçin</h2>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {availableDates.map((date) => {
-                  const isAvailable = AVAILABILITY_DATA[selectedService]?.[date.value] ?? true
-                  return (
-                    <button
-                      key={date.value}
-                      onClick={() => isAvailable && handleDateSelect(date.value)}
-                      disabled={!isAvailable}
-                      className={`py-3 px-2 rounded-lg border-2 transition-all text-sm font-medium ${
-                        selectedDate === date.value
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : isAvailable
-                          ? 'border-border hover:border-primary/50 text-foreground bg-card'
-                          : 'border-border/50 text-muted-foreground bg-muted/30 opacity-50 cursor-not-allowed'
-                      }`}
-                    >
-                      {date.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <h1 className="text-2xl font-bold text-foreground">{CUSTOMER.name}</h1>
+              <p className="text-sm text-muted-foreground mt-1">{CUSTOMER.salonName}</p>
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Son randevu: {CUSTOMER.lastAppointment}
+              </p>
             </div>
-
-            {/* Times */}
-            {selectedDate && (
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-3">Saat Seçin</h2>
-                {isLoadingSlots ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                  </div>
-                ) : availableTimeSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {availableTimeSlots.map((time) => (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        className={`py-3 px-2 rounded-lg border-2 transition-all text-sm font-medium ${
-                          selectedTime === time
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border hover:border-primary/50 text-foreground bg-card'
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-secondary/50 rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Bu tarihte uygun saat bulunmamaktadır. Lütfen başka bir tarih seçin.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Booking Summary & Button */}
-        {selectedServiceData && (
-          <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 sm:static sm:border-0 sm:p-0">
-            <div className="max-w-md mx-auto sm:max-w-2xl space-y-3">
-              <div className="hidden sm:flex items-center justify-between bg-secondary/50 rounded-lg p-4 text-sm">
-                <div className="flex items-center gap-4 flex-1">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Hizmet</p>
-                    <p className="font-semibold text-foreground">{selectedServiceData.name}</p>
-                  </div>
-                  {selectedDate && (
-                    <>
-                      <div className="w-px h-12 bg-border" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Tarih</p>
-                        <p className="font-semibold text-foreground">{selectedDateLabel}</p>
-                      </div>
-                    </>
-                  )}
-                  {selectedTime && (
-                    <>
-                      <div className="w-px h-12 bg-border" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Saat</p>
-                        <p className="font-semibold text-foreground">{selectedTime}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Fiyat</p>
-                  <p className="text-xl font-bold text-primary">{selectedServiceData.price}</p>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleBooking}
-                disabled={!selectedService || !selectedDate || !selectedTime}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
-                size="lg"
-              >
-                Randevuyu Onayla
-              </Button>
+            <div className="text-right text-sm">
+              <p className="text-muted-foreground">{CUSTOMER.phone}</p>
             </div>
           </div>
-        )}
-
-        {/* Mobile spacing for fixed button */}
-        {selectedServiceData && <div className="h-24 sm:h-0" />}
+        </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center mt-12 px-4 text-sm text-muted-foreground sm:mt-0">
-        <p>
-          Sorularınız mı var?{' '}
-          <span className="font-semibold text-foreground">(555) 123-4567</span> veya{' '}
-          <span className="font-semibold text-foreground">randevu@salon.com</span>
-        </p>
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 pb-20">
+        {/* Active Packages Summary */}
+        {PACKAGES.length > 0 && (
+          <Card className="border-0 shadow-sm bg-gradient-to-r from-primary/5 via-primary/2 to-background">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PackageIcon className="w-5 h-5 text-primary" />
+                Aktif Paketleriniz
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3">
+                {PACKAGES.map((pkg) => (
+                  <div key={pkg.id} className="flex items-center justify-between text-sm">
+                    <div>
+                      <p className="font-medium text-foreground">{pkg.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Son kullanma: {pkg.expiryDate}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-primary">{pkg.remainingSessions}/{pkg.totalSessions}</p>
+                      <p className="text-xs text-muted-foreground">seans</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Booking Section */}
+        <Card className="border-0 shadow-sm">
+          <button
+            onClick={() =>
+              setExpandedSection(expandedSection === 'booking' ? null : 'booking')
+            }
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-foreground">Yeni Randevu Al</h2>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-transform ${
+                expandedSection === 'booking' ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {expandedSection === 'booking' && (
+            <CardContent className="pt-0 pb-6 space-y-6 border-t border-border">
+              {/* Step 1: Services */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                    1
+                  </span>
+                  Hizmet Seçin
+                </h3>
+                <div className="space-y-2">
+                  {SERVICES.map((service) => (
+                    <label
+                      key={service.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border-2 border-border hover:border-primary/50 cursor-pointer transition-all"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedServices.includes(service.id)}
+                        onChange={(e) => {
+                          setSelectedServices(
+                            e.target.checked
+                              ? [...selectedServices, service.id]
+                              : selectedServices.filter((id) => id !== service.id)
+                          )
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{service.name}</p>
+                        <p className="text-xs text-muted-foreground">{service.duration}</p>
+                      </div>
+                      {service.specialist && (
+                        <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
+                          {service.specialist}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Package Option */}
+              {selectedServices.length > 0 && PACKAGES.length > 0 && (
+                <div className="bg-secondary/50 rounded-lg p-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={usePackage}
+                      onChange={(e) => setUsePackage(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      Paketimden kullan
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {/* Step 2: Date & Time */}
+              {selectedServices.length > 0 && (
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                      2
+                    </span>
+                    Tarih & Saat
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-2">
+                        Tarih
+                      </label>
+                      <div className="flex gap-2 flex-wrap">
+                        {availableDates.map((date) => (
+                          <button
+                            key={date.value}
+                            onClick={() => handleDateSelect(date.value)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              selectedDate === date.value
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-secondary border border-border hover:border-primary'
+                            }`}
+                          >
+                            {date.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedDate && (
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-2">
+                          Saat
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {availableTimeSlots.map((time) => (
+                            <button
+                              key={time}
+                              onClick={() => setSelectedTime(time)}
+                              className={`px-2 py-2 rounded text-sm font-medium transition-all ${
+                                selectedTime === time
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-secondary border border-border hover:border-primary'
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Confirm Button */}
+              {selectedServiceData && selectedDate && selectedTime && (
+                <Button
+                  onClick={handleBooking}
+                  disabled={!selectedService || !selectedDate || !selectedTime}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 font-semibold"
+                >
+                  Randevuyu Onayla
+                </Button>
+              )}
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Appointment History */}
+        <Card className="border-0 shadow-sm">
+          <button
+            onClick={() =>
+              setExpandedSection(expandedSection === 'history' ? null : 'history')
+            }
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <History className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-foreground">Geçmiş Randevular</h2>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-transform ${
+                expandedSection === 'history' ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {expandedSection === 'history' && (
+            <CardContent className="pt-0 pb-6 border-t border-border space-y-2">
+              {PAST_APPOINTMENTS.map((apt) => (
+                <div key={apt.id} className="flex items-start justify-between gap-4 p-3 rounded-lg bg-secondary/30">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{apt.service}</p>
+                    <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {formatDate(apt.date)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {apt.time}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3" />
+                        {apt.specialist}
+                      </span>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="flex-shrink-0 bg-transparent">
+                    Tekrar Al
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Waiting List */}
+        <Card className="border-0 shadow-sm border-l-4 border-l-primary">
+          <button
+            onClick={() =>
+              setExpandedSection(expandedSection === 'waiting' ? null : 'waiting')
+            }
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-foreground">Bekleme Listesi</h2>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-transform ${
+                expandedSection === 'waiting' ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {expandedSection === 'waiting' && (
+            <CardContent className="pt-0 pb-6 border-t border-border space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Müsait olmayan tarihlerde hizmet almak istiyorsanız bekleme listesine katılabilirsiniz.
+              </p>
+              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-2" />
+                Bekleme Listesine Ekle
+              </Button>
+            </CardContent>
+          )}
+        </Card>
       </div>
     </div>
   )
