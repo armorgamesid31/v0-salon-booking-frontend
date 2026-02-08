@@ -1,6 +1,5 @@
 'use client'
 
-import { Calendar } from "@/components/ui/calendar"
 import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import React from "react"
@@ -23,18 +22,19 @@ import {
   Wand2,
   MessageCircle,
   Plus,
-  CheckCircle,
-  PackageIcon,
+  Calendar,
   Clock,
-  Star
+  CheckCircle,
+  Star,
 } from 'lucide-react'
 
 interface ServiceItem {
   id: string
   name: string
   duration: string
-  specialist: string
-  price: string
+  originalPrice: number
+  salePrice: number
+  tags?: string[]
 }
 
 interface ServiceCategory {
@@ -45,23 +45,40 @@ interface ServiceCategory {
   services: ServiceItem[]
 }
 
-interface Appointment {
+interface PastAppointment {
   id: string
   service: string
   date: string
   time: string
   specialist: string
-  status: string
+  status?: string
+}
+
+interface ActivePackage {
+  id: string
+  name: string
+  remainingSessions: number
+  totalSessions: number
+  expiryDate: string
 }
 
 // Mock data
 const CUSTOMER = {
   name: 'Ayşe',
   greeting: 'Tekrar hoş geldin',
-  salonName: 'Salon Asistanı',
-  lastAppointment: '15 Şubat 2024',
-  phone: '123-456-7890',
 }
+
+const PAST_APPOINTMENTS: PastAppointment[] = [
+  { id: 'a1', service: 'Tam Vücut Epilasyon', date: '2024-02-10', time: '14:00', specialist: 'Aylin' },
+  { id: 'a2', service: 'Saç Kesimi', date: '2024-01-28', time: '10:30', specialist: 'Mehmet' },
+  { id: 'a3', service: 'Cilt Bakımı', date: '2024-01-15', time: '15:00', specialist: 'Sema' },
+  { id: 'a4', service: 'Manicure', date: '2024-01-05', time: '11:00', specialist: 'Gül' },
+]
+
+const ACTIVE_PACKAGES: ActivePackage[] = [
+  { id: 'p1', name: 'Tam Vücut Epilasyon Paketi', remainingSessions: 4, totalSessions: 6, expiryDate: '30 Haziran 2024' },
+  { id: 'p2', name: 'Saç Bakım Paketi', remainingSessions: 3, totalSessions: 5, expiryDate: '31 Temmuz 2024' },
+]
 
 const SERVICE_CATEGORIES: ServiceCategory[] = [
   {
@@ -195,37 +212,26 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
   },
 ]
 
-const SERVICES = [
-  { id: 's1', name: 'Tam Vücut', duration: '60 dk', specialist: 'Dr. Ayşe', price: '1650' },
-  { id: 's2', name: 'Sırt Lazer', duration: '30 dk', specialist: 'Dr. Mehmet', price: '1100' },
-  // other services
-]
-
-const PACKAGES = [
-  { id: 'p1', name: 'Güzellik Paketi', expiryDate: '15 Şubat 2025', remainingSessions: 6, totalSessions: 6 },
-  // other packages
-]
-
-const PAST_APPOINTMENTS = [
-  { id: 'a1', service: 'Tam Vücut', date: '2023-12-01', time: '10:00', specialist: 'Dr. Ayşe', status: 'completed' },
-  // other appointments
-]
-
 const getNextDates = () => {
   // Implementation of getNextDates
-  return [
-    { value: '2023-12-01', label: '1 Aralık 2023' },
-    // other dates
-  ]
+  return [{ value: '2024-02-15', label: '15 Şubat 2024' }, { value: '2024-02-16', label: '16 Şubat 2024' }];
 }
 
 const generateTimeSlots = (serviceId: string, date: string) => {
   // Implementation of generateTimeSlots
-  return ['10:00', '11:00', '12:00']
+  return ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00'];
 }
+
+const SERVICES = SERVICE_CATEGORIES.reduce((acc, category) => {
+  return acc.concat(category.services);
+}, []);
+
+const PACKAGES = ACTIVE_PACKAGES;
 
 export default function SalonDashboard() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [expandedHistory, setExpandedHistory] = useState(false)
+  const [expandedPackages, setExpandedPackages] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [referralToggle, setReferralToggle] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>('booking')
@@ -322,7 +328,7 @@ export default function SalonDashboard() {
               <div className="h-px bg-border" />
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">Fiyat</p>
-                <p className="text-2xl font-bold text-primary">{selectedServiceData.price}</p>
+                <p className="text-2xl font-bold text-primary">{selectedServiceData.salePrice}</p>
               </div>
             </div>
 
@@ -353,7 +359,7 @@ export default function SalonDashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-20">
+      <div className="bg-card border-b border-border sticky top-0 z-20 animate-in fade-in slide-in-from-top duration-300">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -362,7 +368,7 @@ export default function SalonDashboard() {
               </div>
               <span className="font-bold text-foreground text-lg">SalonAsistan</span>
             </div>
-            <Bell className="w-6 h-6 text-primary cursor-pointer" />
+            <Bell className="w-6 h-6 text-primary cursor-pointer hover:scale-110 transition-transform" />
           </div>
           <p className="text-sm text-muted-foreground">
             {CUSTOMER.greeting}, {CUSTOMER.name} ✨
@@ -373,43 +379,123 @@ export default function SalonDashboard() {
       {/* Main Content */}
       <div className="max-w-2xl mx-auto px-4 py-6 pb-20 space-y-5">
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground mb-1">Son Randevular</div>
-              <div className="text-sm font-semibold text-foreground flex items-center justify-between">
-                Geçmiş randevularınız
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground mb-1">Paketlerim</div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Aktif paketler</span>
-                <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-2 py-1 rounded">
-                  6 Seans
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom duration-500">
+          <button
+            onClick={() => setExpandedHistory(!expandedHistory)}
+            className="group"
+          >
+            <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer">
+              <CardContent className="p-4">
+                <div className="text-xs text-muted-foreground mb-1">Son Randevular</div>
+                <div className="text-sm font-semibold text-foreground flex items-center justify-between group-hover:text-primary transition-colors">
+                  Geçmiş randevularınız
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedHistory ? 'rotate-180' : ''}`} />
+                </div>
+              </CardContent>
+            </Card>
+          </button>
+
+          <button
+            onClick={() => setExpandedPackages(!expandedPackages)}
+            className="group"
+          >
+            <Card className="bg-card border-border hover:border-secondary/50 transition-all duration-300 cursor-pointer">
+              <CardContent className="p-4">
+                <div className="text-xs text-muted-foreground mb-1">Paketlerim</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground group-hover:text-secondary transition-colors">
+                    Aktif paketler
+                  </span>
+                  <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-2 py-1 rounded">
+                    {ACTIVE_PACKAGES.reduce((sum, pkg) => sum + pkg.remainingSessions, 0)} Seans
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </button>
         </div>
 
+        {/* Past Appointments Section */}
+        {expandedHistory && (
+          <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="font-semibold text-foreground text-sm">Geçmiş Randevularınız</h3>
+              <div className="space-y-2">
+                {PAST_APPOINTMENTS.map((apt) => (
+                  <div
+                    key={apt.id}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors duration-300 group"
+                  >
+                    <Calendar className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground text-sm group-hover:text-primary transition-colors">
+                        {apt.service}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+                        <span>{formatDate(apt.date)}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {apt.time}
+                        </span>
+                        <span>•</span>
+                        <span>{apt.specialist}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Active Packages Section */}
+        {expandedPackages && (
+          <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+            <CardContent className="p-4 space-y-3">
+              <h3 className="font-semibold text-foreground text-sm">Aktif Paketleriniz</h3>
+              <div className="space-y-3">
+                {ACTIVE_PACKAGES.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="p-3 rounded-lg bg-secondary/10 border border-secondary/30 hover:border-secondary/50 transition-all duration-300"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <p className="font-medium text-foreground text-sm">{pkg.name}</p>
+                      <span className="text-xs font-semibold text-secondary bg-secondary/20 px-2 py-1 rounded">
+                        {pkg.remainingSessions}/{pkg.totalSessions}
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden mb-2">
+                      <div
+                        className="bg-secondary h-full transition-all duration-500"
+                        style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Son geçerlilik: {formatDate(pkg.expiryDate)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Hizmet ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
+            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
           />
         </div>
 
         {/* Referral Banner */}
-        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-primary rounded-2xl">
+        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-primary rounded-2xl animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 hover:shadow-lg transition-shadow">
           <CardContent className="p-4 flex items-start gap-4">
             <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-xl">👥</span>
@@ -428,7 +514,7 @@ export default function SalonDashboard() {
                 type="checkbox"
                 checked={referralToggle}
                 onChange={(e) => setReferralToggle(e.target.checked)}
-                className="w-5 h-5"
+                className="w-5 h-5 cursor-pointer accent-primary"
               />
             </label>
           </CardContent>
@@ -436,18 +522,22 @@ export default function SalonDashboard() {
 
         {/* Service Categories */}
         <div className="space-y-3">
-          {filteredCategories.map((category) => (
-            <Card key={category.id} className="bg-card border-border overflow-hidden">
+          {filteredCategories.map((category, index) => (
+            <Card
+              key={category.id}
+              className="bg-card border-border overflow-hidden hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom duration-500"
+              style={{ animationDelay: `${200 + index * 50}ms` }}
+            >
               <button
                 onClick={() =>
                   setExpandedCategory(expandedCategory === category.id ? null : category.id)
                 }
-                className="w-full px-4 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                className="w-full px-4 py-4 flex items-center justify-between hover:bg-muted/30 transition-all duration-300"
               >
                 <div className="flex items-center gap-3">
                   <div className="text-primary">{category.icon}</div>
                   <div className="text-left">
-                    <p className="font-semibold text-foreground text-sm">{category.name}</p>
+                    <p className="font-semibold text-foreground text-sm group-hover:text-primary">{category.name}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -455,7 +545,7 @@ export default function SalonDashboard() {
                     {category.count}
                   </span>
                   <ChevronDown
-                    className={`w-5 h-5 text-muted-foreground transition-transform ${
+                    className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
                       expandedCategory === category.id ? 'rotate-180' : ''
                     }`}
                   />
@@ -464,11 +554,11 @@ export default function SalonDashboard() {
 
               {/* Expanded Services */}
               {expandedCategory === category.id && (
-                <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3">
+                <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                   {category.services.map((service) => (
                     <div
                       key={service.id}
-                      className="flex items-start justify-between gap-3 pb-3 border-b border-border last:border-0 last:pb-0"
+                      className="flex items-start justify-between gap-3 pb-3 border-b border-border last:border-0 last:pb-0 hover:bg-muted/20 rounded px-2 py-1 transition-all duration-300"
                     >
                       <div className="flex-1">
                         <p className="font-medium text-foreground text-sm">{service.name}</p>
@@ -477,7 +567,7 @@ export default function SalonDashboard() {
                           {service.tags?.map((tag) => (
                             <span
                               key={tag}
-                              className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded"
+                              className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded animate-pulse"
                             >
                               ⚡ {tag}
                             </span>
@@ -501,7 +591,7 @@ export default function SalonDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="mt-2 border-primary text-primary hover:bg-primary/10 rounded-lg text-xs gap-1 bg-transparent"
+                          className="mt-2 border-primary text-primary hover:bg-primary/10 rounded-lg text-xs gap-1 transition-all duration-300 hover:scale-105 bg-transparent"
                         >
                           <Plus className="w-3 h-3" />
                           Ekle
@@ -566,11 +656,6 @@ export default function SalonDashboard() {
                         <p className="text-sm font-medium text-foreground">{service.name}</p>
                         <p className="text-xs text-muted-foreground">{service.duration}</p>
                       </div>
-                      {service.specialist && (
-                        <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
-                          {service.specialist}
-                        </span>
-                      )}
                     </label>
                   ))}
                 </div>
