@@ -212,6 +212,10 @@ export default function SalonDashboard() {
       return [...prev, serviceData]
     })
 
+    // Reset date and time selection when services change (need to check availability again)
+    setSelectedDate(null)
+    setSelectedTimeSlot(null)
+
     // Show specialist selection for certain services
     if (SPECIALIST_SERVICES.includes(service.id)) {
       setSpecialistModal(serviceData)
@@ -220,6 +224,15 @@ export default function SalonDashboard() {
   }
 
   const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
+
+  // Get day name abbreviations
+  const getDayName = (dayNumber: number) => {
+    const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt']
+    const today = new Date()
+    const targetDate = new Date(today)
+    targetDate.setDate(today.getDate() + (dayNumber - today.getDate()))
+    return dayNames[targetDate.getDay()]
+  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('tr-TR', {
@@ -570,13 +583,14 @@ export default function SalonDashboard() {
                   <button
                     key={day}
                     onClick={() => setSelectedDate(day.toString())}
-                    className={`px-3 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                    className={`px-3 py-3 rounded-lg font-semibold text-sm whitespace-nowrap transition-all flex flex-col items-center gap-1 ${
                       selectedDate === day.toString()
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     }`}
                   >
-                    {day}
+                    <span className="text-xs">{getDayName(day)}</span>
+                    <span className="text-base font-bold">{day}</span>
                   </button>
                 ))}
               </div>
@@ -652,34 +666,29 @@ export default function SalonDashboard() {
 
             {/* Waiting List Modal */}
             {showWaitingList && (
-              <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
-                <Card className="w-full rounded-t-2xl rounded-b-none border-b-0 animate-in slide-in-from-bottom duration-300">
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in p-4">
+                <Card className="w-full max-w-sm rounded-2xl border-0 animate-in zoom-in-95 duration-300 bg-foreground/95 text-background">
                   <CardContent className="p-6 space-y-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <AlertCircle className="w-6 h-6 text-primary" />
-                      <h3 className="text-lg font-bold text-foreground">Bu Gün İçin Bekleme Listesine Girin</h3>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center flex-shrink-0">
+                        <MessageCircle className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-base mb-1">Bu Gün için Bekleme Listesine Girin</h3>
+                        <p className="text-sm text-background/80">
+                          Bir yer açılırsa size WhatsApp&apos;tan haber verelim
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Bir yer açılınca WhatsApp&apos;tan haber hesabı olur
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setShowWaitingList(false)}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        Vazgeç
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setShowWaitingList(false)
-                          // Handle waiting list action
-                        }}
-                        className="flex-1 bg-primary text-primary-foreground"
-                      >
-                        Sıraya Gir
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={() => {
+                        setShowWaitingList(false)
+                        // Handle waiting list action
+                      }}
+                      className="w-full bg-background text-foreground hover:bg-background/90 font-semibold rounded-full py-2.5"
+                    >
+                      Sıraya Gir
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
