@@ -344,14 +344,18 @@ const SalonDashboard = () => {
 
     // Show specialist selection modal ONLY if adding a new service (not removing)
     if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id) && numberOfPeople > 1) {
+      console.log('[v0] Opening person selection modal for:', service.id, 'numberOfPeople:', numberOfPeople)
       setPersonSelectionModal({
         service: serviceData,
         numberOfPeople: numberOfPeople,
       })
     } else if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id)) {
+      console.log('[v0] Opening single specialist modal for:', service.id)
       // Single person - use existing modal
       setSpecialistModal(serviceData)
       setSelectedSpecialists([])
+    } else {
+      console.log('[v0] Not opening modal - isCurrentlySelected:', isCurrentlySelected, 'isSpecialist:', SPECIALIST_SERVICES.includes(service.id), 'numberOfPeople:', numberOfPeople)
     }
   }
 
@@ -1634,6 +1638,11 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                         <p className="text-xs text-muted-foreground mt-1">{service.duration}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
+                        {service.originalPrice && service.originalPrice > service.price && (
+                          <p className="text-xs line-through text-muted-foreground">
+                            {service.originalPrice.toLocaleString('tr-TR')}₺
+                          </p>
+                        )}
                         <p className="text-sm font-bold text-primary">
                           {service.price.toLocaleString('tr-TR')}₺
                         </p>
@@ -1668,6 +1677,11 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                             <p className="text-xs text-muted-foreground">{service.duration}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
+                            {service.originalPrice && service.originalPrice > service.price && (
+                              <p className="text-xs line-through text-muted-foreground">
+                                {service.originalPrice.toLocaleString('tr-TR')}₺
+                              </p>
+                            )}
                             <p className="text-sm font-bold text-primary">
                               {service.price.toLocaleString('tr-TR')}₺
                             </p>
@@ -1690,16 +1704,6 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             {/* Price Summary */}
             <div className="bg-secondary/10 rounded-xl p-4 border border-secondary/20 space-y-2">
               <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Hizmetler ({selectedServices.length})</p>
-                <p className="text-sm font-semibold text-foreground">
-                  {selectedServices.reduce((sum, s) => sum + s.price, 0).toLocaleString('tr-TR')}₺
-                </p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Kişi × {numberOfPeople}</p>
-                <p className="text-sm font-semibold text-foreground">×{numberOfPeople}</p>
-              </div>
-              <div className="border-t border-secondary/20 pt-2 mt-2 flex justify-between items-center">
                 <p className="font-bold text-foreground">Toplam Tutar</p>
                 <p className="text-lg font-bold text-secondary">
                   {totalPrice.toLocaleString('tr-TR')}₺
