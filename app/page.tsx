@@ -180,6 +180,8 @@ const TIME_SLOTS: TimeSlot[] = [
   { time: '16:00', available: true },
 ]
 
+const SPECIALIST_SERVICES = ['s1', 's2'] // Services that require specialist selection
+
 export default function SalonDashboard() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [expandedHistory, setExpandedHistory] = useState(false)
@@ -189,6 +191,8 @@ export default function SalonDashboard() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showWaitingList, setShowWaitingList] = useState(false)
+  const [specialistModal, setSpecialistModal] = useState<SelectedService | null>(null)
+  const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([])
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -207,6 +211,12 @@ export default function SalonDashboard() {
       }
       return [...prev, serviceData]
     })
+
+    // Show specialist selection for certain services
+    if (SPECIALIST_SERVICES.includes(service.id)) {
+      setSpecialistModal(serviceData)
+      setSelectedSpecialists([])
+    }
   }
 
   const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
@@ -320,14 +330,14 @@ export default function SalonDashboard() {
                         Hizmetler: {apt.specialists.join(', ')}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs">
+                    <div className="flex flex-col gap-2">
+                      <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold">
                         Tekrarla
                       </Button>
                       {apt.isRated ? (
                         <Button
                           size="sm"
-                          className="flex-1 border-secondary text-secondary bg-transparent rounded-full text-xs"
+                          className="w-full border-secondary text-secondary bg-transparent rounded-full text-xs font-semibold"
                           disabled
                         >
                           <Check className="w-3 h-3 mr-1" />
@@ -337,7 +347,7 @@ export default function SalonDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent"
+                          className="w-full border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold"
                         >
                           <Star className="w-3 h-3 mr-1" />
                           Değerlendir
@@ -379,14 +389,19 @@ export default function SalonDashboard() {
                         <p className="text-xs text-yellow-800 dark:text-yellow-200">{pkg.warning}</p>
                       </div>
                     )}
-                    <div className="space-y-2">
+                    <div className="space-y-3 mt-3">
                       {pkg.availableServices.map((svc) => (
-                        <div key={svc.id} className="text-xs">
-                          <div className="flex justify-between mb-1">
-                            <span className="text-muted-foreground">{svc.name}</span>
-                            <span className="text-secondary font-semibold">{svc.used}/{svc.total}</span>
+                        <div key={svc.id}>
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-xs font-medium text-foreground">{svc.name}</p>
+                              <p className="text-xs text-muted-foreground">{svc.duration}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-secondary font-semibold">{svc.used}/{svc.total}</span>
+                            </div>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden mb-2">
                             <div
                               className="bg-secondary h-full transition-all duration-300"
                               style={{ width: `${(svc.used / svc.total) * 100}%` }}
@@ -395,6 +410,13 @@ export default function SalonDashboard() {
                         </div>
                       ))}
                     </div>
+                    <Button
+                      size="sm"
+                      className="w-full mt-3 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-xs font-semibold"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Ekle
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -667,30 +689,24 @@ export default function SalonDashboard() {
       {/* Sticky Booking Footer */}
       {selectedServices.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
-          <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+          <div className="max-w-2xl mx-auto px-4 py-4">
             {/* Price Section */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Toplam Fiyat</p>
-                <p className="text-2xl font-bold text-foreground">{totalPrice} ₺</p>
-              </div>
+            <div className="mb-3">
+              <p className="text-xs text-muted-foreground mb-1">Toplam Fiyat</p>
+              <p className="text-3xl font-bold text-foreground">{totalPrice} ₺</p>
             </div>
 
             {/* Confirm Button */}
             <Button
               onClick={() => {
                 if (!selectedDate || !selectedTimeSlot) {
-                  // Scroll to date/time selection
                   const element = document.querySelector('[data-scroll-target="date-time"]')
                   if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'start' })
                   }
-                } else {
-                  // Proceed with booking confirmation
-                  // setShowConfirmation(true)
                 }
               }}
-              className={`w-full rounded-lg py-3 font-semibold transition-all ${
+              className={`w-full rounded-full py-3 font-semibold transition-all ${
                 selectedDate && selectedTimeSlot
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
@@ -698,6 +714,57 @@ export default function SalonDashboard() {
               disabled={!selectedDate || !selectedTimeSlot}
             >
               Randevuyu Onayla
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Specialist Selection Modal */}
+      {specialistModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in duration-300">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-foreground">{specialistModal.name}</h3>
+              <button
+                onClick={() => {
+                  setSpecialistModal(null)
+                  setSelectedSpecialists([])
+                }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">Uzman seçiniz:</p>
+
+            <div className="space-y-2">
+              {['Bacak Lazer', 'Kol Lazer'].map((specialist) => (
+                <label key={specialist} className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted hover:border-primary/30 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedSpecialists.includes(specialist)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSpecialists((prev) => [...prev, specialist])
+                      } else {
+                        setSelectedSpecialists((prev) => prev.filter((s) => s !== specialist))
+                      }
+                    }}
+                    className="w-5 h-5 accent-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">{specialist}</span>
+                </label>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => {
+                setSpecialistModal(null)
+              }}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full py-3 font-semibold"
+            >
+              Tamam
             </Button>
           </div>
         </div>
