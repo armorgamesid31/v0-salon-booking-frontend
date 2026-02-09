@@ -28,24 +28,10 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react'
+import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
+import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
 
-interface ServiceItem {
-  id: string
-  name: string
-  duration: string
-  originalPrice: number
-  salePrice: number
-  tags?: string[]
-}
-
-interface ServiceCategory {
-  id: string
-  name: string
-  count: number
-  icon: React.ReactNode
-  services: ServiceItem[]
-  gender?: 'female' | 'male' | 'both'
-}
+const SPECIALIST_SERVICES = CONST_SPECIALIST_SERVICES // Declare the SPECIALIST_SERVICES variable
 
 interface PastAppointment {
   id: string
@@ -172,42 +158,14 @@ const ACTIVE_PACKAGES: ActivePackage[] = [
   },
 ]
 
-const SERVICE_CATEGORIES: ServiceCategory[] = [
-  {
-    id: 'epilasyon',
-    name: 'Epilasyon & Tüy Alma',
-    count: 4,
-    icon: <Zap className="w-5 h-5" />,
-    gender: 'both',
-    services: [
-      { id: 's1', name: 'Tam Vücut', duration: '60 dk', originalPrice: 1800, salePrice: 1650 },
-      { id: 's2', name: 'Sırt Lazer', duration: '30 dk', originalPrice: 1200, salePrice: 1100 },
-      { id: 's3', name: 'Bacak Lazer', duration: '45 dk', originalPrice: 1500, salePrice: 1350 },
-    ],
-  },
-  {
-    id: 'ciltkabimi',
-    name: 'Cilt Bakımı & Yüz',
-    count: 4,
-    icon: <Heart className="w-5 h-5" />,
-    gender: 'female',
-    services: [
-      { id: 's5', name: 'Klasik Yüz Temizliği', duration: '60 dk', originalPrice: 300, salePrice: 250 },
-      { id: 's6', name: 'Hydrafacial', duration: '50 dk', originalPrice: 800, salePrice: 700 },
-    ],
-  },
-  {
-    id: 'danismanlik',
-    name: 'Danışmanlık',
-    count: 3,
-    icon: <MessageCircle className="w-5 h-5" />,
-    gender: 'both',
-    services: [
-      { id: 's40', name: 'Cilt Analizi', duration: '25 dk', originalPrice: 150, salePrice: 0 },
-      { id: 's41', name: 'Stil Danışmanlığı', duration: '45 dk', originalPrice: 200, salePrice: 0 },
-    ],
-  },
-]
+const SERVICE_CATEGORIES: ServiceCategory[] = DUMMY_SERVICES.map((cat) => ({
+  id: cat.id,
+  name: cat.name,
+  count: cat.services.length,
+  icon: cat.icon === '⚡' ? <Zap className="w-5 h-5" /> : <Heart className="w-5 h-5" />,
+  gender: 'both',
+  services: cat.services,
+}))
 
 const TIME_SLOTS: TimeSlot[] = [
   { time: '09:00', available: true },
@@ -226,7 +184,7 @@ const TIME_SLOTS: TimeSlot[] = [
   { time: '16:00', available: true },
 ]
 
-const SPECIALIST_SERVICES = ['s1', 's2'] // Services that require specialist selection
+const SPECIALIST_SERVICES_LIST = SPECIALIST_SERVICES // Services that require specialist selection
 
 const SalonDashboard = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -236,9 +194,9 @@ const SalonDashboard = () => {
   const [showWaitingList, setShowWaitingList] = useState(false)
   const [ratingAppointment, setRatingAppointment] = useState<PastAppointment | null>(null)
   const [serviceRatings, setServiceRatings] = useState<Record<string, number>>({})
-  const [specialistModal, setSpecialistModal] = useState<SelectedService | null>(null)
+  const [specialistModal, setSpecialistModal] = useState<ImportedServiceItem | null>(null)
   const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([])
-  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([])
+  const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [ratingValue, setRatingValue] = useState<number>(0)
@@ -246,21 +204,21 @@ const SalonDashboard = () => {
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
   const [multiPersonSpecialistModal, setMultiPersonSpecialistModal] = useState<{
-    service: SelectedService
+    service: ImportedServiceItem
     numberOfPeople: number
     currentPerson: number
     selections: Record<number, string>
     selectedPeople: number[]
   } | null>(null)
   const [personSelectionModal, setPersonSelectionModal] = useState<{
-    service: SelectedService
+    service: ImportedServiceItem
     numberOfPeople: number
   } | null>(null)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0) * numberOfPeople
 
-  const handleServiceToggle = (service: ServiceItem, categoryName: string) => {
-    const serviceData: SelectedService = {
+  const handleServiceToggle = (service: ImportedServiceItem, categoryName: string) => {
+    const serviceData: ImportedServiceItem = {
       id: service.id,
       name: `${categoryName} - ${service.name}`,
       price: service.salePrice || service.originalPrice,
@@ -298,7 +256,7 @@ const SalonDashboard = () => {
 
 const handleRepeatAppointment = (appointment: PastAppointment) => {
   // Find services that were in this appointment and add them with correct prices
-  const appointmentServices: SelectedService[] = appointment.services
+  const appointmentServices: ImportedServiceItem[] = appointment.services
     .map((serviceId) => {
       // Search for this service in all categories
       for (const category of SERVICE_CATEGORIES) {
@@ -314,7 +272,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
       }
       return null
     })
-    .filter((s) => s !== null) as SelectedService[]
+    .filter((s) => s !== null) as ImportedServiceItem[]
 
   // Add services to selection and clear date/time
   setSelectedServices((prev) => {
@@ -563,7 +521,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                                 } else {
                                   // Add service if there are remaining slots
                                   if (svc.used > 0) {
-                                    const serviceToAdd: SelectedService = {
+                                    const serviceToAdd: ImportedServiceItem = {
                                       id: serviceId,
                                       name: `${pkg.name} - ${svc.name}`,
                                       price: 0,
