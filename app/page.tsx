@@ -371,50 +371,69 @@ export default function SalonDashboard() {
               </h3>
               <div className="space-y-3">
                 {ACTIVE_PACKAGES.map((pkg) => (
-                  <div key={pkg.id} className="p-3 rounded-lg border-l-4 border-secondary bg-card">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-medium text-foreground text-sm">{pkg.name}</p>
-                        <span className={`text-xs font-semibold px-2 py-1 rounded ${pkg.badge === 'Aktif' ? 'bg-secondary text-secondary-foreground' : 'bg-yellow-100 text-yellow-900'}`}>
-                          {pkg.badge}
-                        </span>
+                  <div key={pkg.id} className="p-4 rounded-2xl border-2 border-secondary/30 bg-muted/20 space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-bold text-foreground text-sm">{pkg.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{pkg.totalSessions} seans paket</p>
                       </div>
-                      <span className="text-xs font-semibold text-secondary">
-                        {pkg.remainingSessions}/{pkg.totalSessions}
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${pkg.badge === 'Aktif' ? 'bg-secondary text-secondary-foreground' : 'bg-yellow-100 text-yellow-900'}`}>
+                        {pkg.badge}
                       </span>
                     </div>
+
+                    {/* Progress */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
+                        <span className="text-xs font-semibold text-foreground">{Math.round((pkg.remainingSessions / pkg.totalSessions) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-secondary h-full transition-all duration-300"
+                          style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Warning */}
                     {pkg.warning && (
-                      <div className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-yellow-800 dark:text-yellow-200">{pkg.warning}</p>
                       </div>
                     )}
-                    <div className="space-y-3 mt-3">
+
+                    {/* Services with Checkboxes */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-foreground">Kullanılabilir Hizmetler:</p>
                       {pkg.availableServices.map((svc) => (
-                        <div key={svc.id}>
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <p className="text-xs font-medium text-foreground">{svc.name}</p>
-                              <p className="text-xs text-muted-foreground">{svc.duration}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xs text-secondary font-semibold">{svc.used}/{svc.total}</span>
-                            </div>
+                        <label key={svc.id} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${svc.used === 0 ? 'border-muted bg-muted/50 opacity-50' : 'border-muted hover:border-secondary/30 bg-background'}`}>
+                          <input
+                            type="checkbox"
+                            disabled={svc.used === 0}
+                            className="w-5 h-5 mt-0.5 accent-secondary disabled:accent-muted"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-medium ${svc.used === 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{svc.name}</p>
+                            <p className={`text-xs ${svc.used === 0 ? 'text-muted-foreground' : 'text-secondary font-semibold'}`}>{svc.used} dk   {svc.used}/{svc.total} kaldı</p>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden mb-2">
-                            <div
-                              className="bg-secondary h-full transition-all duration-300"
-                              style={{ width: `${(svc.used / svc.total) * 100}%` }}
-                            />
-                          </div>
-                        </div>
+                        </label>
                       ))}
                     </div>
+
+                    {/* Info Footer */}
+                    <div className="pt-2 border-t border-muted text-xs text-muted-foreground">
+                      1 bölge seçildi · Tahmini süre 30 dk
+                    </div>
+
+                    {/* Ekle Button */}
                     <Button
                       size="sm"
-                      className="w-full mt-3 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-xs font-semibold"
+                      className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-sm font-bold py-3"
                     >
-                      <Plus className="w-3 h-3 mr-1" />
+                      <Plus className="w-4 h-4 mr-2" />
                       Ekle
                     </Button>
                   </div>
@@ -688,12 +707,12 @@ export default function SalonDashboard() {
 
       {/* Sticky Booking Footer */}
       {selectedServices.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
-          <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
+          <div className="max-w-2xl mx-auto px-4 py-5">
             {/* Price Section */}
-            <div className="mb-3">
-              <p className="text-xs text-muted-foreground mb-1">Toplam Fiyat</p>
-              <p className="text-3xl font-bold text-foreground">{totalPrice} ₺</p>
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground mb-1 font-medium">Toplam Fiyat</p>
+              <p className="text-4xl font-black text-foreground">{totalPrice} ₺</p>
             </div>
 
             {/* Confirm Button */}
@@ -706,7 +725,7 @@ export default function SalonDashboard() {
                   }
                 }
               }}
-              className={`w-full rounded-full py-3 font-semibold transition-all ${
+              className={`w-full rounded-full py-3 font-bold text-base transition-all duration-200 ${
                 selectedDate && selectedTimeSlot
                   ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
