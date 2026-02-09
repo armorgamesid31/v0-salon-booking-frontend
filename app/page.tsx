@@ -501,14 +501,24 @@ export default function SalonDashboard() {
                               </div>
                               <Button
                                 size="sm"
-                                className={`mt-2 rounded-lg text-xs gap-1 w-full ${
+                                variant={isSelected ? 'default' : 'outline'}
+                                className={`mt-2 rounded-full text-xs gap-1 w-full font-semibold py-2 ${
                                   isSelected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'border-primary text-primary hover:bg-primary/10 variant-outline'
+                                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
+                                    : 'border-2 border-primary text-primary hover:bg-primary/10'
                                 }`}
                               >
-                                <Plus className="w-3 h-3" />
-                                {isSelected ? 'Eklendi' : 'Ekle'}
+                                {isSelected ? (
+                                  <>
+                                    <Check className="w-3 h-3" />
+                                    Eklendi
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-3 h-3" />
+                                    Ekle
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -523,163 +533,169 @@ export default function SalonDashboard() {
         </div>
       </div>
 
-      {/* Sticky Booking Footer */}
+      {/* Date and Time Selection - if services selected */}
       {selectedServices.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg animate-in fade-in slide-in-from-bottom duration-300 z-40">
-          <div className="max-w-2xl mx-auto px-4 py-6">
-            {/* Selected Services */}
-            <div className="mb-4 max-h-32 overflow-y-auto space-y-2">
-              {selectedServices.map((service) => (
-                <div key={service.id} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded-lg">
-                  <span className="text-foreground font-medium flex-1">{service.name}</span>
-                  <span className="text-secondary font-bold">{service.price} ₺</span>
-                  <button
-                    onClick={() => setSelectedServices((prev) => prev.filter((s) => s.id !== service.id))}
-                    className="ml-2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+        <div className="space-y-6 mt-8 pb-40" data-scroll-target="date-time">
+          {/* Date Selection */}
+          <div className="max-w-2xl mx-auto px-4">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
+              <Calendar className="w-4 h-4 text-primary" />
+              Tarih Seçin
+            </h3>
+            <div className="flex gap-2 pb-2 overflow-x-auto">
+              {[12, 13, 14, 15, 16].map((day) => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDate(day.toString())}
+                  className={`px-3 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                    selectedDate === day.toString()
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {day}
+                </button>
               ))}
             </div>
+          </div>
 
-            {/* Time Slot Selection */}
+          {/* Time Slots */}
+          {selectedDate && (
             <div className="mb-4 space-y-3">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-primary" />
-                Tarih Seçin
+                <Clock className="w-4 h-4 text-primary" />
+                Saat Seçin
               </h3>
-              <div className="flex gap-2 pb-2 overflow-x-auto">
-                {[12, 13, 14, 15, 16].map((day) => (
-                  <button
-                    key={day}
-                    onClick={() => setSelectedDate(day.toString())}
-                    className={`px-3 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
-                      selectedDate === day.toString()
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
+
+              {/* Morning */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Sabah</p>
+                <div className="grid grid-cols-5 gap-2 mb-3">
+                  {morningSlots.map((slot) => (
+                    <button
+                      key={slot.time}
+                      onClick={() => {
+                        if (slot.available) {
+                          setSelectedTimeSlot(slot.time)
+                        } else {
+                          setShowWaitingList(true)
+                        }
+                      }}
+                      disabled={!slot.available}
+                      className={`p-2 rounded-lg text-xs font-semibold transition-all ${
+                        selectedTimeSlot === slot.time
+                          ? 'bg-primary text-primary-foreground'
+                          : slot.available
+                          ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
+                          : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                      }`}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Afternoon */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Öğleden Sonra</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {afternoonSlots.map((slot) => (
+                    <button
+                      key={slot.time}
+                      onClick={() => {
+                        if (slot.available) {
+                          setSelectedTimeSlot(slot.time)
+                        } else {
+                          setShowWaitingList(true)
+                        }
+                      }}
+                      disabled={!slot.available}
+                      className={`p-2 rounded-lg text-xs font-semibold transition-all ${
+                        selectedTimeSlot === slot.time
+                          ? 'bg-primary text-primary-foreground'
+                          : slot.available
+                          ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
+                          : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                      }`}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Time Slots */}
-            {selectedDate && (
-              <div className="mb-4 space-y-3">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-primary" />
-                  Saat Seçin
-                </h3>
-
-                {/* Morning */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Sabah</p>
-                  <div className="grid grid-cols-5 gap-2 mb-3">
-                    {morningSlots.map((slot) => (
-                      <button
-                        key={slot.time}
-                        onClick={() => {
-                          if (slot.available) {
-                            setSelectedTimeSlot(slot.time)
-                          } else {
-                            setShowWaitingList(true)
-                          }
-                        }}
-                        disabled={!slot.available}
-                        className={`p-2 rounded-lg text-xs font-semibold transition-all ${
-                          selectedTimeSlot === slot.time
-                            ? 'bg-primary text-primary-foreground'
-                            : slot.available
-                            ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
-                            : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
-                        }`}
-                      >
-                        {slot.time}
-                      </button>
-                    ))}
+          {/* Waiting List Modal */}
+          {showWaitingList && (
+            <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
+              <Card className="w-full rounded-t-2xl rounded-b-none border-b-0 animate-in slide-in-from-bottom duration-300">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <AlertCircle className="w-6 h-6 text-primary" />
+                    <h3 className="text-lg font-bold text-foreground">Bu Gün İçin Bekleme Listesine Girin</h3>
                   </div>
-                </div>
-
-                {/* Afternoon */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Öğleden Sonra</p>
-                  <div className="grid grid-cols-5 gap-2">
-                    {afternoonSlots.map((slot) => (
-                      <button
-                        key={slot.time}
-                        onClick={() => {
-                          if (slot.available) {
-                            setSelectedTimeSlot(slot.time)
-                          } else {
-                            setShowWaitingList(true)
-                          }
-                        }}
-                        disabled={!slot.available}
-                        className={`p-2 rounded-lg text-xs font-semibold transition-all ${
-                          selectedTimeSlot === slot.time
-                            ? 'bg-primary text-primary-foreground'
-                            : slot.available
-                            ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
-                            : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
-                        }`}
-                      >
-                        {slot.time}
-                      </button>
-                    ))}
+                  <p className="text-sm text-muted-foreground">
+                    Bir yer açılınca WhatsApp&apos;tan haber hesabı olur
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setShowWaitingList(false)}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Vazgeç
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowWaitingList(false)
+                        // Handle waiting list action
+                      }}
+                      className="flex-1 bg-primary text-primary-foreground"
+                    >
+                      Sıraya Gir
+                    </Button>
                   </div>
-                </div>
-              </div>
-            )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      )}
 
-            {/* Waiting List Modal */}
-            {showWaitingList && (
-              <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
-                <Card className="w-full rounded-t-2xl rounded-b-none border-b-0 animate-in slide-in-from-bottom duration-300">
-                  <CardContent className="p-6 space-y-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <AlertCircle className="w-6 h-6 text-primary" />
-                      <h3 className="text-lg font-bold text-foreground">Bu Gün İçin Bekleme Listesine Girin</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Bir yer açılınca WhatsApp&apos;tan haber hesabı olur
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setShowWaitingList(false)}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        Vazgeç
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setShowWaitingList(false)
-                          // Handle waiting list action
-                        }}
-                        className="flex-1 bg-primary text-primary-foreground"
-                      >
-                        Sıraya Gir
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {/* Price & Confirm */}
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg mb-4">
+      {/* Sticky Booking Footer */}
+      {selectedServices.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
+          <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+            {/* Price Section */}
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Toplam Fiyat</p>
                 <p className="text-2xl font-bold text-foreground">{totalPrice} ₺</p>
               </div>
             </div>
 
+            {/* Confirm Button */}
             <Button
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg py-3 font-semibold"
-              disabled={!selectedTimeSlot}
+              onClick={() => {
+                if (!selectedDate || !selectedTimeSlot) {
+                  // Scroll to date/time selection
+                  const element = document.querySelector('[data-scroll-target="date-time"]')
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                } else {
+                  // Proceed with booking confirmation
+                  // setShowConfirmation(true)
+                }
+              }}
+              className={`w-full rounded-lg py-3 font-semibold transition-all ${
+                selectedDate && selectedTimeSlot
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
+              }`}
+              disabled={!selectedDate || !selectedTimeSlot}
             >
               Randevuyu Onayla
             </Button>
