@@ -344,16 +344,16 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
   return (
     <div className="min-h-screen bg-background pb-40">
       {/* Header with Dynamic Logo */}
-      <div className="bg-background border-b-4 border-primary sticky top-0 z-20 animate-in fade-in slide-in-from-top duration-300">
+      <div className="bg-background border-b-4 border-primary">
         <div className="max-w-2xl mx-auto px-4">
           {/* Logo Area - Responsive & Dynamic */}
-          <div className="flex flex-col items-center justify-center py-6 md:py-8">
-            {/* Salon Logo - Scales based on content */}
-            <div className="w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-8">
+            {/* Salon Logo */}
+            <div className="flex items-center justify-center">
               <img
                 src="https://via.placeholder.com/128?text=SALON"
                 alt="Salon Logo"
-                className="w-full h-full object-contain"
+                className="w-auto h-24 md:h-32 object-contain"
               />
             </div>
           </div>
@@ -361,13 +361,18 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
           {/* Divider Line */}
           <div className="h-1 bg-primary/40"></div>
 
-          {/* Welcome Message */}
-          <div className="py-4 md:py-6 text-center">
-            <p className="text-sm md:text-base text-foreground leading-relaxed">
-              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır
-              <br />
-              seni tekrar görmek için sabırsızlanıyoruz 🌟
+          {/* Welcome Message - Multi-line format like reference */}
+          <div className="py-6 text-center space-y-1">
+            <p className="text-sm md:text-base text-foreground">
+              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey
             </p>
+            <p className="text-sm md:text-base text-foreground">
+              yolundadır
+            </p>
+            <p className="text-sm md:text-base text-foreground">
+              seni tekrar görmek için sabırsızlanıyoruz
+            </p>
+            <p className="text-lg">🌟</p>
           </div>
         </div>
       </div>
