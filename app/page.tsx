@@ -262,11 +262,33 @@ const SalonDashboard = () => {
   }, [isKnownCustomer])
 
   const calculateTotalDuration = () => {
-    return selectedServices.reduce((sum, service) => {
-      const durationStr = service.duration
-      const minutes = parseInt(durationStr) || 0
-      return sum + minutes
-    }, 0)
+    if (numberOfPeople === 1) {
+      // Single person - sum all service durations
+      return selectedServices.reduce((sum, service) => {
+        const durationStr = service.duration
+        const minutes = parseInt(durationStr) || 0
+        return sum + minutes
+      }, 0)
+    } else {
+      // Multiple people - parallel appointments (longest person's duration)
+      const personDurations: Record<number, number> = {}
+      
+      selectedServices.forEach((service) => {
+        const personIds = servicePersonMapping[service.id] || []
+        const durationStr = service.duration
+        const minutes = parseInt(durationStr) || 0
+        
+        personIds.forEach((personIdx) => {
+          if (!personDurations[personIdx]) {
+            personDurations[personIdx] = 0
+          }
+          personDurations[personIdx] += minutes
+        })
+      })
+      
+      // Return the maximum duration among all persons (parallel appointments)
+      return Math.max(...Object.values(personDurations), 0)
+    }
   }
 
   // Helper: Bitiş saatini hesapla
@@ -1601,10 +1623,10 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     </div>
 
                     {/* Specialist if selected */}
-                    {multiPersonSpecialistModal?.selections?.[service.id] && (
+                    {multiPersonSpecialistModal?.selections?.[0] && (
                       <div className="text-xs bg-primary/5 rounded-lg p-2 border border-primary/10">
                         <p className="font-semibold text-foreground">
-                          Uzman: {multiPersonSpecialistModal.selections[service.id]}
+                          Uzman: {multiPersonSpecialistModal.selections[0]}
                         </p>
                       </div>
                     )}
