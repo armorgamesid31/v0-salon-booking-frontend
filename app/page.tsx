@@ -203,6 +203,15 @@ const SalonDashboard = () => {
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
+  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean>(true)
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [registrationForm, setRegistrationForm] = useState({
+    fullName: '',
+    phone: '',
+    gender: 'female' as 'female' | 'male',
+    birthDate: '',
+    acceptMarketing: false,
+  })
   const [multiPersonSpecialistModal, setMultiPersonSpecialistModal] = useState<{
     service: ImportedServiceItem
     numberOfPeople: number
@@ -349,6 +358,29 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             <p className="text-sm md:text-base text-foreground">
               Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır seni tekrar görmek için sabırsızlanıyoruz 🌟
             </p>
+            {/* Development: Toggle Known Customer */}
+            <div className="mt-4 flex justify-center gap-2">
+              <button
+                onClick={() => setIsKnownCustomer(true)}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
+                  isKnownCustomer
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                Bilinen Müşteri
+              </button>
+              <button
+                onClick={() => setIsKnownCustomer(false)}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
+                  !isKnownCustomer
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                Yeni Müşteri
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -357,228 +389,236 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {/* Quick Stats */}
         <div className="space-y-2 animate-in fade-in slide-in-from-bottom duration-500">
-          <button
-            onClick={() => setExpandedHistory(!expandedHistory)}
-            className="group text-left w-full"
-          >
-            <Card className="bg-primary/5 border border-primary/20 hover:border-primary/50 transition-all duration-300 cursor-pointer">
-              <CardContent className="p-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <History className="w-5 h-5 text-primary flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Son Randevular</p>
-                    <p className="text-xs text-muted-foreground">Geçmiş randevularınız</p>
-                  </div>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 flex-shrink-0 ${expandedHistory ? 'rotate-180' : ''}`} />
-              </CardContent>
-            </Card>
-          </button>
-
-          {/* Past Appointments Expanded */}
-          {expandedHistory && (
-            <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
-              {PAST_APPOINTMENTS.map((apt) => {
-                const getStatusBadge = () => {
-                  switch (apt.status) {
-                    case 'rated':
-                      return <span className="text-xs font-semibold text-secondary">Değerlendirildi</span>
-                    case 'missed':
-                      return <span className="text-xs font-semibold text-red-500">Kaçırıldı</span>
-                    case 'updated':
-                      return <span className="text-xs font-semibold text-yellow-600">Güncellendi</span>
-                    default:
-                      return null
-                  }
-                }
-
-                return (
-                  <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3 border border-border">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground text-sm">
-                          {formatDate(apt.date)} • {apt.time}-{apt.endTime}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {apt.name}
-                        </p>
+          {isKnownCustomer && (
+            <>
+              <button
+                onClick={() => setExpandedHistory(!expandedHistory)}
+                className="group text-left w-full"
+              >
+                <Card className="bg-primary/5 border border-primary/20 hover:border-primary/50 transition-all duration-300 cursor-pointer">
+                  <CardContent className="p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <History className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Son Randevular</p>
+                        <p className="text-xs text-muted-foreground">Geçmiş randevularınız</p>
                       </div>
-                      {getStatusBadge()}
                     </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleRepeatAppointment(apt)}
-                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2"
-                      >
-                        Tekrarla
-                      </Button>
-                      {apt.status === 'completed' ? (
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setRatingAppointment(apt)
-                            setServiceRatings({})
-                          }}
-                          variant="outline"
-                          className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
-                        >
-                          <Star className="w-3 h-3 mr-1" />
-                          Değerlendir
-                        </Button>
-                      ) : apt.status === 'rated' ? (
-                        <Button
-                          size="sm"
-                          className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
-                          disabled
-                        >
-                          <Check className="w-3 h-3 mr-1" />
-                          Değerlendir
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
-                          disabled
-                        >
-                          <Star className="w-3 h-3 mr-1" />
-                          Değerlendir
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                    <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 flex-shrink-0 ${expandedHistory ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </button>
+
+              {/* Past Appointments Expanded */}
+              {expandedHistory && (
+                <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
+                  {PAST_APPOINTMENTS.map((apt) => {
+                    const getStatusBadge = () => {
+                      switch (apt.status) {
+                        case 'rated':
+                          return <span className="text-xs font-semibold text-secondary">Değerlendirildi</span>
+                        case 'missed':
+                          return <span className="text-xs font-semibold text-red-500">Kaçırıldı</span>
+                        case 'updated':
+                          return <span className="text-xs font-semibold text-yellow-600">Güncellendi</span>
+                        default:
+                          return null
+                      }
+                    }
+
+                    return (
+                      <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3 border border-border">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm">
+                              {formatDate(apt.date)} • {apt.time}-{apt.endTime}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {apt.name}
+                            </p>
+                          </div>
+                          {getStatusBadge()}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleRepeatAppointment(apt)}
+                            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2"
+                          >
+                            Tekrarla
+                          </Button>
+                          {apt.status === 'completed' ? (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setRatingAppointment(apt)
+                                setServiceRatings({})
+                              }}
+                              variant="outline"
+                              className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
+                            >
+                              <Star className="w-3 h-3 mr-1" />
+                              Değerlendir
+                            </Button>
+                          ) : apt.status === 'rated' ? (
+                            <Button
+                              size="sm"
+                              className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
+                              disabled
+                            >
+                              <Check className="w-3 h-3 mr-1" />
+                              Değerlendir
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
+                              disabled
+                            >
+                              <Star className="w-3 h-3 mr-1" />
+                              Değerlendir
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
 
-          <button
-            onClick={() => setExpandedPackages(!expandedPackages)}
-            className="group text-left w-full"
-          >
-            <Card className="bg-secondary/5 border border-secondary/20 hover:border-secondary/50 transition-all duration-300 cursor-pointer">
-              <CardContent className="p-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <Package className="w-5 h-5 text-secondary flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Paketlerim</p>
-                    <p className="text-xs text-muted-foreground">Aktif paketler</p>
-                  </div>
-                </div>
-                <span className="bg-secondary text-secondary-foreground text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0">
-                  {ACTIVE_PACKAGES.length}
-                </span>
-              </CardContent>
-            </Card>
-          </button>
+          {isKnownCustomer && (
+            <>
+              <button
+                onClick={() => setExpandedPackages(!expandedPackages)}
+                className="group text-left w-full"
+              >
+                <Card className="bg-secondary/5 border border-secondary/20 hover:border-secondary/50 transition-all duration-300 cursor-pointer">
+                  <CardContent className="p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <Package className="w-5 h-5 text-secondary flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Paketlerim</p>
+                        <p className="text-xs text-muted-foreground">Aktif paketler</p>
+                      </div>
+                    </div>
+                    <span className="bg-secondary text-secondary-foreground text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0">
+                      {ACTIVE_PACKAGES.length}
+                    </span>
+                  </CardContent>
+                </Card>
+              </button>
 
-          {/* Packages Expanded */}
-          {expandedPackages && (
-            <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
-              {activePackages.map((pkg) => (
-                <div key={pkg.id} className="rounded-lg border-2 border-border bg-card overflow-hidden">
-                  <div className="p-3 border-b border-border bg-muted/30">
-                    <p className="font-bold text-sm text-foreground">{pkg.name}</p>
-                  </div>
-                  <div className="space-y-2 p-3">
-                    {pkg.availableServices.map((svc) => {
-                      const serviceId = `pkg-${pkg.id}-${svc.id}`
-                      const isAdded = selectedServices.some((s) => s.id === serviceId)
-                      const percentLeft = (svc.used / svc.total) * 100
-                      const getProgressColor = () => {
-                        if (percentLeft > 50) return 'bg-green-500'
-                        if (percentLeft > 25) return 'bg-yellow-500'
-                        return 'bg-red-500'
-                      }
+              {/* Packages Expanded */}
+              {expandedPackages && (
+                <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
+                  {activePackages.map((pkg) => (
+                    <div key={pkg.id} className="rounded-lg border-2 border-border bg-card overflow-hidden">
+                      <div className="p-3 border-b border-border bg-muted/30">
+                        <p className="font-bold text-sm text-foreground">{pkg.name}</p>
+                      </div>
+                      <div className="space-y-2 p-3">
+                        {pkg.availableServices.map((svc) => {
+                          const serviceId = `pkg-${pkg.id}-${svc.id}`
+                          const isAdded = selectedServices.some((s) => s.id === serviceId)
+                          const percentLeft = (svc.used / svc.total) * 100
+                          const getProgressColor = () => {
+                            if (percentLeft > 50) return 'bg-green-500'
+                            if (percentLeft > 25) return 'bg-yellow-500'
+                            return 'bg-red-500'
+                          }
 
-                      return (
-                        <div key={svc.id} className="space-y-1.5 rounded-lg bg-muted/20 p-2">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground">{svc.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {svc.used}/{svc.total} kaldı
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isAdded) {
-                                  // Remove service and restore used count
-                                  setSelectedServices((prev) => prev.filter((s) => s.id !== serviceId))
-                                  setActivePackages((prev) =>
-                                    prev.map((p) =>
-                                      p.id === pkg.id
-                                        ? {
-                                            ...p,
-                                            availableServices: p.availableServices.map((s) =>
-                                              s.id === svc.id ? { ...s, used: s.used + 1 } : s
-                                            ),
-                                          }
-                                        : p
-                                    )
-                                  )
-                                } else {
-                                  // Add service if there are remaining slots
-                                  if (svc.used > 0) {
-                                    const serviceToAdd: ImportedServiceItem = {
-                                      id: serviceId,
-                                      name: `${pkg.name} - ${svc.name}`,
-                                      price: 0,
-                                      duration: svc.duration,
-                                    }
-                                    setSelectedServices((prev) => [...prev, serviceToAdd])
-                                    // Decrease used count
-                                    setActivePackages((prev) =>
-                                      prev.map((p) =>
-                                        p.id === pkg.id
-                                          ? {
-                                              ...p,
-                                              availableServices: p.availableServices.map((s) =>
-                                                s.id === svc.id ? { ...s, used: s.used - 1 } : s
-                                              ),
-                                            }
-                                          : p
+                          return (
+                            <div key={svc.id} className="space-y-1.5 rounded-lg bg-muted/20 p-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground">{svc.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {svc.used}/{svc.total} kaldı
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isAdded) {
+                                      // Remove service and restore used count
+                                      setSelectedServices((prev) => prev.filter((s) => s.id !== serviceId))
+                                      setActivePackages((prev) =>
+                                        prev.map((p) =>
+                                          p.id === pkg.id
+                                            ? {
+                                                ...p,
+                                                availableServices: p.availableServices.map((s) =>
+                                                  s.id === svc.id ? { ...s, used: s.used + 1 } : s
+                                                ),
+                                              }
+                                            : p
+                                        )
                                       )
-                                    )
-                                  }
-                                }
-                                setSelectedDate(null)
-                                setSelectedTimeSlot(null)
-                              }}
-                              disabled={svc.used === 0 && !isAdded}
-                              className={`rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 transition-all whitespace-nowrap flex items-center ${
-                                isAdded
-                                  ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
-                                  : 'border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed'
-                              }`}
-                            >
-                              {isAdded ? (
-                                <>
-                                  <Check className="w-3 h-3" />
-                                  Eklendi
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="w-3 h-3" />
-                                  Ekle
-                                </>
-                              )}
-                            </button>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-300 ${getProgressColor()}`}
-                              style={{ width: `${percentLeft}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                                    } else {
+                                      // Add service if there are remaining slots
+                                      if (svc.used > 0) {
+                                        const serviceToAdd: ImportedServiceItem = {
+                                          id: serviceId,
+                                          name: `${pkg.name} - ${svc.name}`,
+                                          price: 0,
+                                          duration: svc.duration,
+                                        }
+                                        setSelectedServices((prev) => [...prev, serviceToAdd])
+                                        // Decrease used count
+                                        setActivePackages((prev) =>
+                                          prev.map((p) =>
+                                            p.id === pkg.id
+                                              ? {
+                                                  ...p,
+                                                  availableServices: p.availableServices.map((s) =>
+                                                    s.id === svc.id ? { ...s, used: s.used - 1 } : s
+                                                  ),
+                                                }
+                                              : p
+                                          )
+                                        )
+                                      }
+                                    }
+                                    setSelectedDate(null)
+                                    setSelectedTimeSlot(null)
+                                  }}
+                                  disabled={svc.used === 0 && !isAdded}
+                                  className={`rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 transition-all whitespace-nowrap flex items-center ${
+                                    isAdded
+                                      ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
+                                      : 'border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed'
+                                  }`}
+                                >
+                                  {isAdded ? (
+                                    <>
+                                      <Check className="w-3 h-3" />
+                                      Eklendi
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      Ekle
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-300 ${getProgressColor()}`}
+                                  style={{ width: `${percentLeft}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
 
           {/* Search and Filters Control Bar */}
@@ -997,7 +1037,16 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                       if (element) {
                         element.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }
-                    }
+                      } else {
+                        // Randevu onay akışı
+                        if (isKnownCustomer) {
+                          // Bilinen müşteri - doğrudan onayla
+                          alert('Randevunuz başarıyla onaylandı!')
+                        } else {
+                          // Yeni müşteri - kayıt formu aç
+                          setShowRegistrationModal(true)
+                        }
+                      }
                   }}
                   className={`px-6 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                     selectedDate && selectedTimeSlot
@@ -1247,6 +1296,170 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 multiPersonSpecialistModal.selectedPeople.length - 1
                   ? 'Tamamla ✓'
                   : 'İleri →'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Modal - Yeni müşteriler için */}
+      {showRegistrationModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in duration-300">
+          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Kaydını Tamamla</h2>
+                <p className="text-sm text-muted-foreground mt-1">Randevuyu tamamlamak için bilgilerini gir</p>
+              </div>
+              <button
+                onClick={() => setShowRegistrationModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Ad Soyad */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">Ad Soyad</label>
+                <input
+                  type="text"
+                  value={registrationForm.fullName}
+                  onChange={(e) =>
+                    setRegistrationForm((prev) => ({
+                      ...prev,
+                      fullName: e.target.value,
+                    }))
+                  }
+                  placeholder="Adınız soyadınız"
+                  className="w-full px-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
+                />
+              </div>
+
+              {/* Telefon Numarası */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">Telefon Numarası</label>
+                <input
+                  type="tel"
+                  value={registrationForm.phone}
+                  onChange={(e) =>
+                    setRegistrationForm((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
+                  }
+                  placeholder="+90 (5XX) XXX-XXXX"
+                  className="w-full px-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
+                />
+              </div>
+
+              {/* Cinsiyet */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">Cinsiyet</label>
+                <div className={`flex gap-3 rounded-xl p-2 transition-all duration-300 ${
+                  registrationForm.gender === 'female'
+                    ? 'bg-pink-100 dark:bg-pink-950/30'
+                    : 'bg-blue-100 dark:bg-blue-950/30'
+                }`}>
+                  <button
+                    onClick={() =>
+                      setRegistrationForm((prev) => ({
+                        ...prev,
+                        gender: 'female',
+                      }))
+                    }
+                    className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
+                      registrationForm.gender === 'female'
+                        ? 'bg-pink-300/60 shadow-md scale-105'
+                        : 'hover:bg-pink-200/40 scale-95 opacity-70'
+                    }`}
+                  >
+                    👩
+                  </button>
+                  <button
+                    onClick={() =>
+                      setRegistrationForm((prev) => ({
+                        ...prev,
+                        gender: 'male',
+                      }))
+                    }
+                    className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
+                      registrationForm.gender === 'male'
+                        ? 'bg-blue-300/60 shadow-md scale-105'
+                        : 'hover:bg-blue-200/40 scale-95 opacity-70'
+                    }`}
+                  >
+                    👨
+                  </button>
+                </div>
+              </div>
+
+              {/* Doğum Tarihi */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">Doğum Tarihi</label>
+                <input
+                  type="date"
+                  value={registrationForm.birthDate}
+                  onChange={(e) =>
+                    setRegistrationForm((prev) => ({
+                      ...prev,
+                      birthDate: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-3 rounded-xl bg-muted/30 text-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
+                />
+              </div>
+
+              {/* Marketing Consent */}
+              <div className="flex items-center gap-3 py-2">
+                <input
+                  type="checkbox"
+                  id="marketing"
+                  checked={registrationForm.acceptMarketing}
+                  onChange={(e) =>
+                    setRegistrationForm((prev) => ({
+                      ...prev,
+                      acceptMarketing: e.target.checked,
+                    }))
+                  }
+                  className="w-4 h-4 accent-primary rounded cursor-pointer"
+                />
+                <label htmlFor="marketing" className="text-sm text-muted-foreground cursor-pointer">
+                  Kampanyalar ve özel teklifler hakkında bilgi almak istiyorum
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={() => setShowRegistrationModal(false)}
+                variant="outline"
+                className="flex-1 rounded-full py-3 font-semibold border-2"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                onClick={() => {
+                  // Validation
+                  if (
+                    !registrationForm.fullName.trim() ||
+                    !registrationForm.phone.trim() ||
+                    !registrationForm.birthDate
+                  ) {
+                    alert('Lütfen tüm zorunlu alanları doldurun')
+                    return
+                  }
+
+                  // Register + Confirm appointment
+                  // TODO: Backend API çağrısı - kayıt oluştur ve randevu onayla
+                  alert('Kayıtlı oldu! Randevunuz başarıyla onaylandı!')
+                  setShowRegistrationModal(false)
+                  setIsKnownCustomer(true)
+                }}
+                className="flex-1 rounded-full py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+              >
+                Kayıt Ol ve Randevuyu Onayla
               </Button>
             </div>
           </div>
