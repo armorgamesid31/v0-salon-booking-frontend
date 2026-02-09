@@ -196,6 +196,7 @@ const SalonDashboard = () => {
   const [ratingAppointment, setRatingAppointment] = useState<PastAppointment | null>(null)
   const [serviceRatings, setServiceRatings] = useState<Record<string, number>>({})
   const [specialistModal, setSpecialistModal] = useState<ImportedServiceItem | null>(null)
+  const [servicePersonMapping, setServicePersonMapping] = useState<Record<string, number[]>>({})
   const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([])
   const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -1197,6 +1198,12 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 })
 
                 if (selectedPeople.length > 0) {
+                  // Hangi hizmetin hangi kişiler tarafından seçildiğini kaydet
+                  setServicePersonMapping((prev) => ({
+                    ...prev,
+                    [personSelectionModal.service.id]: selectedPeople,
+                  }))
+
                   setMultiPersonSpecialistModal({
                     service: personSelectionModal.service,
                     numberOfPeople: personSelectionModal.numberOfPeople,
@@ -1594,10 +1601,10 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     </div>
 
                     {/* Specialist if selected */}
-                    {multiPersonSpecialistModal?.selections?.[0] && (
+                    {multiPersonSpecialistModal?.selections?.[service.id] && (
                       <div className="text-xs bg-primary/5 rounded-lg p-2 border border-primary/10">
                         <p className="font-semibold text-foreground">
-                          Uzman: {multiPersonSpecialistModal.selections[0]}
+                          Uzman: {multiPersonSpecialistModal.selections[service.id]}
                         </p>
                       </div>
                     )}
@@ -1608,19 +1615,25 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 Array.from({ length: numberOfPeople }).map((_, personIdx) => (
                   <div key={personIdx} className="bg-gradient-to-r from-primary/5 to-transparent rounded-xl p-3 border border-primary/10 space-y-2">
                     <p className="text-sm font-bold text-foreground">Kişi {personIdx + 1}</p>
-                    {selectedServices.map((service, serviceIdx) => (
-                      <div key={serviceIdx} className="flex items-start justify-between gap-2 bg-white/40 rounded-lg p-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-foreground">{service.name}</p>
-                          <p className="text-xs text-muted-foreground">{service.duration}</p>
+                    {selectedServices
+                      .filter((service) => {
+                        // Bu kişinin seçtiği hizmetleri filtrele
+                        const personIds = servicePersonMapping[service.id]
+                        return personIds?.includes(personIdx)
+                      })
+                      .map((service, serviceIdx) => (
+                        <div key={serviceIdx} className="flex items-start justify-between gap-2 bg-white/40 rounded-lg p-2">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-foreground">{service.name}</p>
+                            <p className="text-xs text-muted-foreground">{service.duration}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-bold text-primary">
+                              {service.price.toLocaleString('tr-TR')}₺
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm font-bold text-primary">
-                            {service.price.toLocaleString('tr-TR')}₺
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                     {/* Specialist if selected */}
                     {multiPersonSpecialistModal?.selections?.[personIdx] && (
                       <div className="text-xs bg-primary/10 rounded-lg p-2 border border-primary/20 mt-2">
