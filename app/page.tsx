@@ -26,6 +26,8 @@ import {
   Clock,
   Star,
   X,
+  History,
+  Package,
 } from 'lucide-react'
 
 interface ServiceItem {
@@ -326,12 +328,15 @@ export default function SalonDashboard() {
         <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom duration-500">
           <button
             onClick={() => setExpandedHistory(!expandedHistory)}
-            className="group"
+            className="group text-left"
           >
-            <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer">
+            <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer h-full">
               <CardContent className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">Son Randevular</div>
-                <div className="text-sm font-semibold text-foreground flex items-center justify-between group-hover:text-primary transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <History className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">Son Randevular</span>
+                </div>
+                <div className="text-sm text-muted-foreground group-hover:text-primary transition-colors flex items-center justify-between">
                   Geçmiş randevularınız
                   <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedHistory ? 'rotate-180' : ''}`} />
                 </div>
@@ -341,17 +346,20 @@ export default function SalonDashboard() {
 
           <button
             onClick={() => setExpandedPackages(!expandedPackages)}
-            className="group"
+            className="group text-left"
           >
-            <Card className="bg-card border-border hover:border-secondary/50 transition-all duration-300 cursor-pointer">
+            <Card className="bg-card border-border hover:border-secondary/50 transition-all duration-300 cursor-pointer h-full">
               <CardContent className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">Paketlerim</div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="w-4 h-4 text-secondary" />
+                  <span className="text-xs font-semibold text-foreground">Paketlerim</span>
+                </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground group-hover:text-secondary transition-colors">
+                  <span className="text-sm text-muted-foreground group-hover:text-secondary transition-colors">
                     Aktif paketler
                   </span>
                   <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-2 py-1 rounded">
-                    {ACTIVE_PACKAGES.reduce((sum, pkg) => sum + pkg.remainingSessions, 0)} Seans
+                    {ACTIVE_PACKAGES.length}
                   </span>
                 </div>
               </CardContent>
@@ -363,9 +371,9 @@ export default function SalonDashboard() {
         {expandedHistory && (
           <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
             <CardContent className="p-4 space-y-3">
-              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-primary" />
-                Son Randevular
+              <h3 className="text-foreground text-sm flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                <span className="font-bold">Son Randevular</span>
               </h3>
               <div className="space-y-2">
                 {PAST_APPOINTMENTS.map((apt) => (
@@ -413,8 +421,9 @@ export default function SalonDashboard() {
         {expandedPackages && (
           <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
             <CardContent className="p-4 space-y-4">
-              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
-                Paketlerim
+              <h3 className="text-foreground text-sm flex items-center gap-2">
+                <Package className="w-5 h-5 text-secondary" />
+                <span className="font-bold">Paketlerim</span>
               </h3>
               <div className="space-y-4">
                 {ACTIVE_PACKAGES.map((pkg) => (
