@@ -52,6 +52,8 @@ interface PastAppointment {
   service: string
   date: string
   time: string
+  endTime: string
+  status: 'completed' | 'missed' | 'updated' | 'rated'
   specialists: string[]
   packageName?: string
   isRated?: boolean
@@ -99,10 +101,12 @@ const CUSTOMER = {
 const PAST_APPOINTMENTS: PastAppointment[] = [
   {
     id: 'a1',
-    name: 'Lazer Paketi – Tam Vücut',
+    name: 'Protez Tırnak (Pınar), Lazer Bacak',
     service: 'Lazer',
     date: '2024-03-12',
     time: '14:00',
+    endTime: '14:50',
+    status: 'completed',
     specialists: ['Bacak', 'Kol'],
     packageName: 'Laser Paketi',
     isRated: false,
@@ -115,10 +119,38 @@ const PAST_APPOINTMENTS: PastAppointment[] = [
     service: 'Cilt Bakımı',
     date: '2024-02-28',
     time: '10:30',
+    endTime: '11:15',
+    status: 'rated',
     specialists: ['Uzman Zeynep'],
     isRated: true,
     services: ['s5'],
     selectedSpecialist: 'Uzman Zeynep',
+  },
+  {
+    id: 'a3',
+    name: 'Epilasyon - Bacak',
+    service: 'Epilasyon',
+    date: '2024-02-20',
+    time: '15:00',
+    endTime: '15:45',
+    status: 'missed',
+    specialists: ['Uzman Fatma'],
+    isRated: false,
+    services: ['s3'],
+    selectedSpecialist: 'Uzman Fatma',
+  },
+  {
+    id: 'a4',
+    name: 'Cilt Bakımı - Alerjik Cilt',
+    service: 'Cilt Bakımı',
+    date: '2024-02-15',
+    time: '11:00',
+    endTime: '11:30',
+    status: 'updated',
+    specialists: ['Uzman Sela'],
+    isRated: false,
+    services: ['s5'],
+    selectedSpecialist: 'Uzman Sela',
   },
 ]
 
@@ -195,13 +227,15 @@ const SalonDashboard = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [expandedHistory, setExpandedHistory] = useState(false)
   const [expandedPackages, setExpandedPackages] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([])
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showWaitingList, setShowWaitingList] = useState(false)
+  const [ratingAppointment, setRatingAppointment] = useState<PastAppointment | null>(null)
+  const [ratingValue, setRatingValue] = useState(0)
   const [specialistModal, setSpecialistModal] = useState<SelectedService | null>(null)
   const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([])
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -351,48 +385,65 @@ const SalonDashboard = () => {
           {/* Past Appointments Expanded */}
           {expandedHistory && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              {PAST_APPOINTMENTS.map((apt) => (
-                <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3 border border-border">
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {apt.specialists.join(', ')}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleRepeatAppointment(apt)}
-                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2"
-                    >
-                      Tekrarla
-                    </Button>
-                    {apt.isRated ? (
-                      <Button
-                        size="sm"
-                        className="flex-1 border border-secondary text-secondary bg-transparent rounded-full text-xs font-semibold py-2"
-                        disabled
+              {PAST_APPOINTMENTS.map((apt) => {
+                const getStatusBadge = () => {
+                  switch (apt.status) {
+                    case 'rated':
+                      return <span className="text-xs font-semibold text-secondary">Değerlendirildi</span>
+                    case 'missed':
+                      return <span className="text-xs font-semibold text-red-500">Kaçırıldı</span>
+                    case 'updated':
+                      return <span className="text-xs font-semibold text-yellow-600">Güncellendi</span>
+                    default:
+                      return null
+                  }
+                }
+
+                return (
+                  <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3 border border-border">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground text-sm">
+                          {formatDate(apt.date)} • {apt.time}-{apt.endTime}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {apt.name}
+                        </p>
+                      </div>
+                      {getStatusBadge()}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleRepeatAppointment(apt)}
+                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2"
                       >
-                        <Check className="w-3 h-3 mr-1" />
-                        Değerlendirildi
+                        Tekrarla
                       </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          // Handle rating
-                          console.log('Rating appointment:', apt.id)
-                        }}
-                        variant="outline"
-                        className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
-                      >
-                        <Star className="w-3 h-3 mr-1" />
-                        Değerlendir
-                      </Button>
-                    )}
+                      {apt.status === 'rated' ? (
+                        <Button
+                          size="sm"
+                          className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
+                          disabled
+                        >
+                          <Check className="w-3 h-3 mr-1" />
+                          Değerlendir
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => setRatingAppointment(apt)}
+                          variant="outline"
+                          className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
+                        >
+                          <Star className="w-3 h-3 mr-1" />
+                          Değerlendir
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -419,69 +470,12 @@ const SalonDashboard = () => {
           {/* Packages Expanded */}
           {expandedPackages && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              {ACTIVE_PACKAGES.map((pkg) => (
-                <div key={pkg.id} className="p-4 rounded-2xl border-2 border-secondary/30 bg-muted/20 space-y-3">
-                  {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-bold text-foreground text-sm">{pkg.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{pkg.totalSessions} seans paket</p>
-                    </div>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${pkg.badge === 'Aktif' ? 'bg-secondary text-secondary-foreground' : 'bg-yellow-100 text-yellow-900'}`}>
-                      {pkg.badge}
-                    </span>
-                  </div>
-
-                  {/* Progress */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
-                      <span className="text-xs font-semibold text-foreground">{Math.round((pkg.remainingSessions / pkg.totalSessions) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                      <div
-                        className="bg-secondary h-full transition-all duration-300"
-                        style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Warning */}
-                  {pkg.warning && (
-                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-yellow-800 dark:text-yellow-200">{pkg.warning}</p>
-                    </div>
-                  )}
-
-                  {/* Services with Checkboxes */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-foreground">Kullanılabilir Hizmetler:</p>
-                    {pkg.availableServices.map((svc) => (
-                      <label key={svc.id} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${svc.used === 0 ? 'border-muted bg-muted/50 opacity-50' : 'border-muted hover:border-secondary/30 bg-background'}`}>
-                        <input
-                          type="checkbox"
-                          disabled={svc.used === 0}
-                          className="w-5 h-5 mt-0.5 accent-secondary disabled:accent-muted"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-medium ${svc.used === 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{svc.name}</p>
-                          <p className={`text-xs ${svc.used === 0 ? 'text-muted-foreground' : 'text-secondary font-semibold'}`}>{svc.used} dk {svc.used}/{svc.total} kaldı</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* Info Footer */}
-                  <div className="pt-2 border-t border-muted text-xs text-muted-foreground">
-                    1 bölge seçildi · Tahmini süre 30 dk
-                  </div>
-
-                  {/* Ekle Button */}
-                  <Button
-                    size="sm"
+              {ACTIVE_PACKAGES.map((pkg) => {
+                const availableServicesCount = pkg.availableServices.filter((svc) => svc.used > 0).length
+                return (
+                  <button
+                    key={pkg.id}
                     onClick={() => {
-                      // Add package services with price 0
                       const packageServices: SelectedService[] = pkg.availableServices
                         .filter((svc) => svc.used > 0)
                         .map((svc) => ({
@@ -495,13 +489,37 @@ const SalonDashboard = () => {
                       setSelectedDate(null)
                       setSelectedTimeSlot(null)
                     }}
-                    className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-sm font-bold py-3"
+                    className="w-full text-left"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ekle
-                  </Button>
-                </div>
-              ))}
+                    <div className="p-3 rounded-lg border-2 border-border hover:border-secondary/30 bg-card hover:bg-muted/20 transition-all duration-300">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground text-sm">{pkg.name}</p>
+                          <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                            <p>{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
+                            <p>{availableServicesCount} hizmet mevcut</p>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="flex items-baseline gap-2 justify-end mb-2">
+                            <p className="text-sm font-bold text-secondary">
+                              0
+                              <span className="text-xs">₺</span>
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="rounded-full text-xs gap-1 font-semibold py-2 border-2 border-secondary text-secondary hover:bg-secondary/10 bg-transparent"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Ekle
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -756,6 +774,64 @@ const SalonDashboard = () => {
                     >
                       Sıraya Gir
                     </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Rating Modal */}
+            {ratingAppointment && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in p-4">
+                <Card className="w-full max-w-sm rounded-2xl border-0 animate-in zoom-in-95 duration-300">
+                  <CardContent className="p-6 space-y-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-foreground mb-2">Randevuyu Değerlendir</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {ratingAppointment.name}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setRatingValue(star)}
+                          className="transition-transform hover:scale-110"
+                        >
+                          <Star
+                            className={`w-8 h-8 ${
+                              star <= ratingValue
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-muted-foreground'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setRatingAppointment(null)
+                          setRatingValue(0)
+                        }}
+                        variant="outline"
+                        className="flex-1 rounded-full"
+                      >
+                        Vazgeç
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          // Handle rating submission
+                          console.log(`Rated ${ratingValue} stars for ${ratingAppointment.id}`)
+                          setRatingAppointment(null)
+                          setRatingValue(0)
+                        }}
+                        className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+                      >
+                        Gönder
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
