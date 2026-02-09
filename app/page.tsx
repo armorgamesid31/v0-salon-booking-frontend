@@ -372,7 +372,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             onClick={() => setExpandedHistory(!expandedHistory)}
             className="group text-left w-full"
           >
-            <Card className="bg-card border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer">
+            <Card className="bg-primary/5 border border-primary/20 hover:border-primary/50 transition-all duration-300 cursor-pointer">
               <CardContent className="p-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <History className="w-5 h-5 text-primary flex-shrink-0" />
@@ -467,7 +467,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             onClick={() => setExpandedPackages(!expandedPackages)}
             className="group text-left w-full"
           >
-            <Card className="bg-card border border-border hover:border-secondary/50 transition-all duration-300 cursor-pointer">
+            <Card className="bg-secondary/5 border border-secondary/20 hover:border-secondary/50 transition-all duration-300 cursor-pointer">
               <CardContent className="p-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <Package className="w-5 h-5 text-secondary flex-shrink-0" />
