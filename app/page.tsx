@@ -27,6 +27,8 @@ import {
   Package,
   Check,
   AlertCircle,
+  Gem,
+  Lightbulb,
 } from 'lucide-react'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
@@ -171,11 +173,11 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-5':
       return <Heart className="w-5 h-5" />
     case 'cat-6':
-      return <Eye className="w-5 h-5" />
+      return <Gem className="w-5 h-5" />
     case 'cat-7':
       return <Scissors className="w-5 h-5" />
     case 'cat-8':
-      return <Leaf className="w-5 h-5" />
+      return <Lightbulb className="w-5 h-5" />
     case 'cat-9':
       return <Flower className="w-5 h-5" />
     default:
