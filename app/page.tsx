@@ -257,7 +257,7 @@ const SalonDashboard = () => {
     numberOfPeople: number
   } | null>(null)
 
-  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
+  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0) * numberOfPeople
 
   const handleServiceToggle = (service: ServiceItem, categoryName: string) => {
     const serviceData: SelectedService = {
@@ -677,8 +677,9 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     </button>
                     <span className="text-xs font-semibold text-foreground w-4 text-center">{numberOfPeople}</span>
                     <button
-                      onClick={() => setNumberOfPeople(numberOfPeople + 1)}
-                      className="text-muted-foreground hover:text-foreground text-sm font-semibold w-5 h-5 flex items-center justify-center"
+                      onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
+                      className="text-muted-foreground hover:text-foreground text-sm font-semibold w-5 h-5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={numberOfPeople >= 4}
                     >
                       +
                     </button>
@@ -1100,37 +1101,38 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
       {/* Person Selection Modal */}
       {personSelectionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in duration-300">
-          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-foreground">Bu hizmeti kim alacak?</h3>
+        <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in duration-300">
+          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Bu hizmeti kim alacak?</h2>
+                <p className="text-sm text-muted-foreground mt-1">Birden fazla kişi seçebilirsiniz</p>
+              </div>
               <button
                 onClick={() => setPersonSelectionModal(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <p className="text-sm text-muted-foreground">Birden fazla kişi seçebilirsiniz:</p>
-
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
               {Array.from({ length: personSelectionModal.numberOfPeople }).map((_, index) => {
                 const personName = index === 0 ? 'Ben' : `Misafir ${index}`
                 return (
                   <label
                     key={index}
-                    className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted hover:border-primary/30 cursor-pointer transition-all"
+                    className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-muted hover:border-primary/50 cursor-pointer transition-all bg-muted/30 hover:bg-muted/50"
                   >
                     <input
                       type="checkbox"
                       defaultChecked={index === 0}
-                      className="w-5 h-5 accent-primary rounded"
-                      onChange={(e) => {
-                        // Will handle in button click
-                      }}
+                      className="w-5 h-5 accent-primary rounded cursor-pointer"
                     />
-                    <span className="text-sm font-medium text-foreground">{personName}</span>
+                    <span className="text-2xl">
+                      {index === 0 ? '👤' : '👥'}
+                    </span>
+                    <span className="text-sm font-semibold text-foreground text-center">{personName}</span>
                   </label>
                 )
               })}
@@ -1138,7 +1140,6 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
             <Button
               onClick={() => {
-                // Get selected people
                 const checkboxes = document.querySelectorAll('input[type="checkbox"]')
                 const selectedPeople: number[] = []
                 checkboxes.forEach((checkbox, index) => {
@@ -1147,7 +1148,6 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   }
                 })
 
-                // Open specialist selection modal with selected people
                 if (selectedPeople.length > 0) {
                   setMultiPersonSpecialistModal({
                     service: personSelectionModal.service,
@@ -1159,9 +1159,9 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   setPersonSelectionModal(null)
                 }
               }}
-              className="w-full rounded-full py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-full rounded-full py-3.5 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 text-base transition-all"
             >
-              İleri
+              Devam Et →
             </Button>
           </div>
         </div>
@@ -1169,30 +1169,46 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
       {/* Multi-Person Specialist Selection Modal */}
       {multiPersonSpecialistModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in duration-300">
-          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in duration-300">
+          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-foreground">{multiPersonSpecialistModal.service.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {multiPersonSpecialistModal.currentPerson === 0 ? 'Ben' : `Misafir ${multiPersonSpecialistModal.currentPerson}`} için uzman seçimi
-                </p>
+                <h2 className="text-xl font-bold text-foreground">{multiPersonSpecialistModal.service.name}</h2>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold">
+                    {multiPersonSpecialistModal.currentPerson === 0 ? '👤 Ben' : `👥 Misafir ${multiPersonSpecialistModal.currentPerson}`}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {multiPersonSpecialistModal.selectedPeople.indexOf(multiPersonSpecialistModal.currentPerson) + 1} / {multiPersonSpecialistModal.selectedPeople.length}
+                  </span>
+                </div>
               </div>
               <button
                 onClick={() => setMultiPersonSpecialistModal(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <p className="text-sm text-muted-foreground">Uzman seçiniz:</p>
+            <div className="w-full bg-muted rounded-full h-1">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{
+                  width: `${((multiPersonSpecialistModal.selectedPeople.indexOf(multiPersonSpecialistModal.currentPerson) + 1) / multiPersonSpecialistModal.selectedPeople.length) * 100}%`,
+                }}
+              />
+            </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               {['Fark etmez', 'Pınar', 'Fatma', 'Ayşe'].map((specialist) => (
                 <label
                   key={specialist}
-                  className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted hover:border-primary/30 cursor-pointer transition-all"
+                  className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                    multiPersonSpecialistModal.selections[multiPersonSpecialistModal.currentPerson] === specialist
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted hover:border-primary/30 hover:bg-muted/30'
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1213,14 +1229,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                           : null
                       )
                     }}
-                    className="w-5 h-5 accent-primary"
+                    className="w-5 h-5 accent-primary cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-foreground">{specialist}</span>
+                  <span className="text-base font-semibold text-foreground flex-1">{specialist}</span>
                 </label>
               ))}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-4">
               {multiPersonSpecialistModal.selectedPeople.indexOf(multiPersonSpecialistModal.currentPerson) > 0 && (
                 <Button
                   onClick={() => {
@@ -1239,9 +1255,9 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     }
                   }}
                   variant="outline"
-                  className="flex-1 rounded-full py-3 font-semibold"
+                  className="flex-1 rounded-full py-3 font-semibold border-2"
                 >
-                  Geri
+                  ← Geri
                 </Button>
               )}
               <Button
@@ -1259,16 +1275,15 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                         : null
                     )
                   } else {
-                    // All selections done - save and close
                     setMultiPersonSpecialistModal(null)
                   }
                 }}
-                className="flex-1 rounded-full py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+                className="flex-1 rounded-full py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
               >
                 {multiPersonSpecialistModal.selectedPeople.indexOf(multiPersonSpecialistModal.currentPerson) ===
                 multiPersonSpecialistModal.selectedPeople.length - 1
-                  ? 'Tamam'
-                  : 'İleri'}
+                  ? 'Tamamla ✓'
+                  : 'İleri →'}
               </Button>
             </div>
           </div>
