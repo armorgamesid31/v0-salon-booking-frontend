@@ -205,6 +205,7 @@ const SalonDashboard = () => {
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
   const [isKnownCustomer, setIsKnownCustomer] = useState<boolean>(true)
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false)
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
     phone: '',
@@ -226,7 +227,27 @@ const SalonDashboard = () => {
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0) * numberOfPeople
 
-  const handleServiceToggle = (service: ImportedServiceItem, categoryName: string) => {
+  // Helper: Toplam süreyi hesapla (dakika cinsinden)
+  const calculateTotalDuration = () => {
+    return selectedServices.reduce((sum, service) => {
+      const durationStr = service.duration
+      const minutes = parseInt(durationStr) || 0
+      return sum + minutes
+    }, 0)
+  }
+
+  // Helper: Bitiş saatini hesapla
+  const calculateEndTime = () => {
+    if (!selectedTimeSlot) return null
+    const [startHour, startMinute] = selectedTimeSlot.split(':').map(Number)
+    const totalMinutes = calculateTotalDuration()
+    const totalMinutesFromStart = startHour * 60 + startMinute + totalMinutes
+    const endHour = Math.floor(totalMinutesFromStart / 60)
+    const endMinute = totalMinutesFromStart % 60
+    return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
+  }
+
+  const handleServiceToggle = (service: any, categoryName: string) => {
     const serviceData: ImportedServiceItem = {
       id: service.id,
       name: `${categoryName} - ${service.name}`,
@@ -1037,16 +1058,16 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                       if (element) {
                         element.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }
+                    } else {
+                      // Randevu onay akışı
+                      if (isKnownCustomer) {
+                        // Bilinen müşteri - confirmation modal'ı aç
+                        setShowConfirmationModal(true)
                       } else {
-                        // Randevu onay akışı
-                        if (isKnownCustomer) {
-                          // Bilinen müşteri - doğrudan onayla
-                          alert('Randevunuz başarıyla onaylandı!')
-                        } else {
-                          // Yeni müşteri - kayıt formu aç
-                          setShowRegistrationModal(true)
-                        }
+                        // Yeni müşteri - kayıt formu aç
+                        setShowRegistrationModal(true)
                       }
+                    }
                   }}
                   className={`px-6 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                     selectedDate && selectedTimeSlot
@@ -1452,14 +1473,158 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   }
 
                   // Register + Confirm appointment
-                  // TODO: Backend API çağrısı - kayıt oluştur ve randevu onayla
-                  alert('Kayıtlı oldu! Randevunuz başarıyla onaylandı!')
+                  // TODO: Backend API çağrısı - kayıt oluştur
                   setShowRegistrationModal(false)
                   setIsKnownCustomer(true)
+                  setShowConfirmationModal(true)
                 }}
                 className="flex-1 rounded-full py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
               >
                 Kayıt Ol ve Randevuyu Onayla
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal - Randevu Detayları */}
+      {showConfirmationModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in duration-300">
+          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Randevu Onayı</h2>
+                <p className="text-sm text-muted-foreground mt-1">Lütfen randevu detaylarınızı kontrol edin</p>
+              </div>
+              <button
+                onClick={() => setShowConfirmationModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Appointment Details Card */}
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-4 border border-primary/20 space-y-4">
+              {/* Date & Time */}
+              <div className="flex items-start gap-3">
+                <Calendar className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Tarih ve Saat</p>
+                  <p className="text-sm font-bold text-foreground mt-1">
+                    {selectedDate?.toLocaleDateString('tr-TR', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
+                  <div className="flex gap-2 mt-1">
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/50 rounded-lg text-sm font-semibold text-foreground">
+                      <Clock className="w-4 h-4" />
+                      {selectedTimeSlot}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/50 rounded-lg text-sm font-semibold text-foreground">
+                      <span className="text-muted-foreground text-xs">Tahmini bitiş:</span>
+                      {calculateEndTime()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div className="flex items-start gap-3 pt-2 border-t border-primary/10">
+                <Sparkles className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Toplam Süre</p>
+                  <p className="text-sm font-bold text-foreground mt-1">{calculateTotalDuration()} dakika</p>
+                </div>
+              </div>
+
+              {/* Number of People */}
+              <div className="flex items-start gap-3 pt-2 border-t border-primary/10">
+                <Zap className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Kişi Sayısı</p>
+                  <p className="text-sm font-bold text-foreground mt-1">{numberOfPeople} kişi</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Services List */}
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-foreground">Hizmetler</p>
+              {selectedServices.map((service, idx) => (
+                <div key={idx} className="bg-muted/30 rounded-xl p-3 space-y-2 border border-muted">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{service.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{service.duration}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs line-through text-muted-foreground">{service.price.toLocaleString('tr-TR')}₺</p>
+                      <p className="text-sm font-bold text-primary">
+                        {(service.price * numberOfPeople).toLocaleString('tr-TR')}₺
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Specialists if selected */}
+                  {multiPersonSpecialistModal?.selections && Object.keys(multiPersonSpecialistModal.selections).length > 0 && (
+                    <div className="text-xs bg-primary/5 rounded-lg p-2 border border-primary/10">
+                      <p className="font-semibold text-foreground mb-1">Seçili Uzmanlar:</p>
+                      <div className="space-y-1">
+                        {Object.entries(multiPersonSpecialistModal.selections).map(([person, specialist]) => (
+                          <p key={person} className="text-muted-foreground">
+                            <span className="font-semibold">Kişi {Number(person) + 1}:</span> {specialist}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Price Summary */}
+            <div className="bg-secondary/10 rounded-xl p-4 border border-secondary/20 space-y-2">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">Hizmetler ({selectedServices.length})</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {selectedServices.reduce((sum, s) => sum + s.price, 0).toLocaleString('tr-TR')}₺
+                </p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">Kişi × {numberOfPeople}</p>
+                <p className="text-sm font-semibold text-foreground">×{numberOfPeople}</p>
+              </div>
+              <div className="border-t border-secondary/20 pt-2 mt-2 flex justify-between items-center">
+                <p className="font-bold text-foreground">Toplam Tutar</p>
+                <p className="text-lg font-bold text-secondary">
+                  {totalPrice.toLocaleString('tr-TR')}₺
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={() => setShowConfirmationModal(false)}
+                variant="outline"
+                className="flex-1 rounded-full py-3 font-semibold border-2"
+              >
+                Düzenleme Yap
+              </Button>
+              <Button
+                onClick={() => {
+                  // TODO: Backend API çağrısı - randevu oluştur
+                  alert('Randevunuz başarıyla onaylandı!')
+                  setShowConfirmationModal(false)
+                }}
+                className="flex-1 rounded-full py-3 font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all"
+              >
+                Randevuyu Onayla
               </Button>
             </div>
           </div>
