@@ -345,27 +345,20 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
     <div className="min-h-screen bg-background pb-40">
       {/* Header with Logo and Welcome Message */}
       <div className="bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto px-4 pt-8 pb-6">
           {/* Logo Area */}
-          <div className="flex flex-col items-center justify-center mb-8">
-            <div className="flex items-center justify-center mb-3">
-              <img
-                src="https://via.placeholder.com/140?text=SALON"
-                alt="Salon Logo"
-                className="w-auto h-28 md:h-36 object-contain"
-              />
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium tracking-wider">
-              NAIL & BEAUTY BAR
-            </p>
+          <div className="flex flex-col items-center justify-center mb-4">
+            <img
+              src="https://via.placeholder.com/140?text=SALON"
+              alt="Salon Logo"
+              className="w-auto h-24 md:h-28 object-contain"
+            />
           </div>
 
           {/* Welcome Message */}
           <div className="text-center">
-            <p className="text-sm md:text-base text-foreground leading-relaxed">
-              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır
-              <br />
-              seni tekrar görmek için sabırsızlanıyoruz 🌟
+            <p className="text-sm md:text-base text-foreground">
+              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır seni tekrar görmek için sabırsızlanıyoruz 🌟
             </p>
           </div>
         </div>
