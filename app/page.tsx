@@ -245,6 +245,12 @@ const SalonDashboard = () => {
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
+  const [multiPersonSpecialistModal, setMultiPersonSpecialistModal] = useState<{
+    service: SelectedService
+    numberOfPeople: number
+    currentPerson: number
+    selections: Record<number, string>
+  } | null>(null)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -270,8 +276,19 @@ const SalonDashboard = () => {
 
     // Show specialist selection for certain services
     if (SPECIALIST_SERVICES.includes(service.id)) {
-      setSpecialistModal(serviceData)
-      setSelectedSpecialists([])
+      // If multiple people, open multi-person specialist modal
+      if (numberOfPeople > 1) {
+        setMultiPersonSpecialistModal({
+          service: serviceData,
+          numberOfPeople: numberOfPeople,
+          currentPerson: 1,
+          selections: {},
+        })
+      } else {
+        // Single person - use existing modal
+        setSpecialistModal(serviceData)
+        setSelectedSpecialists([])
+      }
     }
   }
 
@@ -1077,6 +1094,107 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             >
               Tamam
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Person Specialist Selection Modal */}
+      {multiPersonSpecialistModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in duration-300">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">{multiPersonSpecialistModal.service.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Kişi {multiPersonSpecialistModal.currentPerson}/{multiPersonSpecialistModal.numberOfPeople}
+                </p>
+              </div>
+              <button
+                onClick={() => setMultiPersonSpecialistModal(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">Uzman seçiniz:</p>
+
+            <div className="space-y-2">
+              {['Uzman Pınar', 'Uzman Fatma', 'Uzman Ayşe'].map((specialist) => (
+                <label
+                  key={specialist}
+                  className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted hover:border-primary/30 cursor-pointer transition-all"
+                >
+                  <input
+                    type="radio"
+                    name="multi-specialist"
+                    checked={
+                      multiPersonSpecialistModal.selections[multiPersonSpecialistModal.currentPerson] === specialist
+                    }
+                    onChange={() => {
+                      setMultiPersonSpecialistModal((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              selections: {
+                                ...prev.selections,
+                                [prev.currentPerson]: specialist,
+                              },
+                            }
+                          : null
+                      )
+                    }}
+                    className="w-5 h-5 accent-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">{specialist}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              {multiPersonSpecialistModal.currentPerson > 1 && (
+                <Button
+                  onClick={() => {
+                    setMultiPersonSpecialistModal((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            currentPerson: prev.currentPerson - 1,
+                          }
+                        : null
+                    )
+                  }}
+                  variant="outline"
+                  className="flex-1 rounded-full py-3 font-semibold"
+                >
+                  Geri
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  if (multiPersonSpecialistModal.currentPerson < multiPersonSpecialistModal.numberOfPeople) {
+                    setMultiPersonSpecialistModal((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            currentPerson: prev.currentPerson + 1,
+                          }
+                        : null
+                    )
+                  } else {
+                    // All selections done - save and close
+                    setMultiPersonSpecialistModal(null)
+                  }
+                }}
+                className={`flex-1 rounded-full py-3 font-semibold ${
+                  multiPersonSpecialistModal.currentPerson === multiPersonSpecialistModal.numberOfPeople
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
+              >
+                {multiPersonSpecialistModal.currentPerson === multiPersonSpecialistModal.numberOfPeople ? 'Tamam' : 'İleri'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
