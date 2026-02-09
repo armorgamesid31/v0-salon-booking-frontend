@@ -1341,24 +1341,24 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
       {/* Registration Modal - Yeni müşteriler için */}
       {showRegistrationModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in duration-300">
-          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 shadow-2xl">
-            <div className="flex items-center justify-between">
+          <div className="bg-card w-full rounded-t-3xl p-4 space-y-3 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Kaydını Tamamla</h2>
-                <p className="text-sm text-muted-foreground mt-1">Randevuyu tamamlamak için bilgilerini gir</p>
+                <h2 className="text-xl font-bold text-foreground">Kaydını Tamamla</h2>
+                <p className="text-xs text-muted-foreground">Bilgilerini gir</p>
               </div>
               <button
                 onClick={() => setShowRegistrationModal(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg flex-shrink-0"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               {/* Ad Soyad */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Ad Soyad</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Ad Soyad</label>
                 <input
                   type="text"
                   value={registrationForm.fullName}
@@ -1369,13 +1369,13 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     }))
                   }
                   placeholder="Adınız soyadınız"
-                  className="w-full px-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
+                  className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
                 />
               </div>
 
               {/* Telefon Numarası */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Telefon Numarası</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Telefon</label>
                 <input
                   type="tel"
                   value={registrationForm.phone}
@@ -1386,14 +1386,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     }))
                   }
                   placeholder="+90 (5XX) XXX-XXXX"
-                  className="w-full px-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
+                  className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
                 />
               </div>
 
               {/* Cinsiyet */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Cinsiyet</label>
-                <div className={`flex gap-3 rounded-xl p-2 transition-all duration-300 ${
+                <label className="block text-xs font-semibold text-foreground mb-1">Cinsiyet</label>
+                <div className={`flex gap-2 rounded-lg p-1.5 transition-all duration-300 ${
                   registrationForm.gender === 'female'
                     ? 'bg-pink-100 dark:bg-pink-950/30'
                     : 'bg-blue-100 dark:bg-blue-950/30'
@@ -1405,7 +1405,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                         gender: 'female',
                       }))
                     }
-                    className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
+                    className={`flex-1 flex items-center justify-center py-1.5 rounded-lg text-lg font-semibold transition-all duration-300 ${
                       registrationForm.gender === 'female'
                         ? 'bg-pink-300/60 shadow-md scale-105'
                         : 'hover:bg-pink-200/40 scale-95 opacity-70'
@@ -1420,7 +1420,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                         gender: 'male',
                       }))
                     }
-                    className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
+                    className={`flex-1 flex items-center justify-center py-1.5 rounded-lg text-lg font-semibold transition-all duration-300 ${
                       registrationForm.gender === 'male'
                         ? 'bg-blue-300/60 shadow-md scale-105'
                         : 'hover:bg-blue-200/40 scale-95 opacity-70'
@@ -1433,7 +1433,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
               {/* Doğum Tarihi */}
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Doğum Tarihi</label>
+                <label className="block text-xs font-semibold text-foreground mb-1">Doğum Tarihi</label>
                 <input
                   type="date"
                   value={registrationForm.birthDate}
@@ -1443,12 +1443,12 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                       birthDate: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-xl bg-muted/30 text-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
+                  className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm text-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
                 />
               </div>
 
               {/* Marketing Consent */}
-              <div className="flex items-center gap-3 py-2">
+              <div className="flex items-center gap-2 py-1">
                 <input
                   type="checkbox"
                   id="marketing"
@@ -1461,17 +1461,17 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   }
                   className="w-4 h-4 accent-primary rounded cursor-pointer"
                 />
-                <label htmlFor="marketing" className="text-sm text-muted-foreground cursor-pointer">
-                  Kampanyalar ve özel teklifler hakkında bilgi almak istiyorum
+                <label htmlFor="marketing" className="text-xs text-muted-foreground cursor-pointer">
+                  Kampanyalar hakkında bilgi almak istiyorum
                 </label>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-2 pt-2">
               <Button
                 onClick={() => setShowRegistrationModal(false)}
                 variant="outline"
-                className="flex-1 rounded-full py-3 font-semibold border-2"
+                className="flex-1 rounded-full py-2 text-sm font-semibold border-2"
               >
                 Vazgeç
               </Button>
@@ -1493,9 +1493,9 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   setIsKnownCustomer(true)
                   setShowConfirmationModal(true)
                 }}
-                className="flex-1 rounded-full py-3 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+                className="flex-1 rounded-full py-2 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
               >
-                Kayıt Ol ve Randevuyu Onayla
+                Kayıt Ol & Onayla
               </Button>
             </div>
           </div>
