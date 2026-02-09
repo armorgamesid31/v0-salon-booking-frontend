@@ -637,7 +637,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               </div>
 
               {/* Gender and Person Counter Controls */}
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-4">
                 {/* Gender Toggle */}
                 <div className={`flex gap-2 rounded-2xl p-2 transition-all duration-300 ${
                   selectedGender === 'female'
@@ -648,8 +648,8 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     onClick={() => setSelectedGender('female')}
                     className={`px-4 py-2 rounded-lg text-2xl font-semibold transition-all duration-300 flex items-center justify-center min-w-16 ${
                       selectedGender === 'female'
-                        ? 'bg-pink-300/60 shadow-md'
-                        : 'hover:bg-pink-200/40'
+                        ? 'bg-pink-300/60 shadow-md scale-105'
+                        : 'hover:bg-pink-200/40 scale-95 opacity-70'
                     }`}
                   >
                     👩
@@ -658,8 +658,8 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     onClick={() => setSelectedGender('male')}
                     className={`px-4 py-2 rounded-lg text-2xl font-semibold transition-all duration-300 flex items-center justify-center min-w-16 ${
                       selectedGender === 'male'
-                        ? 'bg-blue-300/60 shadow-md'
-                        : 'hover:bg-blue-200/40'
+                        ? 'bg-blue-300/60 shadow-md scale-105'
+                        : 'hover:bg-blue-200/40 scale-95 opacity-70'
                     }`}
                   >
                     👨
@@ -667,21 +667,21 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 </div>
 
                 {/* Person Counter */}
-                <div className="flex items-center justify-between gap-3 bg-muted/30 rounded-2xl px-5 py-2.5 border border-muted min-w-max">
+                <div className="flex items-center justify-center gap-4 bg-muted/30 rounded-2xl px-6 py-3 border border-muted">
                   <button
                     onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                    className="text-foreground hover:text-primary transition-colors font-bold text-xl leading-none w-6 h-6 flex items-center justify-center"
+                    className="text-foreground hover:text-primary transition-colors font-bold text-2xl leading-none"
                     aria-label="Decrease people count"
                   >
                     −
                   </button>
-                  <div className="flex flex-col items-center px-4">
-                    <span className="text-base font-bold text-foreground">{numberOfPeople}</span>
+                  <div className="flex flex-col items-center px-6">
+                    <span className="text-xl font-bold text-foreground">{numberOfPeople}</span>
                     <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
                   </div>
                   <button
                     onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                    className={`font-bold text-xl leading-none transition-all w-6 h-6 flex items-center justify-center ${
+                    className={`font-bold text-2xl leading-none transition-all ${
                       numberOfPeople >= 4
                         ? 'text-muted-foreground/40 cursor-not-allowed'
                         : 'text-foreground hover:text-primary'
