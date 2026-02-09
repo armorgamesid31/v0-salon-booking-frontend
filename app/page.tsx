@@ -243,6 +243,7 @@ const SalonDashboard = () => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [ratingValue, setRatingValue] = useState<number>(0)
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
+  const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -496,7 +497,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
           {/* Packages Expanded */}
           {expandedPackages && (
             <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
-              {ACTIVE_PACKAGES.map((pkg) => (
+              {activePackages.map((pkg) => (
                 <div key={pkg.id} className="rounded-lg border-2 border-border bg-card overflow-hidden">
                   <div className="p-3 border-b border-border bg-muted/30">
                     <p className="font-bold text-sm text-foreground">{pkg.name}</p>
@@ -525,8 +526,20 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                               type="button"
                               onClick={() => {
                                 if (isAdded) {
-                                  // Remove service
+                                  // Remove service and restore used count
                                   setSelectedServices((prev) => prev.filter((s) => s.id !== serviceId))
+                                  setActivePackages((prev) =>
+                                    prev.map((p) =>
+                                      p.id === pkg.id
+                                        ? {
+                                            ...p,
+                                            availableServices: p.availableServices.map((s) =>
+                                              s.id === svc.id ? { ...s, used: s.used + 1 } : s
+                                            ),
+                                          }
+                                        : p
+                                    )
+                                  )
                                 } else {
                                   // Add service if there are remaining slots
                                   if (svc.used > 0) {
@@ -538,7 +551,18 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                                     }
                                     setSelectedServices((prev) => [...prev, serviceToAdd])
                                     // Decrease used count
-                                    svc.used -= 1
+                                    setActivePackages((prev) =>
+                                      prev.map((p) =>
+                                        p.id === pkg.id
+                                          ? {
+                                              ...p,
+                                              availableServices: p.availableServices.map((s) =>
+                                                s.id === svc.id ? { ...s, used: s.used - 1 } : s
+                                              ),
+                                            }
+                                          : p
+                                      )
+                                    )
                                   }
                                 }
                                 setSelectedDate(null)
