@@ -180,7 +180,7 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
     icon: <Zap className="w-5 h-5" />,
     gender: 'both',
     services: [
-      { id: 's1', name: 'Tam Vücut', duration: '60 dk', originalPrice: 1800, salePrice: 1650, tags: ['Fast Track'] },
+      { id: 's1', name: 'Tam Vücut', duration: '60 dk', originalPrice: 1800, salePrice: 1650 },
       { id: 's2', name: 'Sırt Lazer', duration: '30 dk', originalPrice: 1200, salePrice: 1100 },
       { id: 's3', name: 'Bacak Lazer', duration: '45 dk', originalPrice: 1500, salePrice: 1350 },
     ],
@@ -267,6 +267,8 @@ const SalonDashboard = () => {
       duration: service.duration,
     }
 
+    const isCurrentlySelected = isServiceSelected(service.id)
+
     setSelectedServices((prev) => {
       const exists = prev.find((s) => s.id === service.id)
       if (exists) {
@@ -279,13 +281,13 @@ const SalonDashboard = () => {
     setSelectedDate(null)
     setSelectedTimeSlot(null)
 
-    // Show person selection modal if multiple people and specialist service
-    if (SPECIALIST_SERVICES.includes(service.id) && numberOfPeople > 1) {
+    // Show specialist selection modal ONLY if adding a new service (not removing)
+    if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id) && numberOfPeople > 1) {
       setPersonSelectionModal({
         service: serviceData,
         numberOfPeople: numberOfPeople,
       })
-    } else if (SPECIALIST_SERVICES.includes(service.id)) {
+    } else if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id)) {
       // Single person - use existing modal
       setSpecialistModal(serviceData)
       setSelectedSpecialists([])
@@ -727,7 +729,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
                 {/* Expanded Services */}
                 {expandedCategory === category.id && (
-                  <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <CardContent className="pt-4 pb-4 px-4 border-t border-border space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                     {category.services.map((service) => {
                       const isSelected = isServiceSelected(service.id)
                       return (
