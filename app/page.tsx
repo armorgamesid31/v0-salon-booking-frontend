@@ -240,6 +240,10 @@ const SalonDashboard = () => {
         const personServicesPrice = selectedServices
           .filter((service) => {
             const personIds = servicePersonMapping[service.id] || []
+            // Fallback: if no mapping exists, assign to first person
+            if (personIds.length === 0) {
+              return personIdx === 0
+            }
             return personIds.includes(personIdx)
           })
           .reduce((sum, s) => sum + s.price, 0)
@@ -344,18 +348,14 @@ const SalonDashboard = () => {
 
     // Show specialist selection modal ONLY if adding a new service (not removing)
     if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id) && numberOfPeople > 1) {
-      console.log('[v0] Opening person selection modal for:', service.id, 'numberOfPeople:', numberOfPeople)
       setPersonSelectionModal({
         service: serviceData,
         numberOfPeople: numberOfPeople,
       })
     } else if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id)) {
-      console.log('[v0] Opening single specialist modal for:', service.id)
       // Single person - use existing modal
       setSpecialistModal(serviceData)
       setSelectedSpecialists([])
-    } else {
-      console.log('[v0] Not opening modal - isCurrentlySelected:', isCurrentlySelected, 'isSpecialist:', SPECIALIST_SERVICES.includes(service.id), 'numberOfPeople:', numberOfPeople)
     }
   }
 
