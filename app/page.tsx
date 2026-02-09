@@ -559,40 +559,49 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
           )}
 
           {/* Search Bar and Gender Toggle */}
-          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Hizmet ara..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
-              />
-            </div>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
+            <div className="flex gap-3 items-end">
+              {/* Search Input */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Hizmet ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
+                />
+              </div>
 
-            {/* Gender Toggle Button */}
-            <div className="flex gap-2 bg-muted/30 p-1 rounded-lg border border-border">
-              <button
-                onClick={() => setSelectedGender('female')}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all duration-300 ${
-                  selectedGender === 'female'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Kadın
-              </button>
-              <button
-                onClick={() => setSelectedGender('male')}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all duration-300 ${
-                  selectedGender === 'male'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Erkek
-              </button>
+              {/* Gender Toggle with Emojis */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedGender('female')}
+                  className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                    selectedGender === 'female'
+                      ? 'bg-muted/20'
+                      : 'bg-muted/10'
+                  }`}
+                >
+                  👩
+                  {selectedGender === 'female' && (
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-pink-500"></div>
+                  )}
+                </button>
+                <button
+                  onClick={() => setSelectedGender('male')}
+                  className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                    selectedGender === 'male'
+                      ? 'bg-muted/20'
+                      : 'bg-muted/10'
+                  }`}
+                >
+                  👨
+                  {selectedGender === 'male' && (
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-blue-500"></div>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
