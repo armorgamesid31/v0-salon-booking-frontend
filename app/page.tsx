@@ -158,14 +158,49 @@ const ACTIVE_PACKAGES: ActivePackage[] = [
   },
 ]
 
-const SERVICE_CATEGORIES: ServiceCategory[] = DUMMY_SERVICES.map((cat) => ({
-  id: cat.id,
-  name: cat.name,
-  count: cat.services.length,
-  icon: cat.icon === '⚡' ? <Zap className="w-5 h-5" /> : <Heart className="w-5 h-5" />,
-  gender: 'both',
-  services: cat.services,
-}))
+const SERVICE_CATEGORIES: ServiceCategory[] = DUMMY_SERVICES.map((cat) => {
+  let lucideIcon
+  switch (cat.id) {
+    case 'cat-1': // Yüz & Cilt Bakımı
+      lucideIcon = <Sparkles className="w-5 h-5" />
+      break
+    case 'cat-2': // Medikal Estetik
+      lucideIcon = <Wand2 className="w-5 h-5" />
+      break
+    case 'cat-3': // Lazer Epilasyon
+      lucideIcon = <Zap className="w-5 h-5" />
+      break
+    case 'cat-4': // Ağda
+      lucideIcon = <Palette className="w-5 h-5" />
+      break
+    case 'cat-5': // Vücut, Şekillendirme & Masaj
+      lucideIcon = <Heart className="w-5 h-5" />
+      break
+    case 'cat-6': // El, Ayak & Tırnak
+      lucideIcon = <Eye className="w-5 h-5" />
+      break
+    case 'cat-7': // Saç & Kuaför
+      lucideIcon = <Scissors className="w-5 h-5" />
+      break
+    case 'cat-8': // Danışmanlık & Paketler
+      lucideIcon = <Leaf className="w-5 h-5" />
+      break
+    case 'cat-9': // Diğer Hizmetler
+      lucideIcon = <Flower className="w-5 h-5" />
+      break
+    default:
+      lucideIcon = <Sparkles className="w-5 h-5" />
+  }
+
+  return {
+    id: cat.id,
+    name: cat.name,
+    count: cat.services.length,
+    icon: lucideIcon,
+    gender: 'both',
+    services: cat.services,
+  }
+})
 
 const TIME_SLOTS: TimeSlot[] = [
   { time: '09:00', available: true },
