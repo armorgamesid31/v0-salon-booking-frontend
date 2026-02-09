@@ -524,23 +524,44 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                             <button
                               type="button"
                               onClick={() => {
-                                const serviceToAdd: SelectedService = {
-                                  id: serviceId,
-                                  name: `${pkg.name} - ${svc.name}`,
-                                  price: 0,
-                                  duration: svc.duration,
+                                if (isAdded) {
+                                  // Remove service
+                                  setSelectedServices((prev) => prev.filter((s) => s.id !== serviceId))
+                                } else {
+                                  // Add service if there are remaining slots
+                                  if (svc.used > 0) {
+                                    const serviceToAdd: SelectedService = {
+                                      id: serviceId,
+                                      name: `${pkg.name} - ${svc.name}`,
+                                      price: 0,
+                                      duration: svc.duration,
+                                    }
+                                    setSelectedServices((prev) => [...prev, serviceToAdd])
+                                    // Decrease used count
+                                    svc.used -= 1
+                                  }
                                 }
-                                setSelectedServices((prev) => [...prev, serviceToAdd])
                                 setSelectedDate(null)
                                 setSelectedTimeSlot(null)
                               }}
-                              disabled={svc.used === 0}
-                              className={`rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 border-secondary text-secondary hover:bg-secondary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-all whitespace-nowrap ${
-                                isAdded ? 'bg-secondary/20' : 'bg-transparent'
+                              disabled={svc.used === 0 && !isAdded}
+                              className={`rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 transition-all whitespace-nowrap flex items-center ${
+                                isAdded
+                                  ? 'border-primary bg-primary/10 text-primary hover:bg-primary/20'
+                                  : 'border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed'
                               }`}
                             >
-                              <Plus className="w-3 h-3" />
-                              {isAdded ? 'Eklendi' : 'Ekle'}
+                              {isAdded ? (
+                                <>
+                                  <Check className="w-3 h-3" />
+                                  Eklendi
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-3 h-3" />
+                                  Ekle
+                                </>
+                              )}
                             </button>
                           </div>
                           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
