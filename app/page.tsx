@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronDown, Search, Bell, Zap, Sparkles, Leaf, Heart, Scissors, Palette, Eye, Droplet, Flower, Wand2, MessageCircle, Plus, Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Brush } from 'lucide-react'
+import { ChevronDown, Search, Bell, Zap, Sparkles, Leaf, Heart, Scissors, Palette, Eye, Droplet, Flower, Wand2, MessageCircle, Plus, Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Sparkle, Brush } from 'lucide-react'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
 
@@ -147,7 +147,7 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-5':
       return <Heart className="w-5 h-5" />
     case 'cat-6':
-      return <Brush className="w-5 h-5" />
+      return <Sparkle className="w-5 h-5" />
     case 'cat-7':
       return <Scissors className="w-5 h-5" />
     case 'cat-8':
