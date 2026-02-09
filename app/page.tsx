@@ -271,476 +271,459 @@ export default function SalonDashboard() {
       {/* Main Content */}
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {/* Quick Stats */}
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom duration-500">
+        <div className="space-y-2 animate-in fade-in slide-in-from-bottom duration-500">
           <button
             onClick={() => setExpandedHistory(!expandedHistory)}
-            className="group text-left"
+            className="group text-left w-full"
           >
-            <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 cursor-pointer h-full">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <History className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-bold text-foreground">Son Randevular</span>
+            <Card className="bg-card border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer">
+              <CardContent className="p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <History className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Son Randevular</p>
+                    <p className="text-xs text-muted-foreground">Geçmiş randevularınız</p>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground group-hover:text-primary transition-colors flex items-center justify-between">
-                  Geçmiş randevularınız
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedHistory ? 'rotate-180' : ''}`} />
-                </div>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 flex-shrink-0 ${expandedHistory ? 'rotate-180' : ''}`} />
               </CardContent>
             </Card>
           </button>
+
+          {/* Past Appointments Expanded */}
+          {expandedHistory && (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              {PAST_APPOINTMENTS.map((apt) => (
+                <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3 border border-border">
+                  <div>
+                    <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.service}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Hizmetler: {apt.specialists.join(', ')}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2">
+                      Tekrarla
+                    </Button>
+                    {apt.isRated ? (
+                      <Button
+                        size="sm"
+                        className="w-full border-secondary text-secondary bg-transparent rounded-full text-xs font-semibold py-2"
+                        disabled
+                      >
+                        <Check className="w-3 h-3 mr-1" />
+                        Değerlendirildi
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
+                      >
+                        <Star className="w-3 h-3 mr-1" />
+                        Değerlendir
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <button
             onClick={() => setExpandedPackages(!expandedPackages)}
-            className="group text-left"
+            className="group text-left w-full"
           >
-            <Card className="bg-card border-border hover:border-secondary/50 transition-all duration-300 cursor-pointer h-full">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="w-4 h-4 text-secondary" />
-                  <span className="text-xs font-bold text-foreground">Paketlerim</span>
+            <Card className="bg-card border border-border hover:border-secondary/50 transition-all duration-300 cursor-pointer">
+              <CardContent className="p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Package className="w-5 h-5 text-secondary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Paketlerim</p>
+                    <p className="text-xs text-muted-foreground">Aktif paketler</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground group-hover:text-secondary transition-colors">
-                    Aktif paketler
-                  </span>
-                  <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-2 py-1 rounded">
-                    {ACTIVE_PACKAGES.length}
-                  </span>
-                </div>
+                <span className="bg-secondary text-secondary-foreground text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0">
+                  {ACTIVE_PACKAGES.length}
+                </span>
               </CardContent>
             </Card>
           </button>
-        </div>
 
-        {/* Past Appointments Section */}
-        {expandedHistory && (
-          <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-            <CardContent className="p-4 space-y-3">
-              <h3 className="text-foreground text-sm flex items-center gap-2">
-                <History className="w-5 h-5 text-primary" />
-                <span className="font-bold">Son Randevular</span>
-              </h3>
-              <div className="space-y-3">
-                {PAST_APPOINTMENTS.map((apt) => (
-                  <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3">
+          {/* Packages Expanded */}
+          {/* Packages Expanded */}
+          {expandedPackages && (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              {ACTIVE_PACKAGES.map((pkg) => (
+                <div key={pkg.id} className="p-4 rounded-2xl border-2 border-secondary/30 bg-muted/20 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.service}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Hizmetler: {apt.specialists.join(', ')}
-                      </p>
+                      <p className="font-bold text-foreground text-sm">{pkg.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{pkg.totalSessions} seans paket</p>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold">
-                        Tekrarla
-                      </Button>
-                      {apt.isRated ? (
-                        <Button
-                          size="sm"
-                          className="w-full border-secondary text-secondary bg-transparent rounded-full text-xs font-semibold"
-                          disabled
-                        >
-                          <Check className="w-3 h-3 mr-1" />
-                          Değerlendirildi
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold"
-                        >
-                          <Star className="w-3 h-3 mr-1" />
-                          Değerlendir
-                        </Button>
-                      )}
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${pkg.badge === 'Aktif' ? 'bg-secondary text-secondary-foreground' : 'bg-yellow-100 text-yellow-900'}`}>
+                      {pkg.badge}
+                    </span>
+                  </div>
+
+                  {/* Progress */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
+                      <span className="text-xs font-semibold text-foreground">{Math.round((pkg.remainingSessions / pkg.totalSessions) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-secondary h-full transition-all duration-300"
+                        style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Active Packages Section */}
-        {expandedPackages && (
-          <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-            <CardContent className="p-4 space-y-4">
-              <h3 className="text-foreground text-sm flex items-center gap-2">
-                <Package className="w-5 h-5 text-secondary" />
-                <span className="font-bold">Paketlerim</span>
-              </h3>
-              <div className="space-y-3">
-                {ACTIVE_PACKAGES.map((pkg) => (
-                  <div key={pkg.id} className="p-4 rounded-2xl border-2 border-secondary/30 bg-muted/20 space-y-3">
-                    {/* Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-bold text-foreground text-sm">{pkg.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{pkg.totalSessions} seans paket</p>
-                      </div>
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${pkg.badge === 'Aktif' ? 'bg-secondary text-secondary-foreground' : 'bg-yellow-100 text-yellow-900'}`}>
-                        {pkg.badge}
-                      </span>
+                  {/* Warning */}
+                  {pkg.warning && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-yellow-800 dark:text-yellow-200">{pkg.warning}</p>
                     </div>
+                  )}
 
-                    {/* Progress */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
-                        <span className="text-xs font-semibold text-foreground">{Math.round((pkg.remainingSessions / pkg.totalSessions) * 100)}%</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-secondary h-full transition-all duration-300"
-                          style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
+                  {/* Services with Checkboxes */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-foreground">Kullanılabilir Hizmetler:</p>
+                    {pkg.availableServices.map((svc) => (
+                      <label key={svc.id} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${svc.used === 0 ? 'border-muted bg-muted/50 opacity-50' : 'border-muted hover:border-secondary/30 bg-background'}`}>
+                        <input
+                          type="checkbox"
+                          disabled={svc.used === 0}
+                          className="w-5 h-5 mt-0.5 accent-secondary disabled:accent-muted"
                         />
-                      </div>
-                    </div>
-
-                    {/* Warning */}
-                    {pkg.warning && (
-                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-yellow-800 dark:text-yellow-200">{pkg.warning}</p>
-                      </div>
-                    )}
-
-                    {/* Services with Checkboxes */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-foreground">Kullanılabilir Hizmetler:</p>
-                      {pkg.availableServices.map((svc) => (
-                        <label key={svc.id} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${svc.used === 0 ? 'border-muted bg-muted/50 opacity-50' : 'border-muted hover:border-secondary/30 bg-background'}`}>
-                          <input
-                            type="checkbox"
-                            disabled={svc.used === 0}
-                            className="w-5 h-5 mt-0.5 accent-secondary disabled:accent-muted"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-medium ${svc.used === 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{svc.name}</p>
-                            <p className={`text-xs ${svc.used === 0 ? 'text-muted-foreground' : 'text-secondary font-semibold'}`}>{svc.used} dk   {svc.used}/{svc.total} kaldı</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-
-                    {/* Info Footer */}
-                    <div className="pt-2 border-t border-muted text-xs text-muted-foreground">
-                      1 bölge seçildi · Tahmini süre 30 dk
-                    </div>
-
-                    {/* Ekle Button */}
-                    <Button
-                      size="sm"
-                      className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-sm font-bold py-3"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Ekle
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Search Bar */}
-        <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Hizmet ara..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
-          />
-        </div>
-
-        {/* Service Categories */}
-        <div className="space-y-3">
-          {filteredCategories.map((category, index) => (
-            <Card
-              key={category.id}
-              className="bg-card border-border overflow-hidden hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom duration-500"
-              style={{ animationDelay: `${200 + index * 50}ms` }}
-            >
-              <button
-                onClick={() =>
-                  setExpandedCategory(expandedCategory === category.id ? null : category.id)
-                }
-                className="w-full px-4 py-4 flex items-center justify-between hover:bg-muted/30 transition-all duration-300"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="text-primary">{category.icon}</div>
-                  <div className="text-left">
-                    <p className="font-semibold text-foreground text-sm">{category.name}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
-                    {category.count}
-                  </span>
-                  <ChevronDown
-                    className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
-                      expandedCategory === category.id ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {/* Expanded Services */}
-              {expandedCategory === category.id && (
-                <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {category.services.map((service) => {
-                    const isSelected = isServiceSelected(service.id)
-                    return (
-                      <button
-                        key={service.id}
-                        onClick={() => handleServiceToggle(service, category.name)}
-                        className="w-full text-left"
-                      >
-                        <div
-                          className={`p-3 rounded-lg border-2 transition-all duration-300 ${
-                            isSelected
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/30 bg-card hover:bg-muted/20'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-foreground text-sm">{service.name}</p>
-                                {isSelected && <Check className="w-4 h-4 text-primary" />}
-                              </div>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {service.duration}
-                                </span>
-                                {service.tags?.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded"
-                                  >
-                                    ⚡ {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="flex items-baseline gap-2 justify-end">
-                                {service.originalPrice > 0 && service.salePrice < service.originalPrice && (
-                                  <span className="text-xs text-muted-foreground line-through">
-                                    {service.originalPrice}
-                                  </span>
-                                )}
-                                {(service.salePrice || service.originalPrice) > 0 && (
-                                  <p className="text-sm font-bold text-secondary">
-                                    {service.salePrice || service.originalPrice}
-                                    <span className="text-xs">₺</span>
-                                  </p>
-                                )}
-                              </div>
-                              <Button
-                                size="sm"
-                                variant={isSelected ? 'default' : 'outline'}
-                                className={`mt-2 rounded-full text-xs gap-1 w-full font-semibold py-2 ${
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
-                                    : 'border-2 border-primary text-primary hover:bg-primary/10'
-                                }`}
-                              >
-                                {isSelected ? (
-                                  <>
-                                    <Check className="w-3 h-3" />
-                                    Eklendi
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="w-3 h-3" />
-                                    Ekle
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-medium ${svc.used === 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{svc.name}</p>
+                          <p className={`text-xs ${svc.used === 0 ? 'text-muted-foreground' : 'text-secondary font-semibold'}`}>{svc.used} dk {svc.used}/{svc.total} kaldı</p>
                         </div>
-                      </button>
-                    )
-                  })}
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
-      </div>
+                      </label>
+                    ))}
+                  </div>
 
-      {/* Date and Time Selection - if services selected */}
-      {selectedServices.length > 0 && (
-        <div className="space-y-6 mt-8 pb-40" data-scroll-target="date-time">
-          {/* Date Selection */}
-          <div className="max-w-2xl mx-auto px-4">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
-              <Calendar className="w-4 h-4 text-primary" />
-              Tarih Seçin
-            </h3>
-            <div className="flex gap-2 pb-2 overflow-x-auto">
-              {[12, 13, 14, 15, 16].map((day) => (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDate(day.toString())}
-                  className={`px-3 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
-                    selectedDate === day.toString()
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  {day}
-                </button>
+                  {/* Info Footer */}
+                  <div className="pt-2 border-t border-muted text-xs text-muted-foreground">
+                    1 bölge seçildi · Tahmini süre 30 dk
+                  </div>
+
+                  {/* Ekle Button */}
+                  <Button
+                    size="sm"
+                    className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-sm font-bold py-3"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ekle
+                  </Button>
+                </div>
               ))}
             </div>
+          )}
+
+          {/* Search Bar */}
+          <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Hizmet ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
+            />
           </div>
 
-          {/* Time Slots */}
-          {selectedDate && (
-            <div className="mb-4 space-y-3">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                Saat Seçin
-              </h3>
-
-              {/* Morning */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Sabah</p>
-                <div className="grid grid-cols-5 gap-2 mb-3">
-                  {morningSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      onClick={() => {
-                        if (slot.available) {
-                          setSelectedTimeSlot(slot.time)
-                        } else {
-                          setShowWaitingList(true)
-                        }
-                      }}
-                      disabled={!slot.available}
-                      className={`p-2 rounded-lg text-xs font-semibold transition-all ${
-                        selectedTimeSlot === slot.time
-                          ? 'bg-primary text-primary-foreground'
-                          : slot.available
-                          ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
-                          : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
-                      }`}
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Afternoon */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">Öğleden Sonra</p>
-                <div className="grid grid-cols-5 gap-2">
-                  {afternoonSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      onClick={() => {
-                        if (slot.available) {
-                          setSelectedTimeSlot(slot.time)
-                        } else {
-                          setShowWaitingList(true)
-                        }
-                      }}
-                      disabled={!slot.available}
-                      className={`p-2 rounded-lg text-xs font-semibold transition-all ${
-                        selectedTimeSlot === slot.time
-                          ? 'bg-primary text-primary-foreground'
-                          : slot.available
-                          ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
-                          : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
-                      }`}
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Waiting List Modal */}
-          {showWaitingList && (
-            <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
-              <Card className="w-full rounded-t-2xl rounded-b-none border-b-0 animate-in slide-in-from-bottom duration-300">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <AlertCircle className="w-6 h-6 text-primary" />
-                    <h3 className="text-lg font-bold text-foreground">Bu Gün İçin Bekleme Listesine Girin</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Bir yer açılınca WhatsApp&apos;tan haber hesabı olur
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setShowWaitingList(false)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Vazgeç
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowWaitingList(false)
-                        // Handle waiting list action
-                      }}
-                      className="flex-1 bg-primary text-primary-foreground"
-                    >
-                      Sıraya Gir
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sticky Booking Footer */}
-      {selectedServices.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
-          <div className="max-w-2xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
-              {/* Price Section - Left */}
-              <div>
-                <p className="text-2xl font-black text-foreground">{totalPrice} ₺</p>
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1">
-                  Detaylı gör
-                </button>
-              </div>
-
-              {/* Confirm Button - Right */}
-              <Button
-                onClick={() => {
-                  if (!selectedDate || !selectedTimeSlot) {
-                    const element = document.querySelector('[data-scroll-target="date-time"]')
-                    if (element) {
-                      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }
-                }}
-                className={`px-8 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  selectedDate && selectedTimeSlot
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-muted text-muted-foreground cursor-not-allowed'
-                }`}
-                disabled={!selectedDate || !selectedTimeSlot}
+          {/* Service Categories */}
+          <div className="space-y-3">
+            {filteredCategories.map((category, index) => (
+              <Card
+                key={category.id}
+                className="bg-card border-border overflow-hidden hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom duration-500"
+                style={{ animationDelay: `${200 + index * 50}ms` }}
               >
-                Randevuyu Onayla
-              </Button>
-            </div>
+                <button
+                  onClick={() =>
+                    setExpandedCategory(expandedCategory === category.id ? null : category.id)
+                  }
+                  className="w-full px-4 py-4 flex items-center justify-between hover:bg-muted/30 transition-all duration-300"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-primary">{category.icon}</div>
+                    <div className="text-left">
+                      <p className="font-semibold text-foreground text-sm">{category.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                      {category.count}
+                    </span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
+                        expandedCategory === category.id ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {/* Expanded Services */}
+                {expandedCategory === category.id && (
+                  <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {category.services.map((service) => {
+                      const isSelected = isServiceSelected(service.id)
+                      return (
+                        <button
+                          key={service.id}
+                          onClick={() => handleServiceToggle(service, category.name)}
+                          className="w-full text-left"
+                        >
+                          <div
+                            className={`p-3 rounded-lg border-2 transition-all duration-300 ${
+                              isSelected
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/30 bg-card hover:bg-muted/20'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground text-sm">{service.name}</p>
+                                  {isSelected && <Check className="w-4 h-4 text-primary" />}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {service.duration}
+                                  </span>
+                                  {service.tags?.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded"
+                                    >
+                                      ⚡ {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <div className="flex items-baseline gap-2 justify-end">
+                                  {service.originalPrice > 0 && service.salePrice < service.originalPrice && (
+                                    <span className="text-xs text-muted-foreground line-through">
+                                      {service.originalPrice}
+                                    </span>
+                                  )}
+                                  {(service.salePrice || service.originalPrice) > 0 && (
+                                    <p className="text-sm font-bold text-secondary">
+                                      {service.salePrice || service.originalPrice}
+                                      <span className="text-xs">₺</span>
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  className={`mt-2 rounded-full text-xs gap-1 w-full font-semibold py-2 ${
+                                    isSelected
+                                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary'
+                                      : 'border-2 border-primary text-primary hover:bg-primary/10'
+                                  }`}
+                                >
+                                  {isSelected ? (
+                                    <>
+                                      <Check className="w-3 h-3" />
+                                      Eklendi
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="w-3 h-3" />
+                                      Ekle
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </CardContent>
+                )}
+              </Card>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Date and Time Selection - if services selected */}
+        {selectedServices.length > 0 && (
+          <div className="space-y-6 mt-8 pb-40" data-scroll-target="date-time">
+            {/* Date Selection */}
+            <div className="max-w-2xl mx-auto px-4">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
+                <Calendar className="w-4 h-4 text-primary" />
+                Tarih Seçin
+              </h3>
+              <div className="flex gap-2 pb-2 overflow-x-auto">
+                {[12, 13, 14, 15, 16].map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => setSelectedDate(day.toString())}
+                    className={`px-3 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                      selectedDate === day.toString()
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Slots */}
+            {selectedDate && (
+              <div className="mb-4 space-y-3">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  Saat Seçin
+                </h3>
+
+                {/* Morning */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Sabah</p>
+                  <div className="grid grid-cols-5 gap-2 mb-3">
+                    {morningSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        onClick={() => {
+                          if (slot.available) {
+                            setSelectedTimeSlot(slot.time)
+                          } else {
+                            setShowWaitingList(true)
+                          }
+                        }}
+                        disabled={!slot.available}
+                        className={`p-2 rounded-lg text-xs font-semibold transition-all ${
+                          selectedTimeSlot === slot.time
+                            ? 'bg-primary text-primary-foreground'
+                            : slot.available
+                            ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
+                            : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Afternoon */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Öğleden Sonra</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {afternoonSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        onClick={() => {
+                          if (slot.available) {
+                            setSelectedTimeSlot(slot.time)
+                          } else {
+                            setShowWaitingList(true)
+                          }
+                        }}
+                        disabled={!slot.available}
+                        className={`p-2 rounded-lg text-xs font-semibold transition-all ${
+                          selectedTimeSlot === slot.time
+                            ? 'bg-primary text-primary-foreground'
+                            : slot.available
+                            ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
+                            : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Waiting List Modal */}
+            {showWaitingList && (
+              <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
+                <Card className="w-full rounded-t-2xl rounded-b-none border-b-0 animate-in slide-in-from-bottom duration-300">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <AlertCircle className="w-6 h-6 text-primary" />
+                      <h3 className="text-lg font-bold text-foreground">Bu Gün İçin Bekleme Listesine Girin</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Bir yer açılınca WhatsApp&apos;tan haber hesabı olur
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setShowWaitingList(false)}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Vazgeç
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setShowWaitingList(false)
+                          // Handle waiting list action
+                        }}
+                        className="flex-1 bg-primary text-primary-foreground"
+                      >
+                        Sıraya Gir
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sticky Booking Footer */}
+        {selectedServices.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
+            <div className="max-w-2xl mx-auto px-4 py-4">
+              <div className="flex items-center justify-between gap-4">
+                {/* Price Section - Left */}
+                <div>
+                  <p className="text-2xl font-black text-foreground">{totalPrice} ₺</p>
+                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1">
+                    Detaylı gör
+                  </button>
+                </div>
+
+                {/* Confirm Button - Right */}
+                <Button
+                  onClick={() => {
+                    if (!selectedDate || !selectedTimeSlot) {
+                      const element = document.querySelector('[data-scroll-target="date-time"]')
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
+                    }
+                  }}
+                  className={`px-8 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    selectedDate && selectedTimeSlot
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  }`}
+                  disabled={!selectedDate || !selectedTimeSlot}
+                >
+                  Randevuyu Onayla
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Specialist Selection Modal */}
       {specialistModal && (
