@@ -16,7 +16,7 @@ export const DUMMY_SERVICES: ServiceCategory[] = [
   {
     id: 'cat-1',
     name: 'Yüz & Cilt Bakımı',
-    icon: '🧖‍♀️',
+    icon: '✨',
     services: [
       {
         id: 's1',
@@ -104,7 +104,7 @@ export const DUMMY_SERVICES: ServiceCategory[] = [
   {
     id: 'cat-8',
     name: 'Danışmanlık & Paketler',
-    icon: '📦',
+    icon: '📋',
     services: [
       { id: 's22', name: 'Cilt Analizi', duration: '25 dk', originalPrice: 150, salePrice: 0 },
       { id: 's23', name: 'Stil Danışmanlığı', duration: '45 dk', originalPrice: 200, salePrice: 0 },
@@ -114,7 +114,7 @@ export const DUMMY_SERVICES: ServiceCategory[] = [
   {
     id: 'cat-9',
     name: 'Diğer Hizmetler',
-    icon: '✨',
+    icon: '🎁',
     services: [
       { id: 's25', name: 'Çok Özel Hizmet 1', duration: '30 dk', originalPrice: 300, salePrice: 250 },
       { id: 's26', name: 'Çok Özel Hizmet 2', duration: '45 dk', originalPrice: 450, salePrice: 400 },

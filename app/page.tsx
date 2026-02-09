@@ -1513,12 +1513,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Tarih ve Saat</p>
                   <p className="text-sm font-bold text-foreground mt-1">
-                    {selectedDate?.toLocaleDateString('tr-TR', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {selectedDate
+                      ? new Date(selectedDate).toLocaleDateString('tr-TR', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : 'Tarih seçilmedi'}
                   </p>
                   <div className="flex gap-2 mt-1">
                     <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/50 rounded-lg text-sm font-semibold text-foreground">
