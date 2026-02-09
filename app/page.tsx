@@ -1529,7 +1529,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Tarih ve Saat</p>
                   <p className="text-sm font-bold text-foreground mt-1">
                     {selectedDate
-                      ? new Date(selectedDate).toLocaleDateString('tr-TR', {
+                      ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString('tr-TR', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -1537,16 +1537,11 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                         })
                       : 'Tarih seçilmedi'}
                   </p>
-                  <div className="flex gap-2 mt-1">
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/50 rounded-lg text-sm font-semibold text-foreground">
-                      <Clock className="w-4 h-4" />
-                      {selectedTimeSlot}
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/50 rounded-lg text-sm font-semibold text-foreground">
-                      <span className="text-muted-foreground text-xs">Tahmini bitiş:</span>
-                      {calculateEndTime()}
-                    </span>
-                  </div>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    {selectedTimeSlot && calculateEndTime()
+                      ? `${selectedTimeSlot} - ${calculateEndTime()}`
+                      : 'Saat seçilmedi'}
+                  </p>
                 </div>
               </div>
 
@@ -1572,36 +1567,61 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             {/* Services List */}
             <div className="space-y-3">
               <p className="text-sm font-bold text-foreground">Hizmetler</p>
-              {selectedServices.map((service, idx) => (
-                <div key={idx} className="bg-muted/30 rounded-xl p-3 space-y-2 border border-muted">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">{service.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{service.duration}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs line-through text-muted-foreground">{service.price.toLocaleString('tr-TR')}₺</p>
-                      <p className="text-sm font-bold text-primary">
-                        {(service.price * numberOfPeople).toLocaleString('tr-TR')}₺
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Specialists if selected */}
-                  {multiPersonSpecialistModal?.selections && Object.keys(multiPersonSpecialistModal.selections).length > 0 && (
-                    <div className="text-xs bg-primary/5 rounded-lg p-2 border border-primary/10">
-                      <p className="font-semibold text-foreground mb-1">Seçili Uzmanlar:</p>
-                      <div className="space-y-1">
-                        {Object.entries(multiPersonSpecialistModal.selections).map(([person, specialist]) => (
-                          <p key={person} className="text-muted-foreground">
-                            <span className="font-semibold">Kişi {Number(person) + 1}:</span> {specialist}
-                          </p>
-                        ))}
+              {numberOfPeople === 1 ? (
+                // Single person
+                selectedServices.map((service, idx) => (
+                  <div key={idx} className="bg-muted/30 rounded-xl p-3 space-y-2 border border-muted">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">{service.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{service.duration}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-primary">
+                          {service.price.toLocaleString('tr-TR')}₺
+                        </p>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Specialist if selected */}
+                    {multiPersonSpecialistModal?.selections?.[0] && (
+                      <div className="text-xs bg-primary/5 rounded-lg p-2 border border-primary/10">
+                        <p className="font-semibold text-foreground">
+                          Uzman: {multiPersonSpecialistModal.selections[0]}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                // Multiple people - show services per person
+                Array.from({ length: numberOfPeople }).map((_, personIdx) => (
+                  <div key={personIdx} className="bg-gradient-to-r from-primary/5 to-transparent rounded-xl p-3 border border-primary/10 space-y-2">
+                    <p className="text-sm font-bold text-foreground">Kişi {personIdx + 1}</p>
+                    {selectedServices.map((service, serviceIdx) => (
+                      <div key={serviceIdx} className="flex items-start justify-between gap-2 bg-white/40 rounded-lg p-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-foreground">{service.name}</p>
+                          <p className="text-xs text-muted-foreground">{service.duration}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-primary">
+                            {service.price.toLocaleString('tr-TR')}₺
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Specialist if selected */}
+                    {multiPersonSpecialistModal?.selections?.[personIdx] && (
+                      <div className="text-xs bg-primary/10 rounded-lg p-2 border border-primary/20 mt-2">
+                        <p className="font-semibold text-foreground">
+                          Uzman: {multiPersonSpecialistModal.selections[personIdx]}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Price Summary */}
