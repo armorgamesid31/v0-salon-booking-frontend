@@ -1,8 +1,8 @@
 'use client'
 
-import { CardTitle } from "@/components/ui/card"
-import { CardHeader } from "@/components/ui/card"
 import React from "react"
+import { CheckCircle } from 'lucide-react'
+
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -24,8 +24,8 @@ import {
   Plus,
   Calendar,
   Clock,
-  CheckCircle,
   Star,
+  X,
 } from 'lucide-react'
 
 interface ServiceItem {
@@ -50,34 +50,88 @@ interface PastAppointment {
   service: string
   date: string
   time: string
-  specialist: string
-  status?: string
+  specialists: string[]
+  packageName?: string
+  isRated?: boolean
 }
 
 interface ActivePackage {
   id: string
   name: string
+  badge: 'Aktif' | 'Bitiryor'
   remainingSessions: number
   totalSessions: number
   expiryDate: string
+  warning?: string
+  availableServices: Array<{
+    id: string
+    name: string
+    duration: string
+    used: number
+    total: number
+    isFinished?: boolean
+  }>
 }
 
-// Mock data
 const CUSTOMER = {
   name: 'Ayşe',
   greeting: 'Tekrar hoş geldin',
 }
 
 const PAST_APPOINTMENTS: PastAppointment[] = [
-  { id: 'a1', service: 'Tam Vücut Epilasyon', date: '2024-02-10', time: '14:00', specialist: 'Aylin' },
-  { id: 'a2', service: 'Saç Kesimi', date: '2024-01-28', time: '10:30', specialist: 'Mehmet' },
-  { id: 'a3', service: 'Cilt Bakımı', date: '2024-01-15', time: '15:00', specialist: 'Sema' },
-  { id: 'a4', service: 'Manicure', date: '2024-01-05', time: '11:00', specialist: 'Gül' },
+  {
+    id: 'a1',
+    service: 'Lazer',
+    date: '2024-03-12',
+    time: '14:00',
+    specialists: ['Bacak', 'Kol'],
+    packageName: 'Laser Paketi',
+    isRated: false,
+  },
+  {
+    id: 'a2',
+    service: 'Cilt Bakımı',
+    date: '2024-02-28',
+    time: '10:30',
+    specialists: ['Premium Yüz Bakımı'],
+    isRated: true,
+  },
+  {
+    id: 'a3',
+    service: 'Saç Kesimi',
+    date: '2024-02-15',
+    time: '15:00',
+    specialists: ['Mehmet'],
+    isRated: false,
+  },
 ]
 
 const ACTIVE_PACKAGES: ActivePackage[] = [
-  { id: 'p1', name: 'Tam Vücut Epilasyon Paketi', remainingSessions: 4, totalSessions: 6, expiryDate: '30 Haziran 2024' },
-  { id: 'p2', name: 'Saç Bakım Paketi', remainingSessions: 3, totalSessions: 5, expiryDate: '31 Temmuz 2024' },
+  {
+    id: 'p1',
+    name: 'Laser Paketi – Tam Vücut',
+    badge: 'Aktif',
+    remainingSessions: 6,
+    totalSessions: 10,
+    expiryDate: '30 Haziran 2024',
+    warning: 'Bacak bölgesi için son 2 hakkın kaldı',
+    availableServices: [
+      { id: 's1', name: 'Bacak Lazer', duration: '30 dk', used: 2, total: 4 },
+      { id: 's2', name: 'Kol Lazer', duration: '20 dk', used: 3, total: 4 },
+      { id: 's3', name: 'Bikini Bölgesi', duration: '15 dk', used: 4, total: 4, isFinished: true },
+    ],
+  },
+  {
+    id: 'p2',
+    name: 'Manikür & Pedikür Paketi',
+    badge: 'Bitiryor',
+    remainingSessions: 1,
+    totalSessions: 5,
+    expiryDate: '15 Nisan 2024',
+    availableServices: [
+      { id: 's4', name: 'Manikür', duration: '30 dk', used: 4, total: 5 },
+    ],
+  },
 ]
 
 const SERVICE_CATEGORIES: ServiceCategory[] = [
@@ -212,139 +266,22 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
   },
 ]
 
-const getNextDates = () => {
-  // Implementation of getNextDates
-  return [{ value: '2024-02-15', label: '15 Şubat 2024' }, { value: '2024-02-16', label: '16 Şubat 2024' }];
-}
-
-const generateTimeSlots = (serviceId: string, date: string) => {
-  // Implementation of generateTimeSlots
-  return ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00'];
-}
-
-const SERVICES = SERVICE_CATEGORIES.reduce((acc, category) => {
-  return acc.concat(category.services);
-}, []);
-
-const PACKAGES = ACTIVE_PACKAGES;
-
 export default function SalonDashboard() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [expandedHistory, setExpandedHistory] = useState(false)
   const [expandedPackages, setExpandedPackages] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [referralToggle, setReferralToggle] = useState(false)
-  const [expandedSection, setExpandedSection] = useState<string | null>('booking')
-  const [selectedServices, setSelectedServices] = useState<string[]>([])
-  const [bookingStep, setBookingStep] = useState<'service' | 'specialist' | 'datetime'>('service')
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [usePackage, setUsePackage] = useState(false)
-  const [availableDates, setAvailableDates] = useState(getNextDates())
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([])
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false)
-  const [isConfirmed, setIsConfirmed] = useState(false)
-  const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [ratingModal, setRatingModal] = useState<PastAppointment | null>(null)
+  const [serviceRating, setServiceRating] = useState(0)
+  const [staffRating, setStaffRating] = useState(0)
+  const [comment, setComment] = useState('')
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('tr-TR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
       day: 'numeric',
+      month: 'long',
     })
-  }
-
-  const handleServiceSelect = (serviceId: string) => {
-    setSelectedService(serviceId)
-    setSelectedDate(null)
-    setSelectedTime(null)
-    setAvailableTimeSlots([])
-  }
-
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date)
-    setSelectedTime(null)
-    setIsLoadingSlots(true)
-
-    // Simulate API call to check availability
-    setTimeout(() => {
-      const slots = generateTimeSlots(selectedService!, date)
-      setAvailableTimeSlots(slots)
-      setIsLoadingSlots(false)
-    }, 600)
-  }
-
-  const handleBooking = () => {
-    if (selectedService && selectedDate && selectedTime) {
-      setIsConfirmed(true)
-    }
-  }
-
-  const handleReset = () => {
-    setSelectedService(null)
-    setSelectedDate(null)
-    setSelectedTime(null)
-    setAvailableTimeSlots([])
-    setIsConfirmed(false)
-  }
-
-  const selectedServiceData = SERVICES.find((s) => s.id === selectedService)
-  const selectedDateLabel = availableDates.find((d) => d.value === selectedDate)?.label
-
-  if (isConfirmed && selectedServiceData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-primary-foreground" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl text-foreground">Randevu Onaylandı!</CardTitle>
-            <p className="text-sm text-muted-foreground mt-2">Randevunuz başarıyla kaydedildi</p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-secondary/50 rounded-lg p-5 space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Hizmet</p>
-                  <p className="font-semibold text-foreground">{selectedServiceData.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Tarih</p>
-                  <p className="font-semibold text-foreground">{selectedDateLabel}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Saat</p>
-                  <p className="font-semibold text-foreground">{selectedTime}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Süre</p>
-                  <p className="font-semibold text-foreground">{selectedServiceData.duration}</p>
-                </div>
-              </div>
-              <div className="h-px bg-border" />
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Fiyat</p>
-                <p className="text-2xl font-bold text-primary">{selectedServiceData.salePrice}</p>
-              </div>
-            </div>
-
-            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <p className="text-sm text-green-900 dark:text-green-100">
-                Onay e-postası gönderildi. Lütfen 10 dakika erken gelin.
-              </p>
-            </div>
-
-            <Button onClick={handleReset} className="w-full" size="lg">
-              Yeni Randevu Al
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   const filteredCategories = SERVICE_CATEGORIES.map((cat) => ({
@@ -355,6 +292,13 @@ export default function SalonDashboard() {
         cat.name.toLowerCase().includes(searchQuery.toLowerCase())
     ),
   })).filter((cat) => cat.services.length > 0 || !searchQuery)
+
+  const handleSubmitRating = () => {
+    setRatingModal(null)
+    setServiceRating(0)
+    setStaffRating(0)
+    setComment('')
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -419,28 +363,44 @@ export default function SalonDashboard() {
         {expandedHistory && (
           <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
             <CardContent className="p-4 space-y-3">
-              <h3 className="font-semibold text-foreground text-sm">Geçmiş Randevularınız</h3>
+              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                Son Randevular
+              </h3>
               <div className="space-y-2">
                 {PAST_APPOINTMENTS.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors duration-300 group"
-                  >
-                    <Calendar className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm group-hover:text-primary transition-colors">
-                        {apt.service}
+                  <div key={apt.id} className="flex items-start justify-between gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300">
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.service}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hizmetler: {apt.specialists.join(', ')}
                       </p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
-                        <span>{formatDate(apt.date)}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {apt.time}
-                        </span>
-                        <span>•</span>
-                        <span>{apt.specialist}</span>
-                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs px-3">
+                        Tekrarla
+                      </Button>
+                      {apt.isRated ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-secondary text-secondary rounded-full text-xs px-3 bg-transparent"
+                          disabled
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Değerlendirildi
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs px-3 bg-transparent"
+                          onClick={() => setRatingModal(apt)}
+                        >
+                          <Star className="w-3 h-3 mr-1" />
+                          Değerlendir
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -452,30 +412,73 @@ export default function SalonDashboard() {
         {/* Active Packages Section */}
         {expandedPackages && (
           <Card className="bg-card border-border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-            <CardContent className="p-4 space-y-3">
-              <h3 className="font-semibold text-foreground text-sm">Aktif Paketleriniz</h3>
-              <div className="space-y-3">
+            <CardContent className="p-4 space-y-4">
+              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                Paketlerim
+              </h3>
+              <div className="space-y-4">
                 {ACTIVE_PACKAGES.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className="p-3 rounded-lg bg-secondary/10 border border-secondary/30 hover:border-secondary/50 transition-all duration-300"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-foreground text-sm">{pkg.name}</p>
-                      <span className="text-xs font-semibold text-secondary bg-secondary/20 px-2 py-1 rounded">
-                        {pkg.remainingSessions}/{pkg.totalSessions}
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden mb-2">
-                      <div
-                        className="bg-secondary h-full transition-all duration-500"
-                        style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Son geçerlilik: {formatDate(pkg.expiryDate)}
-                    </p>
-                  </div>
+                  <Card key={pkg.id} className="bg-secondary/5 border-secondary/30 overflow-hidden rounded-2xl">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground text-sm">{pkg.name}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{pkg.totalSessions} seans paket</p>
+                        </div>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${pkg.badge === 'Aktif' ? 'bg-secondary text-secondary-foreground' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {pkg.badge}
+                        </span>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-medium text-foreground">{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
+                          <p className="text-xs font-medium text-secondary">{Math.round((pkg.remainingSessions / pkg.totalSessions) * 100)}%</p>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-secondary h-full transition-all duration-500"
+                            style={{ width: `${(pkg.remainingSessions / pkg.totalSessions) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {pkg.warning && (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 flex items-start gap-2">
+                          <span className="text-yellow-600 dark:text-yellow-400 mt-0.5">⚠️</span>
+                          <p className="text-xs text-yellow-800 dark:text-yellow-200">{pkg.warning}</p>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-foreground">Kullanılabilir Hizmetler:</p>
+                        {pkg.availableServices.map((service) => (
+                          <label key={service.id} className={`flex items-start gap-3 p-2 rounded-lg border-2 cursor-pointer transition-all duration-300 ${service.isFinished ? 'border-muted bg-muted/30 opacity-50' : 'border-secondary/30 hover:border-secondary/50 bg-white dark:bg-slate-900'}`}>
+                            <input
+                              type="checkbox"
+                              disabled={service.isFinished}
+                              className="w-4 h-4 mt-1 accent-secondary"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{service.name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-muted-foreground">{service.duration}</span>
+                                <span className={`text-xs font-semibold ${service.isFinished ? 'text-muted-foreground line-through' : 'text-secondary'}`}>
+                                  {service.used}/{service.total} kaldı
+                                </span>
+                                {service.isFinished && <span className="text-xs text-muted-foreground">Tükendi</span>}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">Son geçerlilik: {pkg.expiryDate}</p>
+                      <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                        Seçilenlerle Devam Et
+                      </Button>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>
@@ -537,7 +540,7 @@ export default function SalonDashboard() {
                 <div className="flex items-center gap-3">
                   <div className="text-primary">{category.icon}</div>
                   <div className="text-left">
-                    <p className="font-semibold text-foreground text-sm group-hover:text-primary">{category.name}</p>
+                    <p className="font-semibold text-foreground text-sm">{category.name}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -552,7 +555,6 @@ export default function SalonDashboard() {
                 </div>
               </button>
 
-              {/* Expanded Services */}
               {expandedCategory === category.id && (
                 <CardContent className="pt-0 pb-4 px-4 border-t border-border space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                   {category.services.map((service) => (
@@ -604,232 +606,97 @@ export default function SalonDashboard() {
             </Card>
           ))}
         </div>
+      </div>
 
-        {/* Booking Section */}
-        <Card className="border-0 shadow-sm">
-          <button
-            onClick={() =>
-              setExpandedSection(expandedSection === 'booking' ? null : 'booking')
-            }
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Yeni Randevu Al</h2>
+      {/* Rating Modal */}
+      {ratingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <Card className="w-full max-w-md animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Randevunu Değerlendir</h2>
+              <button
+                onClick={() => setRatingModal(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <ChevronDown
-              className={`w-5 h-5 text-muted-foreground transition-transform ${
-                expandedSection === 'booking' ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
+            <CardContent className="p-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {formatDate(ratingModal.date)} • {ratingModal.service} ({ratingModal.specialists.join(', ')})
+              </p>
 
-          {expandedSection === 'booking' && (
-            <CardContent className="pt-0 pb-6 space-y-6 border-t border-border">
-              {/* Step 1: Services */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                    1
-                  </span>
-                  Hizmet Seçin
-                </h3>
-                <div className="space-y-2">
-                  {SERVICES.map((service) => (
-                    <label
-                      key={service.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border-2 border-border hover:border-primary/50 cursor-pointer transition-all"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedServices.includes(service.id)}
-                        onChange={(e) => {
-                          setSelectedServices(
-                            e.target.checked
-                              ? [...selectedServices, service.id]
-                              : selectedServices.filter((id) => id !== service.id)
-                          )
-                        }}
-                        className="w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">{service.name}</p>
-                        <p className="text-xs text-muted-foreground">{service.duration}</p>
-                      </div>
-                    </label>
-                  ))}
+                <div>
+                  <label className="text-sm font-semibold text-foreground block mb-2">
+                    Hizmet değerlendir <span className="text-primary">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <button
+                        key={i}
+                        onClick={() => setServiceRating(i)}
+                        className="transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            i <= serviceRating
+                              ? 'fill-primary text-primary'
+                              : 'text-muted-foreground'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-foreground block mb-2">
+                    Yorumun
+                  </label>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Deneyimin nasıldı? (istege bağlı)"
+                    className="w-full p-3 border-2 border-border rounded-lg bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary resize-none"
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-foreground block mb-2">
+                    Zeynep - Personel Değerlendirmesi
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <button
+                        key={i}
+                        onClick={() => setStaffRating(i)}
+                        className="transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            i <= staffRating
+                              ? 'fill-primary text-primary'
+                              : 'text-muted-foreground'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Package Option */}
-              {selectedServices.length > 0 && PACKAGES.length > 0 && (
-                <div className="bg-secondary/50 rounded-lg p-4">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={usePackage}
-                      onChange={(e) => setUsePackage(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-foreground">
-                      Paketimden kullan
-                    </span>
-                  </label>
-                </div>
-              )}
-
-              {/* Step 2: Date & Time */}
-              {selectedServices.length > 0 && (
-                <div className="space-y-3 pt-4 border-t border-border">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                      2
-                    </span>
-                    Tarih & Saat
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-2">
-                        Tarih
-                      </label>
-                      <div className="flex gap-2 flex-wrap">
-                        {availableDates.map((date) => (
-                          <button
-                            key={date.value}
-                            onClick={() => handleDateSelect(date.value)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              selectedDate === date.value
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-secondary border border-border hover:border-primary'
-                            }`}
-                          >
-                            {date.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {selectedDate && (
-                      <div>
-                        <label className="text-xs font-semibold text-muted-foreground block mb-2">
-                          Saat
-                        </label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {availableTimeSlots.map((time) => (
-                            <button
-                              key={time}
-                              onClick={() => setSelectedTime(time)}
-                              className={`px-2 py-2 rounded text-sm font-medium transition-all ${
-                                selectedTime === time
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-secondary border border-border hover:border-primary'
-                              }`}
-                            >
-                              {time}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Confirm Button */}
-              {selectedServiceData && selectedDate && selectedTime && (
-                <Button
-                  onClick={handleBooking}
-                  disabled={!selectedService || !selectedDate || !selectedTime}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 font-semibold"
-                >
-                  Randevuyu Onayla
-                </Button>
-              )}
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Appointment History */}
-        <Card className="border-0 shadow-sm">
-          <button
-            onClick={() =>
-              setExpandedSection(expandedSection === 'history' ? null : 'history')
-            }
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Geçmiş Randevular</h2>
-            </div>
-            <ChevronDown
-              className={`w-5 h-5 text-muted-foreground transition-transform ${
-                expandedSection === 'history' ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {expandedSection === 'history' && (
-            <CardContent className="pt-0 pb-6 border-t border-border space-y-2">
-              {PAST_APPOINTMENTS.map((apt) => (
-                <div key={apt.id} className="flex items-start justify-between gap-4 p-3 rounded-lg bg-secondary/30">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{apt.service}</p>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(apt.date)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {apt.time}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Star className="w-3 h-3" />
-                        {apt.specialist}
-                      </span>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="flex-shrink-0 bg-transparent">
-                    Tekrar Al
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Waiting List */}
-        <Card className="border-0 shadow-sm border-l-4 border-l-primary">
-          <button
-            onClick={() =>
-              setExpandedSection(expandedSection === 'waiting' ? null : 'waiting')
-            }
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-secondary/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Bekleme Listesi</h2>
-            </div>
-            <ChevronDown
-              className={`w-5 h-5 text-muted-foreground transition-transform ${
-                expandedSection === 'waiting' ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {expandedSection === 'waiting' && (
-            <CardContent className="pt-0 pb-6 border-t border-border space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Müsait olmayan tarihlerde hizmet almak istiyorsanız bekleme listesine katılabilirsiniz.
-              </p>
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Bekleme Listesine Ekle
+              <Button
+                onClick={handleSubmitRating}
+                className="w-full bg-muted text-muted-foreground hover:bg-muted/80"
+              >
+                Gönder
               </Button>
             </CardContent>
-          )}
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
