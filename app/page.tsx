@@ -343,20 +343,31 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
   return (
     <div className="min-h-screen bg-background pb-40">
-      {/* Header */}
+      {/* Header with Dynamic Logo */}
       <div className="bg-background border-b-4 border-primary sticky top-0 z-20 animate-in fade-in slide-in-from-top duration-300">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          {/* Logo Area - Centered */}
-          <div className="flex flex-col items-center justify-center space-y-4">
-            {/* Salon Logo */}
-            <div className="w-32 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center ring-2 ring-primary/20">
-              <div className="text-6xl font-serif font-bold text-primary">P</div>
+        <div className="max-w-2xl mx-auto px-4">
+          {/* Logo Area - Responsive & Dynamic */}
+          <div className="flex flex-col items-center justify-center py-6 md:py-8">
+            {/* Salon Logo - Scales based on content */}
+            <div className="w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 flex items-center justify-center">
+              <img
+                src="https://via.placeholder.com/128?text=SALON"
+                alt="Salon Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
-            
-            {/* Optional: Decorative elements or salon subtitle can go here */}
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground font-medium">Randevu Sayfası</p>
-            </div>
+          </div>
+
+          {/* Divider Line */}
+          <div className="h-1 bg-primary/40"></div>
+
+          {/* Welcome Message */}
+          <div className="py-4 md:py-6 text-center">
+            <p className="text-sm md:text-base text-foreground leading-relaxed">
+              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır
+              <br />
+              seni tekrar görmek için sabırsızlanıyoruz 🌟
+            </p>
           </div>
         </div>
       </div>
