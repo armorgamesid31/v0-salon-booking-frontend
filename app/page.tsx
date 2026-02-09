@@ -375,24 +375,24 @@ export default function SalonDashboard() {
                 <History className="w-5 h-5 text-primary" />
                 <span className="font-bold">Son Randevular</span>
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {PAST_APPOINTMENTS.map((apt) => (
-                  <div key={apt.id} className="flex items-start justify-between gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300">
-                    <div className="flex-1">
+                  <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300">
+                    <div className="flex-1 mb-3">
                       <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.service}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Hizmetler: {apt.specialists.join(', ')}
                       </p>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs px-3">
+                    <div className="flex flex-col gap-2">
+                      <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs w-full">
                         Tekrarla
                       </Button>
                       {apt.isRated ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-secondary text-secondary rounded-full text-xs px-3 bg-transparent"
+                          className="border-secondary text-secondary rounded-full text-xs w-full bg-transparent"
                           disabled
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
@@ -402,7 +402,7 @@ export default function SalonDashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs px-3 bg-transparent"
+                          className="border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs w-full bg-transparent"
                           onClick={() => setRatingModal(apt)}
                         >
                           <Star className="w-3 h-3 mr-1" />
