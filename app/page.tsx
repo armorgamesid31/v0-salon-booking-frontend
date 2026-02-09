@@ -639,23 +639,27 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               {/* Gender and Person Counter Controls */}
               <div className="flex items-center justify-between gap-4">
                 {/* Gender Toggle */}
-                <div className="flex gap-2 bg-muted/20 rounded-xl p-1.5">
+                <div className={`flex gap-2 rounded-2xl p-2 transition-all duration-300 ${
+                  selectedGender === 'female'
+                    ? 'bg-pink-100 dark:bg-pink-950/30'
+                    : 'bg-blue-100 dark:bg-blue-950/30'
+                }`}>
                   <button
                     onClick={() => setSelectedGender('female')}
-                    className={`relative px-4 py-2 rounded-lg text-lg font-semibold transition-all duration-300 flex items-center justify-center min-w-14 ${
+                    className={`px-4 py-2 rounded-lg text-2xl font-semibold transition-all duration-300 flex items-center justify-center min-w-16 ${
                       selectedGender === 'female'
-                        ? 'bg-primary/10 text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'bg-pink-300/60 shadow-md'
+                        : 'hover:bg-pink-200/40'
                     }`}
                   >
                     👩
                   </button>
                   <button
                     onClick={() => setSelectedGender('male')}
-                    className={`relative px-4 py-2 rounded-lg text-lg font-semibold transition-all duration-300 flex items-center justify-center min-w-14 ${
+                    className={`px-4 py-2 rounded-lg text-2xl font-semibold transition-all duration-300 flex items-center justify-center min-w-16 ${
                       selectedGender === 'male'
-                        ? 'bg-primary/10 text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'bg-blue-300/60 shadow-md'
+                        : 'hover:bg-blue-200/40'
                     }`}
                   >
                     👨
@@ -663,23 +667,29 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 </div>
 
                 {/* Person Counter */}
-                <div className="flex items-center gap-3 bg-muted/20 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 bg-muted/30 rounded-2xl px-4 py-2 border border-muted">
                   <button
                     onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                    className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                    className="text-foreground hover:text-primary transition-colors font-bold text-lg leading-none"
+                    aria-label="Decrease people count"
                   >
-                    <span className="text-lg font-semibold">−</span>
+                    −
                   </button>
-                  <div className="flex flex-col items-center min-w-10">
-                    <span className="text-base font-bold text-foreground">{numberOfPeople}</span>
-                    <span className="text-xs text-muted-foreground font-medium">kişi</span>
+                  <div className="flex flex-col items-center px-3 py-1">
+                    <span className="text-lg font-bold text-foreground">{numberOfPeople}</span>
+                    <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
                   </div>
                   <button
                     onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                    className="text-muted-foreground hover:text-foreground transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`font-bold text-lg leading-none transition-all ${
+                      numberOfPeople >= 4
+                        ? 'text-muted-foreground/50 cursor-not-allowed'
+                        : 'text-foreground hover:text-primary'
+                    }`}
                     disabled={numberOfPeople >= 4}
+                    aria-label="Increase people count"
                   >
-                    <span className="text-lg font-semibold">+</span>
+                    +
                   </button>
                 </div>
               </div>
