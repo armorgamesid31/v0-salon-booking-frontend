@@ -318,7 +318,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
         service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cat.name.toLowerCase().includes(searchQuery.toLowerCase())
     ),
-  })).filter((cat) => cat.services.length > 0 || !searchQuery)
+  })).filter((cat) => cat.services.length > 0)
 
   const morningSlots = TIME_SLOTS.filter((slot) => {
     const hour = parseInt(slot.time.split(':')[0])
