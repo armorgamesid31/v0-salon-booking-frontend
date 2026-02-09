@@ -691,14 +691,11 @@ export default function SalonDashboard() {
         {selectedServices.length > 0 && (
           <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
             <div className="max-w-2xl mx-auto px-4 py-3">
-              <div className="flex items-center justify-between gap-3 h-16">
+              <div className="flex items-center justify-between gap-4">
                 {/* Price Section - Left */}
-                <div className="flex flex-col justify-center h-full leading-tight">
-                  <div className="flex items-baseline gap-0.5">
-                    <p className="text-xl font-black text-foreground">{totalPrice}</p>
-                    <p className="text-lg font-black text-foreground">₺</p>
-                  </div>
-                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left mt-0.5 leading-tight">
+                <div className="flex flex-col justify-center gap-1">
+                  <p className="text-2xl font-black text-foreground leading-none">{totalPrice}₺</p>
+                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left leading-tight">
                     Detaylı<br />gör
                   </button>
                 </div>
@@ -713,7 +710,7 @@ export default function SalonDashboard() {
                       }
                     }
                   }}
-                  className={`px-6 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 h-14 ${
+                  className={`px-6 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                     selectedDate && selectedTimeSlot
                       ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                       : 'bg-muted text-muted-foreground cursor-not-allowed'
