@@ -343,36 +343,30 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
   return (
     <div className="min-h-screen bg-background pb-40">
-      {/* Header with Dynamic Logo */}
-      <div className="bg-background border-b-4 border-primary">
-        <div className="max-w-2xl mx-auto px-4">
-          {/* Logo Area - Responsive & Dynamic */}
-          <div className="flex flex-col items-center justify-center py-8">
-            {/* Salon Logo */}
-            <div className="flex items-center justify-center">
+      {/* Header with Logo and Welcome Message */}
+      <div className="bg-background">
+        <div className="max-w-2xl mx-auto px-4 py-12">
+          {/* Logo Area */}
+          <div className="flex flex-col items-center justify-center mb-8">
+            <div className="flex items-center justify-center mb-3">
               <img
-                src="https://via.placeholder.com/128?text=SALON"
+                src="https://via.placeholder.com/140?text=SALON"
                 alt="Salon Logo"
-                className="w-auto h-24 md:h-32 object-contain"
+                className="w-auto h-28 md:h-36 object-contain"
               />
             </div>
+            <p className="text-xs md:text-sm text-muted-foreground font-medium tracking-wider">
+              NAIL & BEAUTY BAR
+            </p>
           </div>
 
-          {/* Divider Line */}
-          <div className="h-1 bg-primary/40"></div>
-
-          {/* Welcome Message - Multi-line format like reference */}
-          <div className="py-6 text-center space-y-1">
-            <p className="text-sm md:text-base text-foreground">
-              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey
+          {/* Welcome Message */}
+          <div className="text-center">
+            <p className="text-sm md:text-base text-foreground leading-relaxed">
+              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır
+              <br />
+              seni tekrar görmek için sabırsızlanıyoruz 🌟
             </p>
-            <p className="text-sm md:text-base text-foreground">
-              yolundadır
-            </p>
-            <p className="text-sm md:text-base text-foreground">
-              seni tekrar görmek için sabırsızlanıyoruz
-            </p>
-            <p className="text-lg">🌟</p>
           </div>
         </div>
       </div>
