@@ -667,23 +667,23 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 </div>
 
                 {/* Person Counter */}
-                <div className="flex items-center gap-2 bg-muted/30 rounded-2xl px-4 py-2 border border-muted">
+                <div className="flex items-center justify-between gap-3 bg-muted/30 rounded-2xl px-5 py-2.5 border border-muted min-w-max">
                   <button
                     onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                    className="text-foreground hover:text-primary transition-colors font-bold text-lg leading-none"
+                    className="text-foreground hover:text-primary transition-colors font-bold text-xl leading-none w-6 h-6 flex items-center justify-center"
                     aria-label="Decrease people count"
                   >
                     −
                   </button>
-                  <div className="flex flex-col items-center px-3 py-1">
-                    <span className="text-lg font-bold text-foreground">{numberOfPeople}</span>
+                  <div className="flex flex-col items-center px-4">
+                    <span className="text-base font-bold text-foreground">{numberOfPeople}</span>
                     <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
                   </div>
                   <button
                     onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                    className={`font-bold text-lg leading-none transition-all ${
+                    className={`font-bold text-xl leading-none transition-all w-6 h-6 flex items-center justify-center ${
                       numberOfPeople >= 4
-                        ? 'text-muted-foreground/50 cursor-not-allowed'
+                        ? 'text-muted-foreground/40 cursor-not-allowed'
                         : 'text-foreground hover:text-primary'
                     }`}
                     disabled={numberOfPeople >= 4}
