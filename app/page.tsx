@@ -300,7 +300,10 @@ const SalonDashboard = () => {
         const durationStr = service.duration
         const minutes = parseInt(durationStr) || 0
         
-        personIds.forEach((personIdx) => {
+        // Fallback: if no mapping exists, assign to first person
+        const idsToUse = personIds.length > 0 ? personIds : [0]
+        
+        idsToUse.forEach((personIdx) => {
           if (!personDurations[personIdx]) {
             personDurations[personIdx] = 0
           }
@@ -346,14 +349,15 @@ const SalonDashboard = () => {
     setSelectedDate(null)
     setSelectedTimeSlot(null)
 
-    // Show specialist selection modal ONLY if adding a new service (not removing)
-    if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id) && numberOfPeople > 1) {
+    // Show person selection modal for multi-person bookings OR specialist services
+    if (!isCurrentlySelected && numberOfPeople > 1) {
+      // Multi-person: always show person selection
       setPersonSelectionModal({
         service: serviceData,
         numberOfPeople: numberOfPeople,
       })
     } else if (!isCurrentlySelected && SPECIALIST_SERVICES.includes(service.id)) {
-      // Single person - use existing modal
+      // Single person specialist service: show specialist modal
       setSpecialistModal(serviceData)
       setSelectedSpecialists([])
     }
