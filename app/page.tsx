@@ -229,7 +229,25 @@ const SalonDashboard = () => {
     numberOfPeople: number
   } | null>(null)
 
-  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0) * numberOfPeople
+  const totalPrice = (() => {
+    if (numberOfPeople === 1) {
+      // Single person - sum all selected services
+      return selectedServices.reduce((sum, s) => sum + s.price, 0)
+    } else {
+      // Multiple people - each person pays for their selected services
+      let total = 0
+      for (let personIdx = 0; personIdx < numberOfPeople; personIdx++) {
+        const personServicesPrice = selectedServices
+          .filter((service) => {
+            const personIds = servicePersonMapping[service.id] || []
+            return personIds.includes(personIdx)
+          })
+          .reduce((sum, s) => sum + s.price, 0)
+        total += personServicesPrice
+      }
+      return total
+    }
+  })()
 
   // Helper: Toplam süreyi hesapla (dakika cinsinden)
   const WELCOME_MESSAGES = [
