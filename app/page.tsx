@@ -269,41 +269,41 @@ const SalonDashboard = () => {
 
   const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
 
-  const handleRepeatAppointment = (appointment: PastAppointment) => {
-    // Find services that were in this appointment and add them
-    const appointmentServices: SelectedService[] = appointment.services
-      .map((serviceId) => {
-        // Search for this service in all categories
-        for (const category of SERVICE_CATEGORIES) {
-          const found = category.services.find((s) => s.id === serviceId)
-          if (found) {
-            return {
-              id: found.id,
-              name: `${category.name} - ${found.name}`,
-              price: 0, // Repeat appointments are free
-              duration: found.duration,
-            }
+const handleRepeatAppointment = (appointment: PastAppointment) => {
+  // Find services that were in this appointment and add them with correct prices
+  const appointmentServices: SelectedService[] = appointment.services
+    .map((serviceId) => {
+      // Search for this service in all categories
+      for (const category of SERVICE_CATEGORIES) {
+        const found = category.services.find((s) => s.id === serviceId)
+        if (found) {
+          return {
+            id: found.id,
+            name: `${category.name} - ${found.name}`,
+            price: found.salePrice || found.originalPrice,
+            duration: found.duration,
           }
         }
-        return null
-      })
-      .filter((s) => s !== null) as SelectedService[]
-
-    // Add services to selection and clear date/time
-    setSelectedServices((prev) => {
-      const newServices = [...prev]
-      for (const service of appointmentServices) {
-        if (!newServices.find((s) => s.id === service.id)) {
-          newServices.push(service)
-        }
       }
-      return newServices
+      return null
     })
+    .filter((s) => s !== null) as SelectedService[]
 
-    // Reset date and time
-    setSelectedDate(null)
-    setSelectedTimeSlot(null)
-  }
+  // Add services to selection and clear date/time
+  setSelectedServices((prev) => {
+    const newServices = [...prev]
+    for (const service of appointmentServices) {
+      if (!newServices.find((s) => s.id === service.id)) {
+        newServices.push(service)
+      }
+    }
+    return newServices
+  })
+
+  // Reset date and time
+  setSelectedDate(null)
+  setSelectedTimeSlot(null)
+}
 
   // Get day name abbreviations
   const getDayName = (dayNumber: number) => {
@@ -489,35 +489,56 @@ const SalonDashboard = () => {
                     <p className="font-bold text-sm text-foreground">{pkg.name}</p>
                   </div>
                   <div className="space-y-2 p-3">
-                    {pkg.availableServices.map((svc) => (
-                      <div key={svc.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/20">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">{svc.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {svc.used}/{svc.total} kaldı
-                          </p>
+                    {pkg.availableServices.map((svc) => {
+                      const serviceId = `pkg-${pkg.id}-${svc.id}`
+                      const isAdded = selectedServices.some((s) => s.id === serviceId)
+                      const percentLeft = (svc.used / svc.total) * 100
+                      const getProgressColor = () => {
+                        if (percentLeft > 50) return 'bg-green-500'
+                        if (percentLeft > 25) return 'bg-yellow-500'
+                        return 'bg-red-500'
+                      }
+
+                      return (
+                        <div key={svc.id} className="space-y-1.5 rounded-lg bg-muted/20 p-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground">{svc.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {svc.used}/{svc.total} kaldı
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const serviceToAdd: SelectedService = {
+                                  id: serviceId,
+                                  name: `${pkg.name} - ${svc.name}`,
+                                  price: 0,
+                                  duration: svc.duration,
+                                }
+                                setSelectedServices((prev) => [...prev, serviceToAdd])
+                                setSelectedDate(null)
+                                setSelectedTimeSlot(null)
+                              }}
+                              disabled={svc.used === 0}
+                              className={`rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 border-secondary text-secondary hover:bg-secondary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-all whitespace-nowrap ${
+                                isAdded ? 'bg-secondary/20' : 'bg-transparent'
+                              }`}
+                            >
+                              <Plus className="w-3 h-3" />
+                              {isAdded ? 'Eklendi' : 'Ekle'}
+                            </button>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ${getProgressColor()}`}
+                              style={{ width: `${percentLeft}%` }}
+                            />
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const serviceToAdd: SelectedService = {
-                              id: `pkg-${pkg.id}-${svc.id}`,
-                              name: `${pkg.name} - ${svc.name}`,
-                              price: 0,
-                              duration: svc.duration,
-                            }
-                            setSelectedServices((prev) => [...prev, serviceToAdd])
-                            setSelectedDate(null)
-                            setSelectedTimeSlot(null)
-                          }}
-                          disabled={svc.used === 0}
-                          className="rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                        >
-                          <Plus className="w-3 h-3" />
-                          Ekle
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               ))}
