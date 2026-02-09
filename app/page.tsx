@@ -624,7 +624,62 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
           {/* Search and Filters Control Bar */}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
             <div className="bg-card rounded-2xl border-2 border-border p-4 space-y-4">
-              {/* Search Input */}
+              {/* Person Counter - TOP */}
+              <div className="flex items-center justify-center gap-6 bg-muted/30 rounded-2xl px-6 py-4 border border-muted">
+                <button
+                  onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
+                  className="text-foreground hover:text-primary transition-colors font-bold text-2xl leading-none"
+                  aria-label="Decrease people count"
+                >
+                  −
+                </button>
+                <div className="flex flex-col items-center px-8">
+                  <span className="text-2xl font-bold text-foreground">{numberOfPeople}</span>
+                  <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
+                </div>
+                <button
+                  onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
+                  className={`font-bold text-2xl leading-none transition-all ${
+                    numberOfPeople >= 4
+                      ? 'text-muted-foreground/40 cursor-not-allowed'
+                      : 'text-foreground hover:text-primary'
+                  }`}
+                  disabled={numberOfPeople >= 4}
+                  aria-label="Increase people count"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Gender Toggle - MIDDLE */}
+              <div className={`flex items-center justify-center gap-6 rounded-2xl p-3 transition-all duration-300 ${
+                selectedGender === 'female'
+                  ? 'bg-pink-100 dark:bg-pink-950/30'
+                  : 'bg-blue-100 dark:bg-blue-950/30'
+              }`}>
+                <button
+                  onClick={() => setSelectedGender('female')}
+                  className={`flex-1 flex items-center justify-center py-3 rounded-lg text-3xl font-semibold transition-all duration-300 ${
+                    selectedGender === 'female'
+                      ? 'bg-pink-300/60 shadow-md scale-105'
+                      : 'hover:bg-pink-200/40 scale-95 opacity-70'
+                  }`}
+                >
+                  👩
+                </button>
+                <button
+                  onClick={() => setSelectedGender('male')}
+                  className={`flex-1 flex items-center justify-center py-3 rounded-lg text-3xl font-semibold transition-all duration-300 ${
+                    selectedGender === 'male'
+                      ? 'bg-blue-300/60 shadow-md scale-105'
+                      : 'hover:bg-blue-200/40 scale-95 opacity-70'
+                  }`}
+                >
+                  👨
+                </button>
+              </div>
+
+              {/* Search Input - BOTTOM */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
@@ -634,64 +689,6 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 transition-colors duration-300"
                 />
-              </div>
-
-              {/* Gender and Person Counter Controls */}
-              <div className="flex flex-col gap-4">
-                {/* Gender Toggle */}
-                <div className={`flex gap-2 rounded-2xl p-2 transition-all duration-300 ${
-                  selectedGender === 'female'
-                    ? 'bg-pink-100 dark:bg-pink-950/30'
-                    : 'bg-blue-100 dark:bg-blue-950/30'
-                }`}>
-                  <button
-                    onClick={() => setSelectedGender('female')}
-                    className={`px-4 py-2 rounded-lg text-2xl font-semibold transition-all duration-300 flex items-center justify-center min-w-16 ${
-                      selectedGender === 'female'
-                        ? 'bg-pink-300/60 shadow-md scale-105'
-                        : 'hover:bg-pink-200/40 scale-95 opacity-70'
-                    }`}
-                  >
-                    👩
-                  </button>
-                  <button
-                    onClick={() => setSelectedGender('male')}
-                    className={`px-4 py-2 rounded-lg text-2xl font-semibold transition-all duration-300 flex items-center justify-center min-w-16 ${
-                      selectedGender === 'male'
-                        ? 'bg-blue-300/60 shadow-md scale-105'
-                        : 'hover:bg-blue-200/40 scale-95 opacity-70'
-                    }`}
-                  >
-                    👨
-                  </button>
-                </div>
-
-                {/* Person Counter */}
-                <div className="flex items-center justify-center gap-4 bg-muted/30 rounded-2xl px-6 py-3 border border-muted">
-                  <button
-                    onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                    className="text-foreground hover:text-primary transition-colors font-bold text-2xl leading-none"
-                    aria-label="Decrease people count"
-                  >
-                    −
-                  </button>
-                  <div className="flex flex-col items-center px-6">
-                    <span className="text-xl font-bold text-foreground">{numberOfPeople}</span>
-                    <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
-                  </div>
-                  <button
-                    onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                    className={`font-bold text-2xl leading-none transition-all ${
-                      numberOfPeople >= 4
-                        ? 'text-muted-foreground/40 cursor-not-allowed'
-                        : 'text-foreground hover:text-primary'
-                    }`}
-                    disabled={numberOfPeople >= 4}
-                    aria-label="Increase people count"
-                  >
-                    +
-                  </button>
-                </div>
               </div>
             </div>
           </div>
