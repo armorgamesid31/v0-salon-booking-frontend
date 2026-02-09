@@ -385,7 +385,7 @@ const SalonDashboard = () => {
 
           {/* Past Appointments Expanded */}
           {expandedHistory && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
               {PAST_APPOINTMENTS.map((apt) => {
                 const getStatusBadge = () => {
                   switch (apt.status) {
@@ -482,7 +482,7 @@ const SalonDashboard = () => {
 
           {/* Packages Expanded */}
           {expandedPackages && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="max-h-[350px] overflow-y-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 pr-2">
               {ACTIVE_PACKAGES.map((pkg) => (
                 <div key={pkg.id} className="rounded-lg border-2 border-border bg-card overflow-hidden">
                   <div className="p-3 border-b border-border bg-muted/30">
@@ -497,8 +497,8 @@ const SalonDashboard = () => {
                             {svc.used}/{svc.total} kaldı
                           </p>
                         </div>
-                        <Button
-                          size="sm"
+                        <button
+                          type="button"
                           onClick={() => {
                             const serviceToAdd: SelectedService = {
                               id: `pkg-${pkg.id}-${svc.id}`,
@@ -511,11 +511,11 @@ const SalonDashboard = () => {
                             setSelectedTimeSlot(null)
                           }}
                           disabled={svc.used === 0}
-                          className="rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                         >
                           <Plus className="w-3 h-3" />
                           Ekle
-                        </Button>
+                        </button>
                       </div>
                     ))}
                   </div>
