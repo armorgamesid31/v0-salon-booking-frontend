@@ -48,12 +48,15 @@ interface ServiceCategory {
 
 interface PastAppointment {
   id: string
+  name: string
   service: string
   date: string
   time: string
   specialists: string[]
   packageName?: string
   isRated?: boolean
+  services: string[]
+  selectedSpecialist: string
 }
 
 interface ActivePackage {
@@ -96,20 +99,26 @@ const CUSTOMER = {
 const PAST_APPOINTMENTS: PastAppointment[] = [
   {
     id: 'a1',
+    name: 'Lazer Paketi – Tam Vücut',
     service: 'Lazer',
     date: '2024-03-12',
     time: '14:00',
     specialists: ['Bacak', 'Kol'],
     packageName: 'Laser Paketi',
     isRated: false,
+    services: ['s1', 's2'],
+    selectedSpecialist: 'Uzman Ayşe',
   },
   {
     id: 'a2',
+    name: 'Premium Yüz Bakımı',
     service: 'Cilt Bakımı',
     date: '2024-02-28',
     time: '10:30',
-    specialists: ['Premium Yüz Bakımı'],
+    specialists: ['Uzman Zeynep'],
     isRated: true,
+    services: ['s5'],
+    selectedSpecialist: 'Uzman Zeynep',
   },
 ]
 
@@ -182,7 +191,7 @@ const TIME_SLOTS: TimeSlot[] = [
 
 const SPECIALIST_SERVICES = ['s1', 's2'] // Services that require specialist selection
 
-export default function SalonDashboard() {
+const SalonDashboard = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [expandedHistory, setExpandedHistory] = useState(false)
   const [expandedPackages, setExpandedPackages] = useState(false)
@@ -224,6 +233,42 @@ export default function SalonDashboard() {
   }
 
   const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
+
+  const handleRepeatAppointment = (appointment: PastAppointment) => {
+    // Find services that were in this appointment and add them
+    const appointmentServices: SelectedService[] = appointment.services
+      .map((serviceId) => {
+        // Search for this service in all categories
+        for (const category of SERVICE_CATEGORIES) {
+          const found = category.services.find((s) => s.id === serviceId)
+          if (found) {
+            return {
+              id: found.id,
+              name: `${category.name} - ${found.name}`,
+              price: 0, // Repeat appointments are free
+              duration: found.duration,
+            }
+          }
+        }
+        return null
+      })
+      .filter((s) => s !== null) as SelectedService[]
+
+    // Add services to selection and clear date/time
+    setSelectedServices((prev) => {
+      const newServices = [...prev]
+      for (const service of appointmentServices) {
+        if (!newServices.find((s) => s.id === service.id)) {
+          newServices.push(service)
+        }
+      }
+      return newServices
+    })
+
+    // Reset date and time
+    setSelectedDate(null)
+    setSelectedTimeSlot(null)
+  }
 
   // Get day name abbreviations
   const getDayName = (dayNumber: number) => {
@@ -309,19 +354,23 @@ export default function SalonDashboard() {
               {PAST_APPOINTMENTS.map((apt) => (
                 <div key={apt.id} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-300 space-y-3 border border-border">
                   <div>
-                    <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.service}</p>
+                    <p className="font-medium text-foreground text-sm">{formatDate(apt.date)} • {apt.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Hizmetler: {apt.specialists.join(', ')}
+                      {apt.specialists.join(', ')}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2">
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleRepeatAppointment(apt)}
+                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full text-xs font-semibold py-2"
+                    >
                       Tekrarla
                     </Button>
                     {apt.isRated ? (
                       <Button
                         size="sm"
-                        className="w-full border-secondary text-secondary bg-transparent rounded-full text-xs font-semibold py-2"
+                        className="flex-1 border border-secondary text-secondary bg-transparent rounded-full text-xs font-semibold py-2"
                         disabled
                       >
                         <Check className="w-3 h-3 mr-1" />
@@ -330,8 +379,12 @@ export default function SalonDashboard() {
                     ) : (
                       <Button
                         size="sm"
+                        onClick={() => {
+                          // Handle rating
+                          console.log('Rating appointment:', apt.id)
+                        }}
                         variant="outline"
-                        className="w-full border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
+                        className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
                       >
                         <Star className="w-3 h-3 mr-1" />
                         Değerlendir
@@ -363,7 +416,6 @@ export default function SalonDashboard() {
             </Card>
           </button>
 
-          {/* Packages Expanded */}
           {/* Packages Expanded */}
           {expandedPackages && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -428,6 +480,21 @@ export default function SalonDashboard() {
                   {/* Ekle Button */}
                   <Button
                     size="sm"
+                    onClick={() => {
+                      // Add package services with price 0
+                      const packageServices: SelectedService[] = pkg.availableServices
+                        .filter((svc) => svc.used > 0)
+                        .map((svc) => ({
+                          id: `pkg-${pkg.id}-${svc.id}`,
+                          name: `${pkg.name} - ${svc.name}`,
+                          price: 0,
+                          duration: svc.duration,
+                        }))
+
+                      setSelectedServices((prev) => [...prev, ...packageServices])
+                      setSelectedDate(null)
+                      setSelectedTimeSlot(null)
+                    }}
                     className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-full text-sm font-bold py-3"
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -757,14 +824,11 @@ export default function SalonDashboard() {
               {['Bacak Lazer', 'Kol Lazer'].map((specialist) => (
                 <label key={specialist} className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted hover:border-primary/30 cursor-pointer transition-all">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="specialist"
                     checked={selectedSpecialists.includes(specialist)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSpecialists((prev) => [...prev, specialist])
-                      } else {
-                        setSelectedSpecialists((prev) => prev.filter((s) => s !== specialist))
-                      }
+                    onChange={() => {
+                      setSelectedSpecialists([specialist])
                     }}
                     className="w-5 h-5 accent-primary"
                   />
@@ -787,3 +851,5 @@ export default function SalonDashboard() {
     </div>
   )
 }
+
+export default SalonDashboard
