@@ -1529,12 +1529,22 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Tarih ve Saat</p>
                   <p className="text-sm font-bold text-foreground mt-1">
                     {selectedDate
-                      ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString('tr-TR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
+                      ? (() => {
+                          // selectedDate sadece "12" şeklinde gelen günü tutuyor
+                          // Bugünün tarihini al ve günü replace et
+                          const today = new Date()
+                          const year = today.getFullYear()
+                          const month = String(today.getMonth() + 1).padStart(2, '0')
+                          const day = String(selectedDate).padStart(2, '0')
+                          const fullDate = new Date(`${year}-${month}-${day}T00:00:00`)
+                          
+                          return fullDate.toLocaleDateString('tr-TR', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })
+                        })()
                       : 'Tarih seçilmedi'}
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">
