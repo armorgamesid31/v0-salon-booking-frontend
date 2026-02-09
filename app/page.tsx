@@ -693,9 +693,9 @@ export default function SalonDashboard() {
             <div className="max-w-2xl mx-auto px-4 py-3">
               <div className="flex items-center justify-between gap-4">
                 {/* Price Section - Left */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-0.5">
                   <p className="text-2xl font-bold text-foreground leading-none">{totalPrice}₺</p>
-                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left whitespace-nowrap">
                     Detaylı gör
                   </button>
                 </div>
