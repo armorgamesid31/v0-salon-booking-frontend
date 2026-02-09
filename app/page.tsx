@@ -1505,16 +1505,16 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
       {/* Confirmation Modal - Randevu Detayları */}
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in duration-300">
-          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
+          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom duration-300 shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+            {/* Header - Not sticky, moves with content */}
+            <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-foreground">Randevu Onayı</h2>
                 <p className="text-sm text-muted-foreground mt-1">Lütfen randevu detaylarınızı kontrol edin</p>
               </div>
               <button
                 onClick={() => setShowConfirmationModal(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg"
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded-lg flex-shrink-0"
               >
                 <X className="w-6 h-6" />
               </button>
