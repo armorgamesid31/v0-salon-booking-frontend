@@ -625,21 +625,21 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
             <div className="bg-card rounded-2xl border-2 border-border p-4 space-y-4">
               {/* Person Counter - TOP */}
-              <div className="flex items-center justify-center gap-6 bg-muted/30 rounded-2xl px-6 py-4 border border-muted">
+              <div className="flex items-center justify-center gap-4 bg-muted/30 rounded-xl px-4 py-2.5 border border-muted">
                 <button
                   onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                  className="text-foreground hover:text-primary transition-colors font-bold text-2xl leading-none"
+                  className="text-foreground hover:text-primary transition-colors font-bold text-lg leading-none"
                   aria-label="Decrease people count"
                 >
                   −
                 </button>
-                <div className="flex flex-col items-center px-8">
-                  <span className="text-2xl font-bold text-foreground">{numberOfPeople}</span>
+                <div className="flex flex-col items-center px-4">
+                  <span className="text-lg font-bold text-foreground">{numberOfPeople}</span>
                   <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
                 </div>
                 <button
                   onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                  className={`font-bold text-2xl leading-none transition-all ${
+                  className={`font-bold text-lg leading-none transition-all ${
                     numberOfPeople >= 4
                       ? 'text-muted-foreground/40 cursor-not-allowed'
                       : 'text-foreground hover:text-primary'
@@ -652,14 +652,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               </div>
 
               {/* Gender Toggle - MIDDLE */}
-              <div className={`flex items-center justify-center gap-6 rounded-2xl p-3 transition-all duration-300 ${
+              <div className={`flex items-center justify-center gap-4 rounded-xl p-2 transition-all duration-300 ${
                 selectedGender === 'female'
                   ? 'bg-pink-100 dark:bg-pink-950/30'
                   : 'bg-blue-100 dark:bg-blue-950/30'
               }`}>
                 <button
                   onClick={() => setSelectedGender('female')}
-                  className={`flex-1 flex items-center justify-center py-3 rounded-lg text-3xl font-semibold transition-all duration-300 ${
+                  className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
                     selectedGender === 'female'
                       ? 'bg-pink-300/60 shadow-md scale-105'
                       : 'hover:bg-pink-200/40 scale-95 opacity-70'
@@ -669,7 +669,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 </button>
                 <button
                   onClick={() => setSelectedGender('male')}
-                  className={`flex-1 flex items-center justify-center py-3 rounded-lg text-3xl font-semibold transition-all duration-300 ${
+                  className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
                     selectedGender === 'male'
                       ? 'bg-blue-300/60 shadow-md scale-105'
                       : 'hover:bg-blue-200/40 scale-95 opacity-70'
@@ -698,14 +698,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             {filteredCategories.map((category, index) => (
               <Card
                 key={category.id}
-                className="bg-card border-border overflow-hidden hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom duration-500"
+                className="bg-muted/40 border-muted/60 overflow-hidden hover:border-primary/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom duration-500"
                 style={{ animationDelay: `${200 + index * 50}ms` }}
               >
                 <button
                   onClick={() =>
                     setExpandedCategory(expandedCategory === category.id ? null : category.id)
                   }
-                  className="w-full px-4 py-4 flex items-center justify-between hover:bg-muted/30 transition-all duration-300"
+                  className="w-full px-4 py-3 flex items-center justify-between bg-muted/50 hover:bg-muted/60 transition-all duration-300"
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-primary">{category.icon}</div>
