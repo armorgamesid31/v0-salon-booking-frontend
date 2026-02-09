@@ -344,20 +344,20 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
   return (
     <div className="min-h-screen bg-background pb-40">
       {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-20 animate-in fade-in slide-in-from-top duration-300">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white text-sm font-bold">
-                ✨
-              </div>
-              <span className="font-bold text-foreground text-lg">SalonAsistan</span>
+      <div className="bg-background border-b-4 border-primary sticky top-0 z-20 animate-in fade-in slide-in-from-top duration-300">
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          {/* Logo Area - Centered */}
+          <div className="flex flex-col items-center justify-center space-y-4">
+            {/* Salon Logo */}
+            <div className="w-32 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center ring-2 ring-primary/20">
+              <div className="text-6xl font-serif font-bold text-primary">P</div>
             </div>
-            <Bell className="w-6 h-6 text-primary cursor-pointer hover:scale-110 transition-transform" />
+            
+            {/* Optional: Decorative elements or salon subtitle can go here */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground font-medium">Randevu Sayfası</p>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {CUSTOMER.greeting}, {CUSTOMER.name} ✨
-          </p>
         </div>
       </div>
 
