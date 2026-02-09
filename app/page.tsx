@@ -44,6 +44,7 @@ interface ServiceCategory {
   count: number
   icon: React.ReactNode
   services: ServiceItem[]
+  gender?: 'female' | 'male' | 'both'
 }
 
 interface PastAppointment {
@@ -96,6 +97,7 @@ interface SelectedService {
 const CUSTOMER = {
   name: 'Ayşe',
   greeting: 'Tekrar hoş geldin',
+  gender: 'female' as 'female' | 'male',
 }
 
 const PAST_APPOINTMENTS: PastAppointment[] = [
@@ -176,6 +178,7 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
     name: 'Epilasyon & Tüy Alma',
     count: 4,
     icon: <Zap className="w-5 h-5" />,
+    gender: 'both',
     services: [
       { id: 's1', name: 'Tam Vücut', duration: '60 dk', originalPrice: 1800, salePrice: 1650, tags: ['Fast Track'] },
       { id: 's2', name: 'Sırt Lazer', duration: '30 dk', originalPrice: 1200, salePrice: 1100 },
@@ -187,6 +190,7 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
     name: 'Cilt Bakımı & Yüz',
     count: 4,
     icon: <Heart className="w-5 h-5" />,
+    gender: 'female',
     services: [
       { id: 's5', name: 'Klasik Yüz Temizliği', duration: '60 dk', originalPrice: 300, salePrice: 250 },
       { id: 's6', name: 'Hydrafacial', duration: '50 dk', originalPrice: 800, salePrice: 700 },
@@ -197,6 +201,7 @@ const SERVICE_CATEGORIES: ServiceCategory[] = [
     name: 'Danışmanlık',
     count: 3,
     icon: <MessageCircle className="w-5 h-5" />,
+    gender: 'both',
     services: [
       { id: 's40', name: 'Cilt Analizi', duration: '25 dk', originalPrice: 150, salePrice: 0 },
       { id: 's41', name: 'Stil Danışmanlığı', duration: '45 dk', originalPrice: 200, salePrice: 0 },
@@ -237,6 +242,7 @@ const SalonDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [ratingValue, setRatingValue] = useState<number>(0)
+  const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -322,7 +328,11 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
     })
   }
 
-  const filteredCategories = SERVICE_CATEGORIES.map((cat) => ({
+  const filteredCategories = SERVICE_CATEGORIES.filter((cat) => {
+    // Filter by gender
+    if (cat.gender === 'both') return true
+    return cat.gender === selectedGender
+  }).map((cat) => ({
     ...cat,
     services: cat.services.filter(
       (service) =>
@@ -548,16 +558,42 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             </div>
           )}
 
-          {/* Search Bar */}
-          <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Hizmet ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
-            />
+          {/* Search Bar and Gender Toggle */}
+          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Hizmet ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
+              />
+            </div>
+
+            {/* Gender Toggle Button */}
+            <div className="flex gap-2 bg-muted/30 p-1 rounded-lg border border-border">
+              <button
+                onClick={() => setSelectedGender('female')}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all duration-300 ${
+                  selectedGender === 'female'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Kadın
+              </button>
+              <button
+                onClick={() => setSelectedGender('male')}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all duration-300 ${
+                  selectedGender === 'male'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Erkek
+              </button>
+            </div>
           </div>
 
           {/* Service Categories */}
