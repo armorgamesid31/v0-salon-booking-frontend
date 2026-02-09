@@ -643,9 +643,8 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     {category.services.map((service) => {
                       const isSelected = isServiceSelected(service.id)
                       return (
-                        <button
+                        <div
                           key={service.id}
-                          onClick={() => handleServiceToggle(service, category.name)}
                           className="w-full text-left"
                         >
                           <div
@@ -692,6 +691,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                                 </div>
                                 <Button
                                   size="sm"
+                                  onClick={() => handleServiceToggle(service, category.name)}
                                   variant={isSelected ? 'default' : 'outline'}
                                   className={`mt-2 rounded-full text-xs gap-1 w-full font-semibold py-2 ${
                                     isSelected
@@ -714,7 +714,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                               </div>
                             </div>
                           </div>
-                        </button>
+                        </div>
                       )
                     })}
                   </CardContent>
