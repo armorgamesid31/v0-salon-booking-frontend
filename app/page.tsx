@@ -244,6 +244,7 @@ const SalonDashboard = () => {
   const [ratingValue, setRatingValue] = useState<number>(0)
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
+  const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -619,33 +620,54 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               </div>
 
               {/* Gender Toggle with Emojis */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedGender('female')}
-                  className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
-                    selectedGender === 'female'
-                      ? 'bg-muted/20'
-                      : 'bg-muted/10'
-                  }`}
-                >
-                  👩
-                  {selectedGender === 'female' && (
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-pink-500"></div>
-                  )}
-                </button>
-                <button
-                  onClick={() => setSelectedGender('male')}
-                  className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
-                    selectedGender === 'male'
-                      ? 'bg-muted/20'
-                      : 'bg-muted/10'
-                  }`}
-                >
-                  👨
-                  {selectedGender === 'male' && (
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-blue-500"></div>
-                  )}
-                </button>
+              <div className="flex flex-col gap-2 items-end">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedGender('female')}
+                    className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                      selectedGender === 'female'
+                        ? 'bg-muted/20'
+                        : 'bg-muted/10'
+                    }`}
+                  >
+                    👩
+                    {selectedGender === 'female' && (
+                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-pink-500"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setSelectedGender('male')}
+                    className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                      selectedGender === 'male'
+                        ? 'bg-muted/20'
+                        : 'bg-muted/10'
+                    }`}
+                  >
+                    👨
+                    {selectedGender === 'male' && (
+                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-blue-500"></div>
+                    )}
+                  </button>
+                </div>
+                {/* Person Counter */}
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-1">
+                    <button
+                      onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
+                      className="text-muted-foreground hover:text-foreground text-sm font-semibold w-5 h-5 flex items-center justify-center"
+                    >
+                      −
+                    </button>
+                    <span className="text-xs font-semibold text-foreground w-4 text-center">{numberOfPeople}</span>
+                    <button
+                      onClick={() => setNumberOfPeople(numberOfPeople + 1)}
+                      className="text-muted-foreground hover:text-foreground text-sm font-semibold w-5 h-5 flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">kaç kişi?</span>
+                </div>
               </div>
             </div>
           </div>
