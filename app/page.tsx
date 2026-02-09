@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -167,7 +167,7 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-3':
       return <Zap className="w-5 h-5" />
     case 'cat-4':
-      return <Palette className="w-5 h-5" />
+      return <Droplet className="w-5 h-5" />
     case 'cat-5':
       return <Heart className="w-5 h-5" />
     case 'cat-6':
@@ -228,7 +228,9 @@ const SalonDashboard = () => {
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
-  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean>(true)
+  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean | null>(null)
+  const [showCustomerTypeModal, setShowCustomerTypeModal] = useState(true)
+  const [welcomeMessage, setWelcomeMessage] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
   const [registrationForm, setRegistrationForm] = useState({
@@ -253,6 +255,35 @@ const SalonDashboard = () => {
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0) * numberOfPeople
 
   // Helper: Toplam süreyi hesapla (dakika cinsinden)
+  const WELCOME_MESSAGES = [
+    'Merhaba! Seni tekrar görmek için sabırsızlanıyorduk 🌟',
+    'Hoş geldin! Her ziyaretinde daha güzel görünüyorsun ✨',
+    'Selamlar! Bugün seni güzelleştirmeye hazırız 💆‍♀️',
+    'Bekliyorduk seni! Hadi başlayalım 🎉',
+    'Merhaba! Kendini rahat hisset, biz seni çok seviyoruz 💕',
+    'Hoşça kaldın! Seni görmek çok mutluluk verici 😊',
+    'Selamlar! Bugün ne güzel görünüyorsun 👑',
+    'Bekliyorduk! Hadi kendini şımarta 💅',
+    'Hoş geldin aşkım! Hazırız seni daha güzel hale getirmeye ✨',
+    'Merhaba! Bugün senin için özel bir gün olacak 🌹',
+  ]
+
+  const NEW_CUSTOMER_MESSAGES = [
+    'Hoş geldin! Seni keşfetmek için çok heyecanlıyız ✨',
+    'Selamlar! En salonumuzda olduğun için mutluyuz 🎉',
+    'Hoş geldin! Haydi seni muhteşem hissettirelim 💆‍♀️',
+    'Merhaba! En iyi hizmetimizi seni için hazırladık 💕',
+    'Selamlar! Bugün senin için özel bir deneyim yaşayacaksın 👑',
+  ]
+
+  useEffect(() => {
+    if (isKnownCustomer !== null) {
+      const messages = isKnownCustomer ? WELCOME_MESSAGES : NEW_CUSTOMER_MESSAGES
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)]
+      setWelcomeMessage(randomMessage)
+    }
+  }, [isKnownCustomer])
+
   const calculateTotalDuration = () => {
     return selectedServices.reduce((sum, service) => {
       const durationStr = service.duration
@@ -402,31 +433,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
           {/* Welcome Message */}
           <div className="text-center">
             <p className="text-sm md:text-base text-foreground">
-              Selamlar <span className="font-bold">{CUSTOMER.name}</span> unarım her şey yolundadır seni tekrar görmek için sabırsızlanıyoruz 🌟
+              {isKnownCustomer ? (
+                <>
+                  Selamlar <span className="font-bold">{CUSTOMER.name}</span>, {welcomeMessage.split(' ').slice(1).join(' ')}
+                </>
+              ) : (
+                welcomeMessage
+              )}
             </p>
-            {/* Development: Toggle Known Customer */}
-            <div className="mt-4 flex justify-center gap-2">
-              <button
-                onClick={() => setIsKnownCustomer(true)}
-                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
-                  isKnownCustomer
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                Bilinen Müşteri
-              </button>
-              <button
-                onClick={() => setIsKnownCustomer(false)}
-                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
-                  !isKnownCustomer
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                Yeni Müşteri
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -1653,6 +1667,62 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               >
                 Randevuyu Onayla
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Type Selection Modal - Sayfa açılışında */}
+      {showCustomerTypeModal && isKnownCustomer === null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300">
+          <div className="bg-card rounded-3xl p-8 max-w-md w-full mx-4 space-y-6 animate-in slide-in-from-bottom duration-300 shadow-2xl">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold text-foreground">Hoş Geldin!</h2>
+              <p className="text-sm text-muted-foreground">Devam etmeden önce, müşteri türünü seç</p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Known Customer Option */}
+              <button
+                onClick={() => {
+                  setIsKnownCustomer(true)
+                  setShowCustomerTypeModal(false)
+                }}
+                className="w-full group"
+              >
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 hover:border-primary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Heart className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-foreground text-lg">Bilinen Müşteri</p>
+                      <p className="text-xs text-muted-foreground">Daha önce ziyaret ettiğim</p>
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {/* New Customer Option */}
+              <button
+                onClick={() => {
+                  setIsKnownCustomer(false)
+                  setShowCustomerTypeModal(false)
+                }}
+                className="w-full group"
+              >
+                <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-2 border-secondary/30 hover:border-secondary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Sparkles className="w-6 h-6 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-foreground text-lg">Yeni Müşteri</p>
+                      <p className="text-xs text-muted-foreground">İlk kez ziyaret ediyorum</p>
+                    </div>
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         </div>
