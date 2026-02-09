@@ -107,7 +107,7 @@ const PAST_APPOINTMENTS: PastAppointment[] = [
     time: '14:00',
     endTime: '14:50',
     status: 'completed',
-    specialists: ['Bacak', 'Kol'],
+    specialists: ['Uzman Pınar', 'Uzman Fatma'],
     packageName: 'Laser Paketi',
     isRated: false,
     services: ['s1', 's2'],
@@ -230,12 +230,13 @@ const SalonDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showWaitingList, setShowWaitingList] = useState(false)
   const [ratingAppointment, setRatingAppointment] = useState<PastAppointment | null>(null)
-  const [ratingValue, setRatingValue] = useState(0)
+  const [serviceRatings, setServiceRatings] = useState<Record<string, number>>({})
   const [specialistModal, setSpecialistModal] = useState<SelectedService | null>(null)
   const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([])
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
+  const [ratingValue, setRatingValue] = useState<number>(0)
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
@@ -420,7 +421,20 @@ const SalonDashboard = () => {
                       >
                         Tekrarla
                       </Button>
-                      {apt.status === 'rated' ? (
+                      {apt.status === 'completed' ? (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setRatingAppointment(apt)
+                            setServiceRatings({})
+                          }}
+                          variant="outline"
+                          className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
+                        >
+                          <Star className="w-3 h-3 mr-1" />
+                          Değerlendir
+                        </Button>
+                      ) : apt.status === 'rated' ? (
                         <Button
                           size="sm"
                           className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
@@ -432,9 +446,8 @@ const SalonDashboard = () => {
                       ) : (
                         <Button
                           size="sm"
-                          onClick={() => setRatingAppointment(apt)}
-                          variant="outline"
-                          className="flex-1 border border-muted-foreground text-muted-foreground hover:border-primary hover:text-primary rounded-full text-xs bg-transparent font-semibold py-2"
+                          className="flex-1 border border-muted text-muted-foreground bg-transparent rounded-full text-xs font-semibold py-2 cursor-default"
+                          disabled
                         >
                           <Star className="w-3 h-3 mr-1" />
                           Değerlendir
@@ -470,56 +483,44 @@ const SalonDashboard = () => {
           {/* Packages Expanded */}
           {expandedPackages && (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              {ACTIVE_PACKAGES.map((pkg) => {
-                const availableServicesCount = pkg.availableServices.filter((svc) => svc.used > 0).length
-                return (
-                  <button
-                    key={pkg.id}
-                    onClick={() => {
-                      const packageServices: SelectedService[] = pkg.availableServices
-                        .filter((svc) => svc.used > 0)
-                        .map((svc) => ({
-                          id: `pkg-${pkg.id}-${svc.id}`,
-                          name: `${pkg.name} - ${svc.name}`,
-                          price: 0,
-                          duration: svc.duration,
-                        }))
-
-                      setSelectedServices((prev) => [...prev, ...packageServices])
-                      setSelectedDate(null)
-                      setSelectedTimeSlot(null)
-                    }}
-                    className="w-full text-left"
-                  >
-                    <div className="p-3 rounded-lg border-2 border-border hover:border-secondary/30 bg-card hover:bg-muted/20 transition-all duration-300">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground text-sm">{pkg.name}</p>
-                          <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                            <p>{pkg.remainingSessions} / {pkg.totalSessions} kullanım kaldı</p>
-                            <p>{availableServicesCount} hizmet mevcut</p>
-                          </div>
+              {ACTIVE_PACKAGES.map((pkg) => (
+                <div key={pkg.id} className="rounded-lg border-2 border-border bg-card overflow-hidden">
+                  <div className="p-3 border-b border-border bg-muted/30">
+                    <p className="font-bold text-sm text-foreground">{pkg.name}</p>
+                  </div>
+                  <div className="space-y-2 p-3">
+                    {pkg.availableServices.map((svc) => (
+                      <div key={svc.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/20">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">{svc.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {svc.used}/{svc.total} kaldı
+                          </p>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="flex items-baseline gap-2 justify-end mb-2">
-                            <p className="text-sm font-bold text-secondary">
-                              0
-                              <span className="text-xs">₺</span>
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            className="rounded-full text-xs gap-1 font-semibold py-2 border-2 border-secondary text-secondary hover:bg-secondary/10 bg-transparent"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Ekle
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const serviceToAdd: SelectedService = {
+                              id: `pkg-${pkg.id}-${svc.id}`,
+                              name: `${pkg.name} - ${svc.name}`,
+                              price: 0,
+                              duration: svc.duration,
+                            }
+                            setSelectedServices((prev) => [...prev, serviceToAdd])
+                            setSelectedDate(null)
+                            setSelectedTimeSlot(null)
+                          }}
+                          disabled={svc.used === 0}
+                          className="rounded-full text-xs gap-1 font-semibold py-1.5 px-3 border-2 border-secondary text-secondary hover:bg-secondary/10 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Ekle
+                        </Button>
                       </div>
-                    </div>
-                  </button>
-                )
-              })}
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -703,13 +704,12 @@ const SalonDashboard = () => {
                             setShowWaitingList(true)
                           }
                         }}
-                        disabled={!slot.available}
                         className={`p-2 rounded-lg text-xs font-semibold transition-all ${
                           selectedTimeSlot === slot.time
                             ? 'bg-primary text-primary-foreground'
                             : slot.available
                             ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
-                            : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-muted/50 text-muted-foreground hover:bg-muted/70 cursor-pointer'
                         }`}
                       >
                         {slot.time}
@@ -732,13 +732,12 @@ const SalonDashboard = () => {
                             setShowWaitingList(true)
                           }
                         }}
-                        disabled={!slot.available}
                         className={`p-2 rounded-lg text-xs font-semibold transition-all ${
                           selectedTimeSlot === slot.time
                             ? 'bg-primary text-primary-foreground'
                             : slot.available
                             ? 'bg-muted text-foreground hover:bg-primary/20 cursor-pointer'
-                            : 'bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                            : 'bg-muted/50 text-muted-foreground hover:bg-muted/70 cursor-pointer'
                         }`}
                       >
                         {slot.time}
@@ -783,37 +782,59 @@ const SalonDashboard = () => {
             {ratingAppointment && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in p-4">
                 <Card className="w-full max-w-sm rounded-2xl border-0 animate-in zoom-in-95 duration-300">
-                  <CardContent className="p-6 space-y-4">
+                  <CardContent className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
                     <div>
-                      <h3 className="font-bold text-lg text-foreground mb-2">Randevuyu Değerlendir</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {ratingAppointment.name}
-                      </p>
+                      <h3 className="font-bold text-lg text-foreground">Hizmetleri Değerlendir</h3>
+                      <p className="text-xs text-muted-foreground mt-1">{formatDate(ratingAppointment.date)}</p>
                     </div>
 
-                    <div className="flex justify-center gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          onClick={() => setRatingValue(star)}
-                          className="transition-transform hover:scale-110"
-                        >
-                          <Star
-                            className={`w-8 h-8 ${
-                              star <= ratingValue
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-muted-foreground'
-                            }`}
-                          />
-                        </button>
-                      ))}
+                    <div className="space-y-4">
+                      {ratingAppointment.services.map((serviceId) => {
+                        // Find service name
+                        let serviceName = ''
+                        for (const category of SERVICE_CATEGORIES) {
+                          const found = category.services.find((s) => s.id === serviceId)
+                          if (found) {
+                            serviceName = found.name
+                            break
+                          }
+                        }
+
+                        return (
+                          <div key={serviceId} className="space-y-2 p-3 rounded-lg bg-muted/30">
+                            <p className="text-sm font-medium text-foreground">{serviceName}</p>
+                            <div className="flex gap-1.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  onClick={() => {
+                                    setServiceRatings((prev) => ({
+                                      ...prev,
+                                      [serviceId]: star,
+                                    }))
+                                  }}
+                                  className="transition-transform hover:scale-110"
+                                >
+                                  <Star
+                                    className={`w-6 h-6 ${
+                                      star <= (serviceRatings[serviceId] || 0)
+                                        ? 'fill-yellow-400 text-yellow-400'
+                                        : 'text-muted-foreground'
+                                    }`}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
 
                     <div className="flex gap-2">
                       <Button
                         onClick={() => {
                           setRatingAppointment(null)
-                          setRatingValue(0)
+                          setServiceRatings({})
                         }}
                         variant="outline"
                         className="flex-1 rounded-full"
@@ -822,10 +843,9 @@ const SalonDashboard = () => {
                       </Button>
                       <Button
                         onClick={() => {
-                          // Handle rating submission
-                          console.log(`Rated ${ratingValue} stars for ${ratingAppointment.id}`)
+                          console.log(`Submitted ratings:`, serviceRatings)
                           setRatingAppointment(null)
-                          setRatingValue(0)
+                          setServiceRatings({})
                         }}
                         className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
                       >
@@ -897,7 +917,7 @@ const SalonDashboard = () => {
             <p className="text-sm text-muted-foreground">Uzman seçiniz:</p>
 
             <div className="space-y-2">
-              {['Bacak Lazer', 'Kol Lazer'].map((specialist) => (
+              {['Uzman Pınar', 'Uzman Fatma', 'Uzman Ayşe'].map((specialist) => (
                 <label key={specialist} className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted hover:border-primary/30 cursor-pointer transition-all">
                   <input
                     type="radio"
