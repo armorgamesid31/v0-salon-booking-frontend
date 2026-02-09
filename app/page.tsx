@@ -271,7 +271,7 @@ export default function SalonDashboard() {
       {/* Main Content */}
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom duration-500">
+        <div className="space-y-3 animate-in fade-in slide-in-from-bottom duration-500">
           <button
             onClick={() => setExpandedHistory(!expandedHistory)}
             className="group text-left"
@@ -708,32 +708,36 @@ export default function SalonDashboard() {
       {/* Sticky Booking Footer */}
       {selectedServices.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-xl z-50 animate-in fade-in slide-in-from-bottom duration-300">
-          <div className="max-w-2xl mx-auto px-4 py-5">
-            {/* Price Section */}
-            <div className="mb-4">
-              <p className="text-xs text-muted-foreground mb-1 font-medium">Toplam Fiyat</p>
-              <p className="text-4xl font-black text-foreground">{totalPrice} ₺</p>
-            </div>
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              {/* Price Section - Left */}
+              <div>
+                <p className="text-2xl font-black text-foreground">{totalPrice} ₺</p>
+                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1">
+                  Detaylı gör
+                </button>
+              </div>
 
-            {/* Confirm Button */}
-            <Button
-              onClick={() => {
-                if (!selectedDate || !selectedTimeSlot) {
-                  const element = document.querySelector('[data-scroll-target="date-time"]')
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              {/* Confirm Button - Right */}
+              <Button
+                onClick={() => {
+                  if (!selectedDate || !selectedTimeSlot) {
+                    const element = document.querySelector('[data-scroll-target="date-time"]')
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
                   }
-                }
-              }}
-              className={`w-full rounded-full py-3 font-bold text-base transition-all duration-200 ${
-                selectedDate && selectedTimeSlot
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'bg-muted text-muted-foreground cursor-not-allowed'
-              }`}
-              disabled={!selectedDate || !selectedTimeSlot}
-            >
-              Randevuyu Onayla
-            </Button>
+                }}
+                className={`px-8 py-3 font-bold text-sm rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                  selectedDate && selectedTimeSlot
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
+                disabled={!selectedDate || !selectedTimeSlot}
+              >
+                Randevuyu Onayla
+              </Button>
+            </div>
           </div>
         </div>
       )}
