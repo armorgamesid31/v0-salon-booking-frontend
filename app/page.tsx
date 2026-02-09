@@ -621,70 +621,66 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
             </div>
           )}
 
-          {/* Search Bar and Gender Toggle */}
+          {/* Search and Filters Control Bar */}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-            <div className="flex gap-3 items-end">
+            <div className="bg-card rounded-2xl border-2 border-border p-4 space-y-4">
               {/* Search Input */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Hizmet ara..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-border bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors duration-300"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 transition-colors duration-300"
                 />
               </div>
 
-              {/* Gender Toggle with Emojis */}
-              <div className="flex flex-col gap-2 items-end">
-                <div className="flex gap-2">
+              {/* Gender and Person Counter Controls */}
+              <div className="flex items-center justify-between gap-4">
+                {/* Gender Toggle */}
+                <div className="flex gap-2 bg-muted/20 rounded-xl p-1.5">
                   <button
                     onClick={() => setSelectedGender('female')}
-                    className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                    className={`relative px-4 py-2 rounded-lg text-lg font-semibold transition-all duration-300 flex items-center justify-center min-w-14 ${
                       selectedGender === 'female'
-                        ? 'bg-muted/20'
-                        : 'bg-muted/10'
+                        ? 'bg-primary/10 text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     👩
-                    {selectedGender === 'female' && (
-                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-pink-500"></div>
-                    )}
                   </button>
                   <button
                     onClick={() => setSelectedGender('male')}
-                    className={`relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 ${
+                    className={`relative px-4 py-2 rounded-lg text-lg font-semibold transition-all duration-300 flex items-center justify-center min-w-14 ${
                       selectedGender === 'male'
-                        ? 'bg-muted/20'
-                        : 'bg-muted/10'
+                        ? 'bg-primary/10 text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     👨
-                    {selectedGender === 'male' && (
-                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-blue-500"></div>
-                    )}
                   </button>
                 </div>
+
                 {/* Person Counter */}
-                <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-1">
-                    <button
-                      onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                      className="text-muted-foreground hover:text-foreground text-sm font-semibold w-5 h-5 flex items-center justify-center"
-                    >
-                      −
-                    </button>
-                    <span className="text-xs font-semibold text-foreground w-4 text-center">{numberOfPeople}</span>
-                    <button
-                      onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                      className="text-muted-foreground hover:text-foreground text-sm font-semibold w-5 h-5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={numberOfPeople >= 4}
-                    >
-                      +
-                    </button>
+                <div className="flex items-center gap-3 bg-muted/20 rounded-xl px-3 py-2">
+                  <button
+                    onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                  >
+                    <span className="text-lg font-semibold">−</span>
+                  </button>
+                  <div className="flex flex-col items-center min-w-10">
+                    <span className="text-base font-bold text-foreground">{numberOfPeople}</span>
+                    <span className="text-xs text-muted-foreground font-medium">kişi</span>
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium">kaç kişi?</span>
+                  <button
+                    onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={numberOfPeople >= 4}
+                  >
+                    <span className="text-lg font-semibold">+</span>
+                  </button>
                 </div>
               </div>
             </div>
