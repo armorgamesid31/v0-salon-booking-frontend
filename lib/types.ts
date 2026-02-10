@@ -83,3 +83,16 @@ export interface ApiResponse<T> {
   error?: string
   message?: string
 }
+
+// Booking Context (Magic Link)
+export interface BookingContext {
+  customerId: string
+  customerName: string
+  customerPhone: string
+  customerGender?: 'male' | 'female'
+  salonId: string
+  salonName: string
+  isKnownCustomer: boolean
+  appointments?: Appointment[]
+  activePackages?: any[]
+}

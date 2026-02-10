@@ -1,5 +1,5 @@
 import { API_BASE_URL, DUMMY_SALON, DUMMY_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from './constants'
-import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse } from './types'
+import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext } from './types'
 
 /**
  * Multi-tenant SaaS API helpers
@@ -119,5 +119,28 @@ export async function getAppointments(salonId: string, customerId: string): Prom
     return await fetchFromAPI<Appointment[]>(url)
   } catch {
     return []
+  }
+}
+
+// Magic Link - Token ile booking context getir
+export async function getBookingContextByToken(token: string): Promise<BookingContext | null> {
+  try {
+    const url = `${API_BASE_URL}/api/booking/context?token=${token}`
+    const response = await fetchFromAPI<ApiResponse<BookingContext>>(url)
+    return response.data || null
+  } catch (error) {
+    console.error('Magic link token fetch error:', error)
+    // Dummy data fallback - geliştirme için
+    return {
+      customerId: 'customer-001',
+      customerName: 'Ayşe',
+      customerPhone: '+90 555 123 4567',
+      customerGender: 'female',
+      salonId: 'salon-001',
+      salonName: 'Demo Salon',
+      isKnownCustomer: true,
+      appointments: [],
+      activePackages: [],
+    }
   }
 }

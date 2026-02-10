@@ -1,11 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, Search, Bell, Zap, Sparkles, Leaf, Heart, Scissors, Palette, Eye, Droplet, Flower, Wand2, MessageCircle, Plus, Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Hand, Syringe as Ring } from 'lucide-react'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
+import { getBookingContextByToken } from '@/lib/api'
 
 const SPECIALIST_SERVICES = CONST_SPECIALIST_SERVICES // Declare the SPECIALIST_SERVICES variable
 
@@ -188,6 +190,7 @@ const TIME_SLOTS: TimeSlot[] = [
 const SPECIALIST_SERVICES_LIST = SPECIALIST_SERVICES // Services that require specialist selection
 
 const SalonDashboard = () => {
+  const searchParams = useSearchParams()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [expandedHistory, setExpandedHistory] = useState(false)
   const [expandedPackages, setExpandedPackages] = useState(false)
@@ -205,8 +208,8 @@ const SalonDashboard = () => {
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
-  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean | null>(null)
-  const [showCustomerTypeModal, setShowCustomerTypeModal] = useState(true)
+  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean | null>(true)
+  const [showCustomerTypeModal, setShowCustomerTypeModal] = useState(false)
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
@@ -274,6 +277,26 @@ const SalonDashboard = () => {
     'Merhaba! En iyi hizmetimizi seni için hazırladık 💕',
     'Selamlar! Bugün senin için özel bir deneyim yaşayacaksın 👑',
   ]
+
+  // Magic Link token handling
+  useEffect(() => {
+    const token = searchParams.get('token')
+    if (token) {
+      getBookingContextByToken(token).then((context) => {
+        if (context) {
+          // Backend'den gelen context'i UI state'ine bağla
+          setIsKnownCustomer(context.isKnownCustomer)
+          if (context.customerGender) {
+            setSelectedGender(context.customerGender)
+          }
+          if (context.activePackages) {
+            setActivePackages(context.activePackages as ActivePackage[])
+          }
+          // TODO: Eğer backend appointments de dönüyorsa, o da kullanılabilir
+        }
+      })
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (isKnownCustomer !== null) {
