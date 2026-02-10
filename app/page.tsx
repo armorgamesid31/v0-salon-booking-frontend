@@ -3,14 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { 
-  ChevronDown, Search, Bell, Zap, Leaf, Scissors, Eye, Droplet, MessageCircle, Plus, 
-  Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Hand 
-} from 'lucide-react'
-import {
-  FaSpa, FaLeaf, FaFaceSmile, FaHeartPulse, FaScissors, FaHandsClapping, 
-  FaEye, FaEyeSlash, FaDroplet, FaWandMagicSparkles, FaPalette
-} from 'react-icons/fa6'
+import { ChevronDown, Search, Bell, Zap, Sparkles, Leaf, Heart, Scissors, Palette, Eye, Droplet, Flower, Wand2, MessageCircle, Plus, Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Hand, Syringe as Ring } from 'lucide-react'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
 
@@ -144,15 +137,15 @@ const ACTIVE_PACKAGES: ActivePackage[] = [
 const getIconComponent = (categoryId: string) => {
   switch (categoryId) {
     case 'cat-1':
-      return <FaSpa className="w-5 h-5" />
+      return <Sparkles className="w-5 h-5" />
     case 'cat-2':
-      return <FaHeartPulse className="w-5 h-5" />
+      return <Wand2 className="w-5 h-5" />
     case 'cat-3':
-      return <FaScissors className="w-5 h-5" />
+      return <Zap className="w-5 h-5" />
     case 'cat-4':
-      return <FaHandsClapping className="w-5 h-5" />
+      return <Droplet className="w-5 h-5" />
     case 'cat-5':
-      return <FaFaceSmile className="w-5 h-5" />
+      return <Heart className="w-5 h-5" />
     case 'cat-6':
       return <Hand className="w-5 h-5" />
     case 'cat-7':
@@ -160,9 +153,9 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-8':
       return <Lightbulb className="w-5 h-5" />
     case 'cat-9':
-      return <FaLeaf className="w-5 h-5" />
+      return <Flower className="w-5 h-5" />
     default:
-      return <FaWandMagicSparkles className="w-5 h-5" />
+      return <Sparkles className="w-5 h-5" />
   }
 }
 
@@ -1430,7 +1423,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                       fullName: e.target.value,
                     }))
                   }
-                  placeholder="Adınız soyadın��z"
+                  placeholder="Adınız soyadınız"
                   className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
                 />
               </div>
@@ -1619,12 +1612,10 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
               {/* Duration */}
               <div className="flex items-start gap-3 pt-2 border-t border-primary/10">
-                <FaWandMagicSparkles className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <Sparkles className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Toplam Süre</p>
-                  <p className="text-sm font-bold text-foreground mt-1">
-                    {calculateTotalDuration()} dakika
-                  </p>
+                  <p className="text-sm font-bold text-foreground mt-1">{calculateTotalDuration()} dakika</p>
                 </div>
               </div>
 
@@ -1761,17 +1752,15 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               {/* Known Customer Option */}
               <button
                 onClick={() => {
-                  console.log('[v0] Known customer button clicked')
                   setIsKnownCustomer(true)
                   setShowCustomerTypeModal(false)
                 }}
-                type="button"
-                className="w-full group cursor-pointer"
+                className="w-full group"
               >
-                <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 hover:border-primary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg pointer-events-none">
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 hover:border-primary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FaHeartPulse className="w-6 h-6 text-primary" />
+                      <Heart className="w-6 h-6 text-primary" />
                     </div>
                     <div>
                       <p className="font-bold text-foreground text-lg">Bilinen Müşteri</p>
@@ -1784,17 +1773,15 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               {/* New Customer Option */}
               <button
                 onClick={() => {
-                  console.log('[v0] New customer button clicked')
                   setIsKnownCustomer(false)
                   setShowCustomerTypeModal(false)
                 }}
-                type="button"
-                className="w-full group cursor-pointer"
+                className="w-full group"
               >
-                <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-2 border-secondary/30 hover:border-secondary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg pointer-events-none">
+                <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-2 border-secondary/30 hover:border-secondary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FaWandMagicSparkles className="w-6 h-6 text-secondary" />
+                      <Sparkles className="w-6 h-6 text-secondary" />
                     </div>
                     <div>
                       <p className="font-bold text-foreground text-lg">Yeni Müşteri</p>
