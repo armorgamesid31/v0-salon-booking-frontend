@@ -9,9 +9,8 @@ import {
 } from 'lucide-react'
 import {
   FaSpa, FaLeaf, FaFaceSmile, FaHeartPulse, FaScissors, FaHandsClapping, 
-  FaEye, FaEyeSlash, FaDroplet, FaWandMagicSparkles, FaPalette
+  FaEye, FaEyeSlash, FaDroplet, FaWandMagicSparkles, FaPalette, FaFace
 } from 'react-icons/fa6'
-import { MdFaceRetouching } from 'react-icons/md'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
 
@@ -147,7 +146,7 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-1':
       return <FaSpa className="w-5 h-5" />
     case 'cat-2':
-      return <MdFaceRetouching className="w-5 h-5" />
+      return <FaFace className="w-5 h-5" />
     case 'cat-3':
       return <FaScissors className="w-5 h-5" />
     case 'cat-4':
