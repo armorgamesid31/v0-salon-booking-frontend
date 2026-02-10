@@ -7,7 +7,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, Search, Bell, Zap, Sparkles, Leaf, Heart, Scissors, Palette, Eye, Droplet, Flower, Wand2, MessageCircle, Plus, Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Hand, Syringe as Ring } from 'lucide-react'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
-import { getBookingContextByToken } from '@/lib/api'
+import { getBookingContextByToken, registerCustomer } from '@/lib/api'
+import { DUMMY_SALON } from '@/lib/constants'
 
 const SPECIALIST_SERVICES = CONST_SPECIALIST_SERVICES // Declare the SPECIALIST_SERVICES variable
 
@@ -209,6 +210,8 @@ const SalonDashboard = () => {
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
   const [isKnownCustomer, setIsKnownCustomer] = useState<boolean | null>(false)
+  const [customerId, setCustomerId] = useState<string | null>(null)
+  const [salonId, setSalonId] = useState<string>(DUMMY_SALON.id)
   const [showCustomerTypeModal, setShowCustomerTypeModal] = useState(false)
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
@@ -284,13 +287,20 @@ const SalonDashboard = () => {
     if (token) {
       getBookingContextByToken(token).then((context) => {
         if (context) {
-          // Backend'den gelen context'i UI state'ine bağla
+          setSalonId(context.salonId)
           setIsKnownCustomer(context.isKnownCustomer)
+          if (context.isKnownCustomer && context.customerId) {
+            setCustomerId(context.customerId)
+          }
           if (context.customerGender) {
             setSelectedGender(context.customerGender)
           }
           if (context.activePackages) {
             setActivePackages(context.activePackages as ActivePackage[])
+          }
+          // Magic link'ten gelen telefon - registration form prefill
+          if (!context.isKnownCustomer && context.customerPhone) {
+            setRegistrationForm((prev) => ({ ...prev, phone: context.customerPhone }))
           }
           // TODO: Eğer backend appointments de dönüyorsa, o da kullanılabilir
         }
@@ -1554,7 +1564,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 Vazgeç
               </Button>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   // Validation
                   if (
                     !registrationForm.fullName.trim() ||
@@ -1565,11 +1575,23 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                     return
                   }
 
-                  // Register + Confirm appointment
-                  // TODO: Backend API çağrısı - kayıt oluştur
-                  setShowRegistrationModal(false)
-                  setIsKnownCustomer(true)
-                  setShowConfirmationModal(true)
+                  // POST /api/customers/register
+                  const res = await registerCustomer({
+                    fullName: registrationForm.fullName.trim(),
+                    phone: registrationForm.phone.trim(),
+                    gender: registrationForm.gender,
+                    birthDate: registrationForm.birthDate,
+                    acceptMarketing: registrationForm.acceptMarketing,
+                    salonId,
+                  })
+                  if (res?.customerId) {
+                    setCustomerId(res.customerId)
+                    setIsKnownCustomer(true)
+                    setShowRegistrationModal(false)
+                    setShowConfirmationModal(true)
+                  } else {
+                    alert('Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.')
+                  }
                 }}
                 className="flex-1 rounded-full py-2 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
               >
