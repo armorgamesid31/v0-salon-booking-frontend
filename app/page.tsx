@@ -8,10 +8,10 @@ import {
   Calendar, Clock, Star, X, History, Package, Check, AlertCircle, Gem, Lightbulb, Hand 
 } from 'lucide-react'
 import {
-  FaSpa, FaLeaf as FaLeafIcon, FaFaceSmile, FaHeartPulse, FaCut, FaHands, 
+  FaSpa, FaLeaf, FaFaceSmile, FaHeartPulse, FaScissors, FaHandsClapping, 
   FaEye, FaEyeSlash, FaDroplet, FaWandMagicSparkles, FaPalette
 } from 'react-icons/fa6'
-import { MdFaceRetouching, MdOutlineVolumeOff, MdAccessible } from 'react-icons/md'
+import { MdFaceRetouching } from 'react-icons/md'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
 
@@ -149,9 +149,9 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-2':
       return <MdFaceRetouching className="w-5 h-5" />
     case 'cat-3':
-      return <FaCut className="w-5 h-5" />
+      return <FaScissors className="w-5 h-5" />
     case 'cat-4':
-      return <FaHands className="w-5 h-5" />
+      return <FaHandsClapping className="w-5 h-5" />
     case 'cat-5':
       return <FaFaceSmile className="w-5 h-5" />
     case 'cat-6':
@@ -161,7 +161,7 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-8':
       return <Lightbulb className="w-5 h-5" />
     case 'cat-9':
-      return <FaLeafIcon className="w-5 h-5" />
+      return <FaLeaf className="w-5 h-5" />
     default:
       return <FaWandMagicSparkles className="w-5 h-5" />
   }
