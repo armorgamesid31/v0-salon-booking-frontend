@@ -708,23 +708,23 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
 
           {/* Search and Filters Control Bar */}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-            <div className="bg-card rounded-2xl border-2 border-border p-4 space-y-4">
+            <div className="bg-card rounded-2xl border-2 border-border p-4 space-y-3">
               {/* Person Counter - TOP */}
-              <div className="flex items-center justify-center gap-4 bg-muted/30 rounded-xl px-4 py-2.5 border border-muted">
+              <div className="flex items-center justify-center gap-4 bg-muted/30 rounded-lg px-3 py-1.5 border border-muted">
                 <button
                   onClick={() => setNumberOfPeople(Math.max(1, numberOfPeople - 1))}
-                  className="text-foreground hover:text-primary transition-colors font-bold text-lg leading-none"
+                  className="text-foreground hover:text-primary transition-colors font-bold text-sm leading-none"
                   aria-label="Decrease people count"
                 >
                   −
                 </button>
-                <div className="flex flex-col items-center px-4">
-                  <span className="text-lg font-bold text-foreground">{numberOfPeople}</span>
+                <div className="flex flex-col items-center px-3">
+                  <span className="text-base font-bold text-foreground">{numberOfPeople}</span>
                   <span className="text-xs text-muted-foreground font-medium leading-tight">kişi</span>
                 </div>
                 <button
                   onClick={() => setNumberOfPeople(Math.min(4, numberOfPeople + 1))}
-                  className={`font-bold text-lg leading-none transition-all ${
+                  className={`font-bold text-sm leading-none transition-all ${
                     numberOfPeople >= 4
                       ? 'text-muted-foreground/40 cursor-not-allowed'
                       : 'text-foreground hover:text-primary'
@@ -736,44 +736,47 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                 </button>
               </div>
 
-              {/* Gender Toggle - MIDDLE */}
-              <div className={`flex items-center justify-center gap-4 rounded-xl p-2 transition-all duration-300 ${
-                selectedGender === 'female'
-                  ? 'bg-pink-100 dark:bg-pink-950/30'
-                  : 'bg-blue-100 dark:bg-blue-950/30'
-              }`}>
-                <button
-                  onClick={() => setSelectedGender('female')}
-                  className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
-                    selectedGender === 'female'
-                      ? 'bg-pink-300/60 shadow-md scale-105'
-                      : 'hover:bg-pink-200/40 scale-95 opacity-70'
-                  }`}
-                >
-                  👩
-                </button>
-                <button
-                  onClick={() => setSelectedGender('male')}
-                  className={`flex-1 flex items-center justify-center py-2.5 rounded-lg text-2xl font-semibold transition-all duration-300 ${
-                    selectedGender === 'male'
-                      ? 'bg-blue-300/60 shadow-md scale-105'
-                      : 'hover:bg-blue-200/40 scale-95 opacity-70'
-                  }`}
-                >
-                  👨
-                </button>
-              </div>
+              {/* Gender Toggle and Search - SIDE BY SIDE */}
+              <div className="flex gap-3">
+                {/* Gender Toggle */}
+                <div className={`flex-1 flex items-center justify-center gap-2 rounded-lg p-1.5 transition-all duration-300 ${
+                  selectedGender === 'female'
+                    ? 'bg-pink-100 dark:bg-pink-950/30'
+                    : 'bg-blue-100 dark:bg-blue-950/30'
+                }`}>
+                  <button
+                    onClick={() => setSelectedGender('female')}
+                    className={`flex-1 flex items-center justify-center py-2 rounded-lg text-xl font-semibold transition-all duration-300 ${
+                      selectedGender === 'female'
+                        ? 'bg-pink-300/60 shadow-md scale-105'
+                        : 'hover:bg-pink-200/40 scale-95 opacity-70'
+                    }`}
+                  >
+                    👩
+                  </button>
+                  <button
+                    onClick={() => setSelectedGender('male')}
+                    className={`flex-1 flex items-center justify-center py-2 rounded-lg text-xl font-semibold transition-all duration-300 ${
+                      selectedGender === 'male'
+                        ? 'bg-blue-300/60 shadow-md scale-105'
+                        : 'hover:bg-blue-200/40 scale-95 opacity-70'
+                    }`}
+                  >
+                    👨
+                  </button>
+                </div>
 
-              {/* Search Input - BOTTOM */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Hizmet ara..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 transition-colors duration-300"
-                />
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Hizmet ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 transition-colors duration-300"
+                  />
+                </div>
               </div>
             </div>
           </div>
