@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import {
   FaSpa, FaLeaf, FaFaceSmile, FaHeartPulse, FaScissors, FaHandsClapping, 
-  FaEye, FaEyeSlash, FaDroplet, FaWandMagicSparkles, FaPalette, FaFace
+  FaEye, FaEyeSlash, FaDroplet, FaWandMagicSparkles, FaPalette
 } from 'react-icons/fa6'
 import { DUMMY_SERVICES, SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES, DUMMY_EMPLOYEES, DUMMY_PACKAGES } from '@/lib/constants'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory } from '@/lib/types'
@@ -146,7 +146,7 @@ const getIconComponent = (categoryId: string) => {
     case 'cat-1':
       return <FaSpa className="w-5 h-5" />
     case 'cat-2':
-      return <FaFace className="w-5 h-5" />
+      return <FaHeartPulse className="w-5 h-5" />
     case 'cat-3':
       return <FaScissors className="w-5 h-5" />
     case 'cat-4':
@@ -1430,7 +1430,7 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
                       fullName: e.target.value,
                     }))
                   }
-                  placeholder="Adınız soyadınız"
+                  placeholder="Adınız soyadın��z"
                   className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 border border-muted focus:border-primary transition-all"
                 />
               </div>
