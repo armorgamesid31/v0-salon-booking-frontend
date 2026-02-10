@@ -208,7 +208,7 @@ const SalonDashboard = () => {
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>(CUSTOMER.gender)
   const [activePackages, setActivePackages] = useState<ActivePackage[]>(ACTIVE_PACKAGES)
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
-  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean | null>(true)
+  const [isKnownCustomer, setIsKnownCustomer] = useState<boolean | null>(false)
   const [showCustomerTypeModal, setShowCustomerTypeModal] = useState(false)
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
