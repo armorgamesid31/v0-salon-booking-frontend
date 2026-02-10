@@ -1761,12 +1761,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               {/* Known Customer Option */}
               <button
                 onClick={() => {
+                  console.log('[v0] Known customer button clicked')
                   setIsKnownCustomer(true)
                   setShowCustomerTypeModal(false)
                 }}
-                className="w-full group"
+                type="button"
+                className="w-full group cursor-pointer"
               >
-                <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 hover:border-primary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg">
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 hover:border-primary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg pointer-events-none">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <FaHeartPulse className="w-6 h-6 text-primary" />
@@ -1782,12 +1784,14 @@ const handleRepeatAppointment = (appointment: PastAppointment) => {
               {/* New Customer Option */}
               <button
                 onClick={() => {
+                  console.log('[v0] New customer button clicked')
                   setIsKnownCustomer(false)
                   setShowCustomerTypeModal(false)
                 }}
-                className="w-full group"
+                type="button"
+                className="w-full group cursor-pointer"
               >
-                <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-2 border-secondary/30 hover:border-secondary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg">
+                <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-2 border-secondary/30 hover:border-secondary/60 rounded-2xl p-6 transition-all duration-300 text-left space-y-3 hover:shadow-lg pointer-events-none">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <FaWandMagicSparkles className="w-6 h-6 text-secondary" />
