@@ -7,6 +7,7 @@ export interface Salon {
   headerMessage?: string
   phone?: string
   address?: string
+  categoryOrder?: string[] | null
   workingHours?: {
     day: string
     open: string

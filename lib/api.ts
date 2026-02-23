@@ -27,11 +27,18 @@ export async function getSalon(salonId: string): Promise<Salon> {
       id: data.salon.id.toString(),
       name: data.salon.name,
       description: '',
+      logoUrl: data.salon.logoUrl || undefined,
       headerMessage: 'Hizmetini Seç',
     }
   } catch (error) {
     console.warn('getSalon failed, using fallback:', error)
-    return { id: salonId, name: 'Salon', description: '', headerMessage: 'Hizmetini Seç' }
+    return { 
+      id: salonId, 
+      name: 'Salon', 
+      description: '', 
+      headerMessage: 'Hizmetini Seç',
+      logoUrl: undefined
+    }
   }
 }
 
