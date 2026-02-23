@@ -69,6 +69,7 @@ const SalonDashboardContent = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [isBooking, setIsBooking] = useState(false)
   const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
+  const [logoError, setLogoError] = useState(false)
 
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
@@ -260,14 +261,12 @@ const SalonDashboardContent = () => {
         <div className="max-w-2xl mx-auto px-4 pt-8 pb-6">
           <div className="flex flex-col items-center justify-center mb-4">
             <div className="mb-2">
-                {salonData.logoUrl ? (
+                {salonData.logoUrl && !logoError ? (
                     <img 
                         src={salonData.logoUrl} 
                         alt={salonData.name} 
                         className="h-20 w-auto object-contain"
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80?text=LOGO';
-                        }}
+                        onError={() => setLogoError(true)}
                     />
                 ) : (
                     <div className="text-4xl">💇‍♀️</div>
