@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb } from 'lucide-react'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee } from '@/lib/types'
-import { getBookingContextByToken, registerCustomer, getSalon, getServices, getEmployees, checkAvailability } from '@/lib/api'
+import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability } from '@/lib/api'
 import { DUMMY_SALON } from '@/lib/constants'
 
 interface PastAppointment {
@@ -49,9 +49,9 @@ const SalonDashboardContent = () => {
   const searchParams = useSearchParams()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [specialistModal, setSpecialistModal] = useState<ImportedServiceItem | null>(null)
+  const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
   const [servicePersonMapping, setServicePersonMapping] = useState<Record<string, number[]>>({})
-  const [selectedSpecialists, setSelectedSpecialists] = useState<string[]>([])
+  const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
   const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
@@ -62,7 +62,6 @@ const SalonDashboardContent = () => {
   const [salonId, setSalonId] = useState<string>(DUMMY_SALON.id)
   const [salonData, setSalonData] = useState<any>(DUMMY_SALON)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
-  const [availableStaff, setAvailableStaff] = useState<Employee[]>([])
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [welcomeMessage, setWelcomeMessage] = useState('Hoş geldiniz! Bugün sizi şımartmaya hazırız ✨')
   const [customerName, setCustomerName] = useState('')
@@ -81,22 +80,12 @@ const SalonDashboardContent = () => {
   } | null>(null)
 
   const totalPrice = (() => {
-    if (numberOfPeople === 1) {
-      return selectedServices.reduce((sum, s) => sum + (s.salePrice || s.originalPrice || 0), 0)
-    } else {
-      let total = 0
-      for (let personIdx = 0; personIdx < numberOfPeople; personIdx++) {
-        const personServicesPrice = selectedServices
-          .filter((service) => {
-            const personIds = servicePersonMapping[service.id] || []
-            if (personIds.length === 0) return personIdx === 0
-            return personIds.includes(personIdx)
-          })
-          .reduce((sum, s) => sum + (s.salePrice || s.originalPrice || 0), 0)
-        total += personServicesPrice
-      }
-      return total
-    }
+    return selectedServices.reduce((sum, s) => {
+        const staffId = selectedSpecialistIds[s.id];
+        const staffOverride = specialistModal?.service.id === s.id ? specialistModal.staff.find(st => st.id === staffId) : null;
+        const price = staffOverride?.overridePrice || s.salePrice || s.originalPrice || 0;
+        return sum + price;
+    }, 0);
   })()
 
   // Magic Link token handling & Data Fetching
@@ -116,7 +105,6 @@ const SalonDashboardContent = () => {
           
           getSalon(context.salonId).then(setSalonData)
           getServices(context.salonId).then(setAvailableServices)
-          getEmployees(context.salonId).then(setAvailableStaff)
         }
       })
     } else {
@@ -124,7 +112,6 @@ const SalonDashboardContent = () => {
         setSalonId(sId)
         getSalon(sId).then(setSalonData)
         getServices(sId).then(setAvailableServices)
-        getEmployees(sId).then(setAvailableStaff)
     }
   }, [searchParams])
 
@@ -149,18 +136,12 @@ const SalonDashboardContent = () => {
   }, [selectedDate, selectedServices, numberOfPeople, salonId])
 
   const calculateTotalDuration = () => {
-    if (numberOfPeople === 1) {
-      return selectedServices.reduce((sum, service) => sum + (parseInt(service.duration) || 0), 0)
-    } else {
-      const personDurations: Record<number, number> = {}
-      selectedServices.forEach((service) => {
-        const personIds = servicePersonMapping[service.id] || [0]
-        personIds.forEach((personIdx) => {
-          personDurations[personIdx] = (personDurations[personIdx] || 0) + (parseInt(service.duration) || 0)
-        })
-      })
-      return Math.max(...Object.values(personDurations), 0)
-    }
+    return selectedServices.reduce((sum, service) => {
+        const staffId = selectedSpecialistIds[service.id];
+        const staffOverride = specialistModal?.service.id === service.id ? specialistModal.staff.find(st => st.id === staffId) : null;
+        const duration = staffOverride?.overrideDuration || parseInt(service.duration) || 0;
+        return sum + duration;
+    }, 0);
   }
 
   const calculateEndTime = () => {
@@ -173,7 +154,7 @@ const SalonDashboardContent = () => {
     return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
   }
 
-  const handleServiceToggle = (service: any, categoryName: string) => {
+  const handleServiceToggle = async (service: any, categoryName: string) => {
     const serviceData: ImportedServiceItem = {
       id: service.id,
       name: `${categoryName} - ${service.name}`,
@@ -185,22 +166,21 @@ const SalonDashboardContent = () => {
 
     const isCurrentlySelected = selectedServices.some(s => s.id === service.id)
 
-    setSelectedServices(prev => {
-      if (isCurrentlySelected) return prev.filter(s => s.id !== service.id)
-      return [...prev, serviceData]
-    })
+    if (isCurrentlySelected) {
+      setSelectedServices(prev => prev.filter(s => s.id !== service.id))
+      const newStaffIds = { ...selectedSpecialistIds };
+      delete newStaffIds[service.id];
+      setSelectedSpecialistIds(newStaffIds);
+    } else {
+      setSelectedServices(prev => [...prev, serviceData])
+      if (service.requiresSpecialist) {
+          const staff = await getStaffForService(service.id.toString());
+          setSpecialistModal({ service: serviceData, staff });
+      }
+    }
 
     setSelectedDate(null)
     setSelectedTimeSlot(null)
-
-    if (!isCurrentlySelected) {
-        if (numberOfPeople > 1) {
-            setPersonSelectionModal({ service: serviceData, numberOfPeople })
-        } else if (service.requiresSpecialist) {
-            setSpecialistModal(serviceData)
-            setSelectedSpecialists([])
-        }
-    }
   }
 
   const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
@@ -357,18 +337,24 @@ const SalonDashboardContent = () => {
         <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-foreground">{specialistModal.name}</h3>
+              <h3 className="text-lg font-bold text-foreground">{specialistModal.service.name}</h3>
               <button onClick={() => setSpecialistModal(null)} className="text-muted-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-2">
-              {availableStaff.map((staff) => (
-                <label key={staff.id} className="flex items-center gap-3 p-3 rounded-lg border-2 border-muted cursor-pointer">
-                  <input type="radio" name="specialist" checked={selectedSpecialists.includes(staff.name)} onChange={() => setSelectedSpecialists([staff.name])} className="w-5 h-5 accent-primary" />
-                  <span className="text-sm font-medium text-foreground">{staff.name}</span>
+              {specialistModal.staff.map((staff) => (
+                <label key={staff.id} className="flex items-center justify-between p-3 rounded-lg border-2 border-muted cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <input type="radio" name="specialist" checked={selectedSpecialistIds[specialistModal.service.id] === staff.id} onChange={() => setSelectedSpecialistIds(prev => ({ ...prev, [specialistModal.service.id]: staff.id }))} className="w-5 h-5 accent-primary" />
+                    <span className="text-sm font-medium text-foreground">{staff.name}</span>
+                  </div>
+                  <div className="text-right">
+                      {staff.overridePrice && <p className="text-xs font-bold text-secondary">{staff.overridePrice}₺</p>}
+                      {staff.overrideDuration && <p className="text-[10px] text-muted-foreground">{staff.overrideDuration} dk</p>}
+                  </div>
                 </label>
               ))}
             </div>
-            <Button onClick={() => setSpecialistModal(null)} className="w-full bg-primary text-primary-foreground rounded-full py-3">Tamam</Button>
+            <Button onClick={() => setSpecialistModal(null)} className="w-full bg-primary text-primary-foreground rounded-full py-3">Seçimi Onayla</Button>
           </div>
         </div>
       )}

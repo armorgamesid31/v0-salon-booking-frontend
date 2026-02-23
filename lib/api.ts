@@ -2,10 +2,9 @@ import { API_BASE_URL } from './constants'
 import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext } from './types'
 
 /**
- * Multi-tenant SaaS API helpers - Backend ile Uyumlu (Grouped Categories)
+ * Multi-tenant SaaS API helpers
  */
 
-// Generic fetch wrapper
 async function fetchFromAPI<T>(url: string): Promise<T> {
   try {
     const response = await fetch(url)
@@ -20,7 +19,6 @@ async function fetchFromAPI<T>(url: string): Promise<T> {
   }
 }
 
-// Salon bilgisini getir
 export async function getSalon(salonId: string): Promise<Salon> {
   const url = `${API_BASE_URL}/api/salon/public`
   try {
@@ -37,7 +35,6 @@ export async function getSalon(salonId: string): Promise<Salon> {
   }
 }
 
-// Hizmetleri getir (Grouped by backend)
 export async function getServices(salonId: string): Promise<ServiceCategory[]> {
   const url = `${API_BASE_URL}/api/salon/services/public`
   try {
@@ -45,7 +42,7 @@ export async function getServices(salonId: string): Promise<ServiceCategory[]> {
     return data.categories.map(cat => ({
       id: cat.key,
       name: cat.name,
-      icon: '', // Backend key üzerinden frontend'de maplenebilir
+      icon: cat.key,
       services: cat.services.map((s: any) => ({
         id: s.id.toString(),
         name: s.name,
@@ -61,7 +58,23 @@ export async function getServices(salonId: string): Promise<ServiceCategory[]> {
   }
 }
 
-// Çalışanları getir
+// Yeni: Belirli bir hizmet için uzmanları getir
+export async function getStaffForService(serviceId: string): Promise<Employee[]> {
+  const url = `${API_BASE_URL}/api/salon/services/${serviceId}/staff`
+  try {
+    const data = await fetchFromAPI<{ staff: any[] }>(url)
+    return data.staff.map(p => ({
+      id: p.id.toString(),
+      name: p.name,
+      overridePrice: p.price,
+      overrideDuration: p.duration
+    }))
+  } catch (error) {
+    console.error('getStaffForService error:', error)
+    return []
+  }
+}
+
 export async function getEmployees(salonId: string): Promise<Employee[]> {
   const url = `${API_BASE_URL}/api/salon/staff/public`
   try {
@@ -76,12 +89,10 @@ export async function getEmployees(salonId: string): Promise<Employee[]> {
   }
 }
 
-// Paketleri getir
 export async function getPackages(salonId: string): Promise<Package[]> {
   return []
 }
 
-// Müsaitlik kontrol et
 export async function checkAvailability(
   salonId: string,
   serviceId: string,
@@ -123,7 +134,6 @@ export async function checkAvailability(
   }
 }
 
-// Randevu oluştur
 export async function createAppointment(
   salonId: string,
   customerId: string,
@@ -164,7 +174,6 @@ export async function createAppointment(
   }
 }
 
-// Geçmiş randevuları getir
 export async function getAppointments(salonId: string, customerId: string): Promise<Appointment[]> {
   try {
     const url = `${API_BASE_URL}/api/salon/appointments?customerId=${customerId}`
@@ -175,7 +184,6 @@ export async function getAppointments(salonId: string, customerId: string): Prom
   }
 }
 
-// Yeni müşteri kaydı
 export interface RegisterCustomerRequest {
   fullName: string
   phone: string
@@ -219,7 +227,6 @@ export async function registerCustomer(
   }
 }
 
-// Magic Link - Token ile booking context getir
 export async function getBookingContextByToken(token: string): Promise<BookingContext | null> {
   try {
     const url = `${API_BASE_URL}/api/booking/context?token=${token}`

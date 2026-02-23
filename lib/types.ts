@@ -37,6 +37,8 @@ export interface Employee {
   id: string
   name: string
   specialization?: string
+  overridePrice?: number
+  overrideDuration?: number
   availability?: {
     day: string
     slots: string[]
