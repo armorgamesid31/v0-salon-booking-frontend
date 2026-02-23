@@ -88,7 +88,7 @@ const SalonDashboardContent = () => {
     }, 0);
   })()
 
-  // Magic Link token handling & Data Fetching
+  // Fetch initial salon and services data
   useEffect(() => {
     const token = searchParams.get('token')
     if (token) {
@@ -104,16 +104,27 @@ const SalonDashboardContent = () => {
           if (context.customerGender) setSelectedGender(context.customerGender)
           
           getSalon(context.salonId).then(setSalonData)
-          getServices(context.salonId).then(setAvailableServices)
+          getServices(context.salonId, context.customerGender || 'female').then(setAvailableServices)
         }
       })
     } else {
         const sId = searchParams.get('salonId') || DUMMY_SALON.id
         setSalonId(sId)
         getSalon(sId).then(setSalonData)
-        getServices(sId).then(setAvailableServices)
+        getServices(sId, selectedGender).then(setAvailableServices)
     }
   }, [searchParams])
+
+  // Refetch services when gender changes
+  useEffect(() => {
+      if (salonId) {
+          getServices(salonId, selectedGender).then(setAvailableServices)
+          // Clear selections when changing gender to avoid inconsistent states
+          setSelectedServices([])
+          setSelectedDate(null)
+          setSelectedTimeSlot(null)
+      }
+  }, [selectedGender, salonId])
 
   // Fetch Slots
   useEffect(() => {

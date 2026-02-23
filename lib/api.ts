@@ -35,8 +35,12 @@ export async function getSalon(salonId: string): Promise<Salon> {
   }
 }
 
-export async function getServices(salonId: string): Promise<ServiceCategory[]> {
-  const url = `${API_BASE_URL}/api/salon/services/public`
+// Güncellendi: Cinsiyet parametresi eklendi
+export async function getServices(salonId: string, gender?: string): Promise<ServiceCategory[]> {
+  const params = new URLSearchParams();
+  if (gender) params.append('gender', gender);
+  
+  const url = `${API_BASE_URL}/api/salon/services/public?${params.toString()}`
   try {
     const data = await fetchFromAPI<{ categories: any[] }>(url)
     return data.categories.map(cat => ({
@@ -58,7 +62,6 @@ export async function getServices(salonId: string): Promise<ServiceCategory[]> {
   }
 }
 
-// Yeni: Belirli bir hizmet için uzmanları getir
 export async function getStaffForService(serviceId: string): Promise<Employee[]> {
   const url = `${API_BASE_URL}/api/salon/services/${serviceId}/staff`
   try {
