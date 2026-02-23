@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb } from 'lucide-react'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee } from '@/lib/types'
-import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability } from '@/lib/api'
+import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability, createAppointment } from '@/lib/api'
 import { DUMMY_SALON } from '@/lib/constants'
 
 interface PastAppointment {
@@ -50,7 +50,6 @@ const SalonDashboardContent = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
-  const [servicePersonMapping, setServicePersonMapping] = useState<Record<string, number[]>>({})
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
   const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,6 +66,10 @@ const SalonDashboardContent = () => {
   const [customerName, setCustomerName] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [isBooking, setIsBooking] = useState(false)
+  const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
+
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
     phone: '',
@@ -74,10 +77,6 @@ const SalonDashboardContent = () => {
     birthDate: '',
     acceptMarketing: false,
   })
-  const [personSelectionModal, setPersonSelectionModal] = useState<{
-    service: ImportedServiceItem
-    numberOfPeople: number
-  } | null>(null)
 
   const totalPrice = (() => {
     return selectedServices.reduce((sum, s) => {
@@ -119,7 +118,6 @@ const SalonDashboardContent = () => {
   useEffect(() => {
       if (salonId) {
           getServices(salonId, selectedGender).then(setAvailableServices)
-          // Clear selections when changing gender to avoid inconsistent states
           setSelectedServices([])
           setSelectedDate(null)
           setSelectedTimeSlot(null)
@@ -192,6 +190,53 @@ const SalonDashboardContent = () => {
 
     setSelectedDate(null)
     setSelectedTimeSlot(null)
+  }
+
+  const handleConfirmAppointment = async () => {
+    if (!customerId || !selectedDate || !selectedTimeSlot || selectedServices.length === 0) return;
+    
+    setIsBooking(true);
+    try {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const day = String(selectedDate).padStart(2, '0')
+        const dateStr = `${year}-${month}-${day}`
+
+        const res = await createAppointment(salonId, customerId, {
+            services: selectedServices.map(s => ({
+                serviceId: s.id,
+                employeeId: selectedSpecialistIds[s.id]
+            })),
+            date: dateStr,
+            time: selectedTimeSlot,
+            numberOfPeople,
+            customerInfo: {
+                name: customerName || registrationForm.fullName,
+                phone: registrationForm.phone
+            }
+        });
+
+        if (res.data) {
+            setLastAppointmentDetails({
+                date: dateStr,
+                time: selectedTimeSlot,
+                services: selectedServices
+            });
+            setShowConfirmationModal(false);
+            setShowSuccessModal(true);
+            // Reset state
+            setSelectedServices([]);
+            setSelectedDate(null);
+            setSelectedTimeSlot(null);
+        } else {
+            alert(res.error || 'Randevu oluşturulamadı.');
+        }
+    } catch (err) {
+        alert('Bir hata oluştu.');
+    } finally {
+        setIsBooking(false);
+    }
   }
 
   const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
@@ -387,33 +432,80 @@ const SalonDashboardContent = () => {
               <input type="date" value={registrationForm.birthDate} onChange={(e) => setRegistrationForm(p => ({ ...p, birthDate: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
             </div>
             <Button onClick={async () => {
-                if (!registrationForm.fullName || !registrationForm.phone) return alert('Doldurunuz')
-                const res = await registerCustomer({ ...registrationForm, salonId })
-                if (res.customerId) { setCustomerId(res.customerId); setIsKnownCustomer(true); setShowRegistrationModal(false); setShowConfirmationModal(true); }
-            }} className="w-full rounded-full py-2 bg-primary text-primary-foreground font-semibold">Kayıt Ol & Onayla</Button>
+                if (!registrationForm.fullName || !registrationForm.phone) return alert('Lütfen bilgilerinizi doldurun.');
+                const res = await registerCustomer({ ...registrationForm, salonId });
+                if (res.customerId) { 
+                    setCustomerId(res.customerId); 
+                    setCustomerName(registrationForm.fullName);
+                    setIsKnownCustomer(true); 
+                    setShowRegistrationModal(false); 
+                    setShowConfirmationModal(true); 
+                }
+            }} className="w-full rounded-full py-2 bg-primary text-primary-foreground font-semibold">Kayıt Ol & Devam Et</Button>
           </div>
         </div>
       )}
 
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in">
-          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+          <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto shadow-2xl">
             <h2 className="text-2xl font-bold">Randevu Onayı</h2>
-            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-2">
-                <p className="text-sm font-bold">{selectedDate} Mart - {selectedTimeSlot}</p>
-                <p className="text-xs text-muted-foreground">{calculateTotalDuration()} dakika</p>
-                <p className="text-xs text-muted-foreground">{numberOfPeople} kişi</p>
+            <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-4">
+                <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold">Tarih & Saat</p>
+                    <p className="text-base font-bold">{selectedDate} Mart - {selectedTimeSlot}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold">Detaylar</p>
+                    <p className="text-sm font-medium">{calculateTotalDuration()} dakika • {numberOfPeople} kişi</p>
+                </div>
+                <div className="pt-2 border-t border-primary/10">
+                    <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Hizmetler</p>
+                    {selectedServices.map(s => (
+                        <p key={s.id} className="text-sm font-medium flex justify-between">
+                            <span>{s.name}</span>
+                            <span>{s.salePrice || s.originalPrice}₺</span>
+                        </p>
+                    ))}
+                </div>
             </div>
-            <Button onClick={() => { alert('Randevunuz alındı!'); setShowConfirmationModal(false); }} className="w-full rounded-full py-3 bg-secondary text-secondary-foreground font-bold">Randevuyu Tamamla</Button>
+            <Button 
+                onClick={handleConfirmAppointment} 
+                disabled={isBooking}
+                className="w-full rounded-full py-4 bg-secondary text-secondary-foreground font-bold text-lg"
+            >
+                {isBooking ? 'Onaylanıyor...' : 'Randevuyu Tamamla'}
+            </Button>
           </div>
         </div>
+      )}
+
+      {showSuccessModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] animate-in fade-in">
+              <Card className="w-[90%] max-w-sm rounded-3xl border-0 shadow-2xl text-center overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="bg-secondary/10 p-8 flex justify-center">
+                      <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center animate-bounce">
+                          <Check className="w-10 h-10 text-secondary-foreground" />
+                      </div>
+                  </div>
+                  <CardContent className="p-8 space-y-4">
+                      <h2 className="text-2xl font-bold text-foreground">Randevunuz Alındı!</h2>
+                      <p className="text-sm text-muted-foreground">Onay mesajı telefonunuza gönderilecektir.</p>
+                      <div className="bg-muted/30 p-4 rounded-2xl text-sm space-y-1">
+                          <p className="font-bold">{lastAppointmentDetails?.date} • {lastAppointmentDetails?.time}</p>
+                          <p className="text-xs opacity-70">{lastAppointmentDetails?.services.map((s: any) => s.name).join(', ')}</p>
+                      </div>
+                      <Button onClick={() => setShowSuccessModal(false)} className="w-full rounded-full py-3 bg-primary text-primary-foreground font-bold">Harika!</Button>
+                  </CardContent>
+              </Card>
+          </div>
       )}
     </div>
   )
 }
 
 const SalonDashboard = () => (
-    <Suspense fallback={<div>Yükleniyor...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Yükleniyor...</div>}>
         <SalonDashboardContent />
     </Suspense>
 )
