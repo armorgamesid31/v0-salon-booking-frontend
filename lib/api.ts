@@ -23,11 +23,12 @@ export async function getSalon(salonId: string): Promise<Salon> {
   const url = `${API_BASE_URL}/api/salon/public`
   try {
     const data = await fetchFromAPI<{ salon: any }>(url)
+    // console.log("Frontend getSalon data:", data); // Debug
     return {
       id: data.salon.id.toString(),
       name: data.salon.name,
       description: '',
-      logoUrl: data.salon.logoUrl || undefined,
+      logoUrl: data.salon.logoUrl || null,
       headerMessage: 'Hizmetini Seç',
     }
   } catch (error) {
@@ -213,6 +214,7 @@ export async function registerCustomer(
 ): Promise<RegisterCustomerResponse> {
   try {
     const url = `${API_BASE_URL}/api/customers/register`
+    // console.log("Registering customer:", data); // Debug
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -225,7 +227,10 @@ export async function registerCustomer(
       }),
     })
     
-    if (!response.ok) throw new Error(`Register failed: ${response.status}`)
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Register failed: ${response.status}`);
+    }
     const result = await response.json()
     return { 
       customerId: result.customerId.toString(), 
