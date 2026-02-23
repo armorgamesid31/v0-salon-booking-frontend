@@ -225,7 +225,6 @@ const SalonDashboardContent = () => {
             });
             setShowConfirmationModal(false);
             setShowSuccessModal(true);
-            // Reset state
             setSelectedServices([]);
             setSelectedDate(null);
             setSelectedTimeSlot(null);
@@ -260,7 +259,20 @@ const SalonDashboardContent = () => {
       <div className="bg-background">
         <div className="max-w-2xl mx-auto px-4 pt-8 pb-6">
           <div className="flex flex-col items-center justify-center mb-4">
-            <div className="text-4xl font-bold text-primary mb-2">{salonData.logoUrl || '💇‍♀️'}</div>
+            <div className="mb-2">
+                {salonData.logoUrl ? (
+                    <img 
+                        src={salonData.logoUrl} 
+                        alt={salonData.name} 
+                        className="h-20 w-auto object-contain"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80?text=LOGO';
+                        }}
+                    />
+                ) : (
+                    <div className="text-4xl">💇‍♀️</div>
+                )}
+            </div>
             <h1 className="text-xl font-bold">{salonData.name}</h1>
           </div>
           <div className="text-center">
