@@ -2,7 +2,7 @@ import { API_BASE_URL } from './constants'
 import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext } from './types'
 
 /**
- * Multi-tenant SaaS API helpers - Backend ile Uyumlu
+ * Multi-tenant SaaS API helpers - Backend ile Uyumlu (No Query Params)
  */
 
 // Generic fetch wrapper
@@ -22,7 +22,7 @@ async function fetchFromAPI<T>(url: string): Promise<T> {
 
 // Salon bilgisini getir
 export async function getSalon(salonId: string): Promise<Salon> {
-  const url = `${API_BASE_URL}/api/salon/public?s=${salonId}`
+  const url = `${API_BASE_URL}/api/salon/public`
   try {
     const data = await fetchFromAPI<{ salon: any }>(url)
     return {
@@ -39,11 +39,9 @@ export async function getSalon(salonId: string): Promise<Salon> {
 
 // Hizmetleri getir
 export async function getServices(salonId: string): Promise<ServiceCategory[]> {
-  const url = `${API_BASE_URL}/api/salon/services/public?s=${salonId}`
+  const url = `${API_BASE_URL}/api/salon/services/public`
   try {
     const data = await fetchFromAPI<{ services: any[] }>(url)
-    
-    // Backend'den gelen düz listeyi kategori bazlı grupla (veya tek kategori göster)
     return [
       {
         id: 'cat-main',
@@ -66,7 +64,7 @@ export async function getServices(salonId: string): Promise<ServiceCategory[]> {
 
 // Çalışanları getir
 export async function getEmployees(salonId: string): Promise<Employee[]> {
-  const url = `${API_BASE_URL}/api/salon/staff/public?s=${salonId}`
+  const url = `${API_BASE_URL}/api/salon/staff/public`
   try {
     const data = await fetchFromAPI<{ staff: any[] }>(url)
     return data.staff.map(p => ({
@@ -79,12 +77,12 @@ export async function getEmployees(salonId: string): Promise<Employee[]> {
   }
 }
 
-// Paketleri getir (Backend'de henüz yok, boş dönelim)
+// Paketleri getir
 export async function getPackages(salonId: string): Promise<Package[]> {
   return []
 }
 
-// Müsaitlik kontrol et (Backend'in yeni motorunu kullanacak şekilde uyarlandı)
+// Müsaitlik kontrol et
 export async function checkAvailability(
   salonId: string,
   serviceId: string,
@@ -98,8 +96,7 @@ export async function checkAvailability(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        salonId: parseInt(salonId),
-        date: date, // YYYY-MM-DD
+        date: date,
         groups: [
           {
             personId: 'p1',
@@ -112,7 +109,6 @@ export async function checkAvailability(
     if (!response.ok) return { available: false }
     
     const data = await response.json()
-    // Yeni motorun çıktısını mevcut frontend formatına dönüştür
     const personGroup = data.groups?.[0]
     if (personGroup && personGroup.slots.length > 0) {
       return {
@@ -146,7 +142,6 @@ export async function createAppointment(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        salonId: parseInt(salonId),
         customerId: parseInt(customerId),
         serviceId: parseInt(data.services[0].serviceId),
         staffId: data.services[0].employeeId ? parseInt(data.services[0].employeeId) : undefined,
@@ -205,8 +200,11 @@ export async function registerCustomer(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...data,
-        salonId: parseInt(data.salonId)
+        fullName: data.fullName,
+        phone: data.phone,
+        gender: data.gender,
+        birthDate: data.birthDate,
+        acceptMarketing: data.acceptMarketing,
       }),
     })
     
