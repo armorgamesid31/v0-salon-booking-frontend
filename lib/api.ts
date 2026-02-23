@@ -2,7 +2,7 @@ import { API_BASE_URL } from './constants'
 import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext } from './types'
 
 /**
- * Multi-tenant SaaS API helpers - Backend ile Uyumlu (No Query Params)
+ * Multi-tenant SaaS API helpers - Backend ile Uyumlu (Grouped Categories)
  */
 
 // Generic fetch wrapper
@@ -37,25 +37,24 @@ export async function getSalon(salonId: string): Promise<Salon> {
   }
 }
 
-// Hizmetleri getir
+// Hizmetleri getir (Grouped by backend)
 export async function getServices(salonId: string): Promise<ServiceCategory[]> {
   const url = `${API_BASE_URL}/api/salon/services/public`
   try {
-    const data = await fetchFromAPI<{ services: any[] }>(url)
-    return [
-      {
-        id: 'cat-main',
-        name: 'Hizmetler',
-        icon: '✨',
-        services: data.services.map(s => ({
-          id: s.id.toString(),
-          name: s.name,
-          duration: `${s.duration} dk`,
-          originalPrice: s.price,
-          salePrice: s.price,
-        }))
-      }
-    ]
+    const data = await fetchFromAPI<{ categories: any[] }>(url)
+    return data.categories.map(cat => ({
+      id: cat.key,
+      name: cat.name,
+      icon: '', // Backend key üzerinden frontend'de maplenebilir
+      services: cat.services.map((s: any) => ({
+        id: s.id.toString(),
+        name: s.name,
+        duration: `${s.duration} dk`,
+        originalPrice: s.price,
+        salePrice: s.price,
+        requiresSpecialist: s.requiresSpecialist
+      }))
+    }))
   } catch (error) {
     console.error('getServices error:', error)
     return []

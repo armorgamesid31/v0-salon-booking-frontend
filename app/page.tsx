@@ -4,13 +4,10 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, History, Check, AlertCircle, Hand, Lightbulb } from 'lucide-react'
-import { SPECIALIST_SERVICES as CONST_SPECIALIST_SERVICES } from '@/lib/constants'
+import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb } from 'lucide-react'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee } from '@/lib/types'
 import { getBookingContextByToken, registerCustomer, getSalon, getServices, getEmployees, checkAvailability } from '@/lib/api'
 import { DUMMY_SALON } from '@/lib/constants'
-
-const SPECIALIST_SERVICES = CONST_SPECIALIST_SERVICES 
 
 interface PastAppointment {
   id: string
@@ -27,41 +24,23 @@ interface PastAppointment {
   selectedSpecialist: string
 }
 
-interface ActivePackage {
-  id: string
-  name: string
-  badge: 'Aktif' | 'Bitiryor'
-  remainingSessions: number
-  totalSessions: number
-  expiryDate: string
-  warning?: string
-  availableServices: Array<{
-    id: string
-    name: string
-    duration: string
-    used: number
-    total: number
-    isFinished?: boolean
-  }>
-}
-
 interface TimeSlot {
   time: string
   available: boolean
   booked?: boolean
 }
 
-const getIconComponent = (categoryId: string) => {
-  switch (categoryId) {
-    case 'cat-1': return <Sparkles className="w-5 h-5" />
-    case 'cat-2': return <Wand2 className="w-5 h-5" />
-    case 'cat-3': return <Zap className="w-5 h-5" />
-    case 'cat-4': return <Droplet className="w-5 h-5" />
-    case 'cat-5': return <Heart className="w-5 h-5" />
-    case 'cat-6': return <Hand className="w-5 h-5" />
-    case 'cat-7': return <Scissors className="w-5 h-5" />
-    case 'cat-8': return <Lightbulb className="w-5 h-5" />
-    case 'cat-9': return <Flower className="w-5 h-5" />
+const getIconComponent = (categoryKey: string) => {
+  switch (categoryKey) {
+    case 'FACIAL': return <Sparkles className="w-5 h-5" />
+    case 'MEDICAL': return <Wand2 className="w-5 h-5" />
+    case 'LASER': return <Zap className="w-5 h-5" />
+    case 'WAX': return <Droplet className="w-5 h-5" />
+    case 'BODY': return <Heart className="w-5 h-5" />
+    case 'NAIL': return <Hand className="w-5 h-5" />
+    case 'HAIR': return <Scissors className="w-5 h-5" />
+    case 'CONSULTATION': return <Lightbulb className="w-5 h-5" />
+    case 'OTHER': return <Flower className="w-5 h-5" />
     default: return <Sparkles className="w-5 h-5" />
   }
 }
@@ -103,7 +82,7 @@ const SalonDashboardContent = () => {
 
   const totalPrice = (() => {
     if (numberOfPeople === 1) {
-      return selectedServices.reduce((sum, s) => sum + (s.salePrice || s.originalPrice), 0)
+      return selectedServices.reduce((sum, s) => sum + (s.salePrice || s.originalPrice || 0), 0)
     } else {
       let total = 0
       for (let personIdx = 0; personIdx < numberOfPeople; personIdx++) {
@@ -113,7 +92,7 @@ const SalonDashboardContent = () => {
             if (personIds.length === 0) return personIdx === 0
             return personIds.includes(personIdx)
           })
-          .reduce((sum, s) => sum + (s.salePrice || s.originalPrice), 0)
+          .reduce((sum, s) => sum + (s.salePrice || s.originalPrice || 0), 0)
         total += personServicesPrice
       }
       return total
@@ -201,6 +180,7 @@ const SalonDashboardContent = () => {
       originalPrice: service.originalPrice || service.salePrice || 0,
       salePrice: service.salePrice,
       duration: service.duration,
+      requiresSpecialist: service.requiresSpecialist
     }
 
     const isCurrentlySelected = selectedServices.some(s => s.id === service.id)
@@ -216,7 +196,7 @@ const SalonDashboardContent = () => {
     if (!isCurrentlySelected) {
         if (numberOfPeople > 1) {
             setPersonSelectionModal({ service: serviceData, numberOfPeople })
-        } else if (SPECIALIST_SERVICES.includes(service.id)) {
+        } else if (service.requiresSpecialist) {
             setSpecialistModal(serviceData)
             setSelectedSpecialists([])
         }
@@ -305,7 +285,7 @@ const SalonDashboardContent = () => {
                                 <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><Clock className="w-3 h-3" />{service.duration}</span>
                               </div>
                               <div className="text-right">
-                                {displayPrice > 0 && <p className="text-sm font-bold text-secondary">{displayPrice}₺</p>}
+                                {displayPrice && displayPrice > 0 && <p className="text-sm font-bold text-secondary">{displayPrice}₺</p>}
                                 <Button size="sm" onClick={() => handleServiceToggle(service, category.name)} variant={isSelected ? 'default' : 'outline'} className="mt-2 rounded-full text-xs font-semibold">{isSelected ? 'Eklendi' : 'Ekle'}</Button>
                               </div>
                             </div>

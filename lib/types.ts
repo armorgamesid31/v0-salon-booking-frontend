@@ -22,6 +22,7 @@ export interface ServiceItem {
   originalPrice: number
   salePrice?: number
   tags?: string[]
+  requiresSpecialist?: boolean
 }
 
 export interface ServiceCategory {
