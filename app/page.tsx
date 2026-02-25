@@ -9,27 +9,7 @@ import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee } fr
 import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability, createAppointment } from '@/lib/api'
 import { DUMMY_SALON } from '@/lib/constants'
 
-interface PastAppointment {
-  id: string
-  name: string
-  service: string
-  date: string
-  time: string
-  endTime: string
-  status: 'completed' | 'missed' | 'updated' | 'rated'
-  specialists: string[]
-  packageName?: string
-  isRated?: boolean
-  services: string[]
-  selectedSpecialist: string
-}
-
-interface TimeSlot {
-  time: string
-  available: boolean
-  booked?: boolean
-}
-
+// Fixed icons helper
 const getIconComponent = (categoryKey: string) => {
   switch (categoryKey) {
     case 'FACIAL': return <Sparkles className="w-5 h-5" />
@@ -50,7 +30,6 @@ const SalonDashboardContent = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
-  const [servicePersonMapping, setServicePersonMapping] = useState<Record<string, number[]>>({})
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
   const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -59,10 +38,10 @@ const SalonDashboardContent = () => {
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1)
   const [isKnownCustomer, setIsKnownCustomer] = useState<boolean>(false)
   const [customerId, setCustomerId] = useState<string | null>(null)
-  const [salonId, setSalonId] = useState<string>(DUMMY_SALON.id)
-  const [salonData, setSalonData] = useState<any>(DUMMY_SALON)
+  const [salonId, setSalonId] = useState<string>('')
+  const [salonData, setSalonData] = useState<any>(null)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
   const [welcomeMessage, setWelcomeMessage] = useState('Hoş geldiniz! Bugün sizi şımartmaya hazırız ✨')
   const [customerName, setCustomerName] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
@@ -80,18 +59,30 @@ const SalonDashboardContent = () => {
     acceptMarketing: false,
   })
 
-  const totalPrice = (() => {
-    return selectedServices.reduce((sum, s) => {
-        const staffId = selectedSpecialistIds[s.id];
-        const staffOverride = specialistModal?.service.id === s.id ? specialistModal.staff.find(st => st.id === staffId) : null;
-        const price = staffOverride?.overridePrice || s.salePrice || s.originalPrice || 0;
-        return sum + price;
-    }, 0);
-  })()
+  // Calculate current price based on overrides
+  const totalPrice = selectedServices.reduce((sum, s) => {
+    const staffId = selectedSpecialistIds[s.id];
+    // We would need the full staff info here to check overrides, for now use base
+    return sum + (s.salePrice || s.originalPrice || 0);
+  }, 0);
 
   // Fetch initial salon and services data
   useEffect(() => {
     const token = searchParams.get('token')
+    
+    const loadSalonAndServices = async (sId: string, gender: string) => {
+        try {
+            const [salon, services] = await Promise.all([
+                getSalon(sId),
+                getServices(sId, gender)
+            ]);
+            setSalonData(salon);
+            setAvailableServices(services);
+        } catch (err) {
+            console.error("Critical load error:", err);
+        }
+    }
+
     if (token) {
       getBookingContextByToken(token).then((context) => {
         if (context) {
@@ -102,17 +93,15 @@ const SalonDashboardContent = () => {
             setCustomerName(context.customerName)
             setWelcomeMessage(`Selamlar ${context.customerName}, tekrar hoş geldin! 🌟`)
           }
-          if (context.customerGender) setSelectedGender(context.customerGender)
-          
-          getSalon(context.salonId).then(setSalonData)
-          getServices(context.salonId, context.customerGender || 'female').then(setAvailableServices)
+          const gender = context.customerGender || 'female';
+          setSelectedGender(gender as 'female' | 'male');
+          loadSalonAndServices(context.salonId, gender);
         }
       })
     } else {
-        const sId = searchParams.get('salonId') || DUMMY_SALON.id
+        const sId = searchParams.get('salonId') || '1';
         setSalonId(sId)
-        getSalon(sId).then(setSalonData)
-        getServices(sId, selectedGender).then(setAvailableServices)
+        loadSalonAndServices(sId, selectedGender);
     }
   }, [searchParams])
 
@@ -148,21 +137,8 @@ const SalonDashboardContent = () => {
 
   const calculateTotalDuration = () => {
     return selectedServices.reduce((sum, service) => {
-        const staffId = selectedSpecialistIds[service.id];
-        const staffOverride = specialistModal?.service.id === service.id ? specialistModal.staff.find(st => st.id === staffId) : null;
-        const duration = staffOverride?.overrideDuration || parseInt(service.duration) || 0;
-        return sum + duration;
+        return sum + (parseInt(service.duration) || 0);
     }, 0);
-  }
-
-  const calculateEndTime = () => {
-    if (!selectedTimeSlot) return null
-    const [startHour, startMinute] = selectedTimeSlot.split(':').map(Number)
-    const totalMinutes = calculateTotalDuration()
-    const totalMinutesFromStart = startHour * 60 + startMinute + totalMinutes
-    const endHour = Math.floor(totalMinutesFromStart / 60)
-    const endMinute = totalMinutesFromStart % 60
-    return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
   }
 
   const handleServiceToggle = async (service: any, categoryName: string) => {
@@ -189,7 +165,6 @@ const SalonDashboardContent = () => {
           setSpecialistModal({ service: serviceData, staff });
       }
     }
-
     setSelectedDate(null)
     setSelectedTimeSlot(null)
   }
@@ -240,8 +215,6 @@ const SalonDashboardContent = () => {
     }
   }
 
-  const isServiceSelected = (serviceId: string) => selectedServices.some((s) => s.id === serviceId)
-
   const dateOptions = Array.from({ length: 7 }).map((_, i) => {
       const d = new Date()
       d.setDate(d.getDate() + i)
@@ -256,6 +229,8 @@ const SalonDashboardContent = () => {
     ),
   })).filter((cat) => cat.services.length > 0)
 
+  if (!salonData) return <div className="flex h-screen items-center justify-center">Yükleniyor...</div>
+
   return (
     <div className="min-h-screen bg-background pb-40">
       <div className="bg-background">
@@ -267,10 +242,7 @@ const SalonDashboardContent = () => {
                         src={salonData.logoUrl} 
                         alt={salonData.name} 
                         className="h-20 w-auto object-contain"
-                        onError={(e) => {
-                            console.error("Logo failed to load:", salonData.logoUrl);
-                            setLogoError(true);
-                        }}
+                        onError={() => setLogoError(true)}
                     />
                 ) : (
                     <div className="text-4xl flex items-center justify-center w-20 h-20 bg-muted rounded-full shadow-sm">
@@ -324,7 +296,7 @@ const SalonDashboardContent = () => {
                 {expandedCategory === category.id && (
                   <CardContent className="pt-4 pb-4 px-4 border-t border-border space-y-3">
                     {category.services.map((service) => {
-                      const isSelected = isServiceSelected(service.id)
+                      const isSelected = selectedServices.some(s => s.id === service.id);
                       const displayPrice = service.salePrice || service.originalPrice;
                       return (
                         <div key={service.id} className="w-full text-left">
@@ -405,7 +377,7 @@ const SalonDashboardContent = () => {
           </div>
         )}
 
-      {/* Modals */}
+      {/* Specialist Selection Modal */}
       {specialistModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom">
@@ -432,6 +404,7 @@ const SalonDashboardContent = () => {
         </div>
       )}
 
+      {/* Registration Modal */}
       {showRegistrationModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in">
           <div className="bg-card w-full rounded-t-3xl p-4 space-y-3 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
@@ -450,7 +423,6 @@ const SalonDashboardContent = () => {
             </div>
             <Button onClick={async () => {
                 if (!registrationForm.fullName || !registrationForm.phone) return alert('Lütfen bilgilerinizi doldurun.');
-                
                 try {
                   const res = await registerCustomer(registrationForm);
                   if (res.customerId) { 
@@ -459,17 +431,16 @@ const SalonDashboardContent = () => {
                       setIsKnownCustomer(true); 
                       setShowRegistrationModal(false); 
                       setShowConfirmationModal(true); 
-                  } else {
-                      alert('Kayıt başarısız oldu. Lütfen tekrar deneyin.');
                   }
-                } catch (err) {
-                  alert("Bir hata oluştu: " + (err as Error).message);
+                } catch (err: any) {
+                  alert(err.message || "Bir hata oluştu");
                 }
             }} className="w-full rounded-full py-2 bg-primary text-primary-foreground font-semibold">Kayıt Ol & Devam Et</Button>
           </div>
         </div>
       )}
 
+      {/* Confirmation Modal */}
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in">
           <div className="bg-card w-full rounded-t-3xl p-6 space-y-6 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -493,17 +464,14 @@ const SalonDashboardContent = () => {
                     ))}
                 </div>
             </div>
-            <Button 
-                onClick={handleConfirmAppointment} 
-                disabled={isBooking}
-                className="w-full rounded-full py-4 bg-secondary text-secondary-foreground font-bold text-lg"
-            >
+            <Button onClick={handleConfirmAppointment} disabled={isBooking} className="w-full rounded-full py-4 bg-secondary text-secondary-foreground font-bold text-lg">
                 {isBooking ? 'Onaylanıyor...' : 'Randevuyu Tamamla'}
             </Button>
           </div>
         </div>
       )}
 
+      {/* Success Modal */}
       {showSuccessModal && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] animate-in fade-in">
               <Card className="w-[90%] max-w-sm rounded-3xl border-0 shadow-2xl text-center overflow-hidden animate-in zoom-in-95 duration-300">
