@@ -266,10 +266,15 @@ const SalonDashboardContent = () => {
                         src={salonData.logoUrl} 
                         alt={salonData.name} 
                         className="h-20 w-auto object-contain"
-                        onError={() => setLogoError(true)}
+                        onError={(e) => {
+                            console.error("Logo failed to load:", salonData.logoUrl);
+                            setLogoError(true);
+                        }}
                     />
                 ) : (
-                    <div className="text-4xl">💇‍♀️</div>
+                    <div className="text-4xl flex items-center justify-center w-20 h-20 bg-muted rounded-full shadow-sm">
+                        💇‍♀️
+                    </div>
                 )}
             </div>
             <h1 className="text-xl font-bold">{salonData.name}</h1>
@@ -444,13 +449,21 @@ const SalonDashboardContent = () => {
             </div>
             <Button onClick={async () => {
                 if (!registrationForm.fullName || !registrationForm.phone) return alert('Lütfen bilgilerinizi doldurun.');
-                const res = await registerCustomer({ ...registrationForm, salonId });
-                if (res.customerId) { 
-                    setCustomerId(res.customerId); 
-                    setCustomerName(registrationForm.fullName);
-                    setIsKnownCustomer(true); 
-                    setShowRegistrationModal(false); 
-                    setShowConfirmationModal(true); 
+                
+                // Form validation passing, now trigger API call
+                try {
+                  const res = await registerCustomer({ ...registrationForm, salonId });
+                  if (res.customerId) { 
+                      setCustomerId(res.customerId); 
+                      setCustomerName(registrationForm.fullName);
+                      setIsKnownCustomer(true); 
+                      setShowRegistrationModal(false); 
+                      setShowConfirmationModal(true); 
+                  } else {
+                      alert('Kayıt başarısız oldu. Lütfen tekrar deneyin.');
+                  }
+                } catch (err) {
+                  alert('Bir hata oluştu: ' + (err as Error).message);
                 }
             }} className="w-full rounded-full py-2 bg-primary text-primary-foreground font-semibold">Kayıt Ol & Devam Et</Button>
           </div>
