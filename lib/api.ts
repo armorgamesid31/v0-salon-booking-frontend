@@ -5,25 +5,21 @@ import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiRespons
  * Multi-tenant SaaS API helpers
  */
 
-async function fetchFromAPI<T>(url: string): Promise<T> {
-  try {
-    const response = await fetch(url)
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `API error: ${response.status}`)
-    }
-    return response.json()
-  } catch (error) {
-    console.error('API fetch error:', error)
-    throw error
+async function fetchFromAPI<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, options)
+  const isJson = response.headers.get('content-type')?.includes('application/json')
+  const data = isJson ? await response.json().catch(() => ({})) : null
+
+  if (!response.ok) {
+    throw new Error(data?.message || `API error: ${response.status}`)
   }
+  return data as T
 }
 
 export async function getSalon(salonId: string): Promise<Salon> {
   const url = `${API_BASE_URL}/api/salon/public`
   try {
     const data = await fetchFromAPI<{ salon: any }>(url)
-    // console.log("Frontend getSalon data:", data); // Debug
     return {
       id: data.salon.id.toString(),
       name: data.salon.name,
@@ -43,7 +39,6 @@ export async function getSalon(salonId: string): Promise<Salon> {
   }
 }
 
-// Güncellendi: Cinsiyet parametresi eklendi
 export async function getServices(salonId: string, gender?: string): Promise<ServiceCategory[]> {
   const params = new URLSearchParams();
   if (gender) params.append('gender', gender);
@@ -86,65 +81,6 @@ export async function getStaffForService(serviceId: string): Promise<Employee[]>
   }
 }
 
-export async function getEmployees(salonId: string): Promise<Employee[]> {
-  const url = `${API_BASE_URL}/api/salon/staff/public`
-  try {
-    const data = await fetchFromAPI<{ staff: any[] }>(url)
-    return data.staff.map(p => ({
-      id: p.id.toString(),
-      name: p.name,
-    }))
-  } catch (error) {
-    console.error('getEmployees error:', error)
-    return []
-  }
-}
-
-export async function getPackages(salonId: string): Promise<Package[]> {
-  return []
-}
-
-export async function checkAvailability(
-  salonId: string,
-  serviceId: string,
-  date: string,
-  numberOfPeople: number,
-  employeeId?: string
-): Promise<{ available: boolean; slots?: string[] }> {
-  try {
-    const url = `${API_BASE_URL}/availability/slots`
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date: date,
-        groups: [
-          {
-            personId: 'p1',
-            services: [parseInt(serviceId)]
-          }
-        ]
-      }),
-    })
-    
-    if (!response.ok) return { available: false }
-    
-    const data = await response.json()
-    const personGroup = data.groups?.[0]
-    if (personGroup && personGroup.slots.length > 0) {
-      return {
-        available: true,
-        slots: personGroup.slots.map((s: any) => s.startTime)
-      }
-    }
-    
-    return { available: false }
-  } catch (error) {
-    console.error('checkAvailability error:', error)
-    return { available: false }
-  }
-}
-
 export async function createAppointment(
   salonId: string,
   customerId: string,
@@ -158,7 +94,7 @@ export async function createAppointment(
 ): Promise<ApiResponse<Appointment>> {
   try {
     const url = `${API_BASE_URL}/api/bookings`
-    const response = await fetch(url, {
+    const result = await fetchFromAPI<any>(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -170,13 +106,6 @@ export async function createAppointment(
         customerPhone: data.customerInfo.phone,
       }),
     })
-    
-    if (!response.ok) {
-      const err = await response.json()
-      throw new Error(err.message || 'Appointment creation failed')
-    }
-    
-    const result = await response.json()
     return { data: result }
   } catch (error) {
     return {
@@ -185,60 +114,49 @@ export async function createAppointment(
   }
 }
 
-export async function getAppointments(salonId: string, customerId: string): Promise<Appointment[]> {
-  try {
-    const url = `${API_BASE_URL}/api/salon/appointments?customerId=${customerId}`
-    const data = await fetchFromAPI<{ appointments: any[] }>(url)
-    return data.appointments || []
-  } catch {
-    return []
+export async function registerCustomer(
+  data: { fullName: string; phone: string; gender: string; birthDate: string; acceptMarketing: boolean }
+): Promise<{ customerId: string; success: boolean }> {
+  const url = `${API_BASE_URL}/api/customers/register`
+  const result = await fetchFromAPI<any>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  return { 
+    customerId: result.customerId.toString(), 
+    success: true 
   }
 }
 
-export interface RegisterCustomerRequest {
-  fullName: string
-  phone: string
-  gender: 'female' | 'male' | 'other'
-  birthDate: string
-  acceptMarketing: boolean
-  salonId: string
-}
-
-export interface RegisterCustomerResponse {
-  customerId: string
-  success?: boolean
-}
-
-export async function registerCustomer(
-  data: RegisterCustomerRequest
-): Promise<RegisterCustomerResponse> {
+export async function checkAvailability(
+  salonId: string,
+  serviceId: string,
+  date: string,
+  numberOfPeople: number
+): Promise<{ available: boolean; slots?: string[] }> {
   try {
-    const url = `${API_BASE_URL}/api/customers/register`
-    // console.log("Registering customer:", data); // Debug
-    const response = await fetch(url, {
+    const url = `${API_BASE_URL}/availability/slots`
+    const data = await fetchFromAPI<any>(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fullName: data.fullName,
-        phone: data.phone,
-        gender: data.gender,
-        birthDate: data.birthDate,
-        acceptMarketing: data.acceptMarketing,
+        date: date,
+        groups: [{ personId: 'p1', services: [parseInt(serviceId)] }]
       }),
     })
     
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Register failed: ${response.status}`);
+    const personGroup = data.groups?.[0]
+    if (personGroup && personGroup.slots.length > 0) {
+      return {
+        available: true,
+        slots: personGroup.slots.map((s: any) => s.startTime)
+      }
     }
-    const result = await response.json()
-    return { 
-      customerId: result.customerId.toString(), 
-      success: true 
-    }
+    return { available: false }
   } catch (error) {
-    console.error('registerCustomer error:', error)
-    throw error
+    console.error('checkAvailability error:', error)
+    return { available: false }
   }
 }
 
@@ -246,7 +164,6 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
   try {
     const url = `${API_BASE_URL}/api/booking/context?token=${token}`
     const data = await fetchFromAPI<any>(url)
-    
     return {
       customerId: data.customerId?.toString() || null,
       customerName: data.customerName,
@@ -263,3 +180,21 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
     return null
   }
 }
+
+export async function getEmployees(salonId: string): Promise<Employee[]> {
+  const url = `${API_BASE_URL}/api/salon/staff/public`
+  try {
+    const data = await fetchFromAPI<{ staff: any[] }>(url)
+    return data.staff.map(p => ({ id: p.id.toString(), name: p.name }))
+  } catch { return [] }
+}
+
+export async function getAppointments(salonId: string, customerId: string): Promise<Appointment[]> {
+  try {
+    const url = `${API_BASE_URL}/api/salon/appointments?customerId=${customerId}`
+    const data = await fetchFromAPI<{ appointments: any[] }>(url)
+    return data.appointments || []
+  } catch { return [] }
+}
+
+export async function getPackages(salonId: string): Promise<Package[]> { return [] }

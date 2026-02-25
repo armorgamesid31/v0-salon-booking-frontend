@@ -50,6 +50,7 @@ const SalonDashboardContent = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
+  const [servicePersonMapping, setServicePersonMapping] = useState<Record<string, number[]>>({})
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
   const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -393,7 +394,7 @@ const SalonDashboardContent = () => {
                 </div>
                 <Button onClick={() => {
                     if (!selectedDate || !selectedTimeSlot) {
-                      document.querySelector('[data-scroll-target="date-time"]')?.scrollIntoView({ behavior: 'smooth' })
+                      document.querySelector('[data-scroll-target="date-time"]')?.scrollIntoView({ behavior: "smooth" })
                     } else {
                       if (isKnownCustomer) setShowConfirmationModal(true)
                       else setShowRegistrationModal(true)
@@ -442,17 +443,16 @@ const SalonDashboardContent = () => {
               <input type="text" value={registrationForm.fullName} onChange={(e) => setRegistrationForm(p => ({ ...p, fullName: e.target.value }))} placeholder="Ad Soyad" className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
               <input type="tel" value={registrationForm.phone} onChange={(e) => setRegistrationForm(p => ({ ...p, phone: e.target.value }))} placeholder="Telefon" className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
               <div className="flex gap-2">
-                  <Button onClick={() => setRegistrationForm(p => ({ ...p, gender: 'female' }))} variant={registrationForm.gender === 'female' ? 'default' : 'outline'} className="flex-1">👩</Button>
-                  <Button onClick={() => setRegistrationForm(p => ({ ...p, gender: 'male' }))} variant={registrationForm.gender === 'male' ? 'default' : 'outline'} className="flex-1">👨</Button>
+                  <Button onClick={() => setRegistrationForm(p => ({ ...p, gender: "female" }))} variant={"female" === registrationForm.gender ? "default" : "outline"} className="flex-1">👩</Button>
+                  <Button onClick={() => setRegistrationForm(p => ({ ...p, gender: "male" }))} variant={"male" === registrationForm.gender ? "default" : "outline"} className="flex-1">👨</Button>
               </div>
               <input type="date" value={registrationForm.birthDate} onChange={(e) => setRegistrationForm(p => ({ ...p, birthDate: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
             </div>
             <Button onClick={async () => {
                 if (!registrationForm.fullName || !registrationForm.phone) return alert('Lütfen bilgilerinizi doldurun.');
                 
-                // Form validation passing, now trigger API call
                 try {
-                  const res = await registerCustomer({ ...registrationForm, salonId });
+                  const res = await registerCustomer(registrationForm);
                   if (res.customerId) { 
                       setCustomerId(res.customerId); 
                       setCustomerName(registrationForm.fullName);
@@ -463,7 +463,7 @@ const SalonDashboardContent = () => {
                       alert('Kayıt başarısız oldu. Lütfen tekrar deneyin.');
                   }
                 } catch (err) {
-                  alert('Bir hata oluştu: ' + (err as Error).message);
+                  alert("Bir hata oluştu: " + (err as Error).message);
                 }
             }} className="w-full rounded-full py-2 bg-primary text-primary-foreground font-semibold">Kayıt Ol & Devam Et</Button>
           </div>
