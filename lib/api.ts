@@ -85,28 +85,39 @@ export async function createAppointment(
   salonId: string,
   customerId: string,
   data: {
-    services: Array<{ serviceId: string; employeeId?: string }>
+    services: Array<{ serviceId: string; employeeId?: string; duration?: string }>
     date: string
     time: string
     numberOfPeople: number
     customerInfo: { name: string; phone: string; email?: string }
   }
 ): Promise<ApiResponse<Appointment>> {
-  try {
-    const url = `${API_BASE_URL}/api/bookings`
-    const result = await fetchFromAPI<any>(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customerId: parseInt(customerId),
-        serviceId: parseInt(data.services[0].serviceId),
-        staffId: data.services[0].employeeId ? parseInt(data.services[0].employeeId) : undefined,
-        startTime: `${data.date}T${data.time}:00`, 
-        customerName: data.customerInfo.name,
-        customerPhone: data.customerInfo.phone,
-      }),
-    })
-    return { data: result }
+    try {
+      const url = `${API_BASE_URL}/api/bookings`
+      
+      const [hours, minutes] = data.time.split(':');
+      const start = new Date(data.date);
+      start.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      const durationMatch = data.services[0].duration?.match(/\d+/) || ["30"];
+      const durationMinutes = parseInt(durationMatch[0]);
+      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+      const result = await fetchFromAPI<any>(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: parseInt(customerId),
+          serviceId: parseInt(data.services[0].serviceId),
+          staffId: data.services[0].employeeId ? parseInt(data.services[0].employeeId) : undefined,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          customerName: data.customerInfo.name,
+          customerPhone: data.customerInfo.phone,
+          source: 'CUSTOMER'
+        }),
+      })
+      return { data: result }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : 'Failed to create appointment',

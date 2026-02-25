@@ -183,7 +183,8 @@ const SalonDashboardContent = () => {
         const res = await createAppointment(salonId, customerId, {
             services: selectedServices.map(s => ({
                 serviceId: s.id,
-                employeeId: selectedSpecialistIds[s.id]
+                employeeId: selectedSpecialistIds[s.id],
+                duration: s.duration
             })),
             date: dateStr,
             time: selectedTimeSlot,
