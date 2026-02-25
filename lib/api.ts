@@ -108,10 +108,12 @@ export async function createAppointment(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: parseInt(customerId),
-          serviceId: parseInt(data.services[0].serviceId),
-          staffId: data.services[0].employeeId ? parseInt(data.services[0].employeeId) : undefined,
+          services: data.services.map(s => ({
+              serviceId: s.serviceId,
+              staffId: s.employeeId,
+              duration: s.duration?.match(/\d+/)?.[0] || "30"
+          })),
           startTime: start.toISOString(),
-          endTime: end.toISOString(),
           customerName: data.customerInfo.name,
           customerPhone: data.customerInfo.phone,
           source: 'CUSTOMER'
