@@ -160,9 +160,11 @@ const SalonDashboardContent = () => {
       setSelectedSpecialistIds(newStaffIds);
     } else {
       setSelectedServices(prev => [...prev, serviceData])
-      if (service.requiresSpecialist) {
+      if (service.requiresSpecialist && service.allowStaffSelection) {
           const staff = await getStaffForService(service.id.toString());
-          setSpecialistModal({ service: serviceData, staff });
+          if (staff && staff.length > 0) {
+            setSpecialistModal({ service: serviceData, staff });
+          }
       }
     }
     setSelectedDate(null)
