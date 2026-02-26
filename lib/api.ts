@@ -56,8 +56,7 @@ export async function getServices(salonId: string, gender?: string): Promise<Ser
         duration: `${s.duration} dk`,
         originalPrice: s.price,
         salePrice: s.price,
-        requiresSpecialist: s.requiresSpecialist,
-        allowStaffSelection: s.allowStaffSelection ?? true
+        requiresSpecialist: s.requiresSpecialist
       }))
     }))
   } catch (error) {

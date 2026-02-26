@@ -160,9 +160,11 @@ const SalonDashboardContent = () => {
       setSelectedSpecialistIds(newStaffIds);
     } else {
       setSelectedServices(prev => [...prev, serviceData])
-      if (service.requiresSpecialist && service.allowStaffSelection) {
+      // If specialist is required, only show modal if there's more than one choice.
+      // If only one staff member exists, they will be auto-assigned.
+      if (service.requiresSpecialist) {
           const staff = await getStaffForService(service.id.toString());
-          if (staff && staff.length > 0) {
+          if (staff && staff.length > 1) {
             setSpecialistModal({ service: serviceData, staff });
           }
       }
