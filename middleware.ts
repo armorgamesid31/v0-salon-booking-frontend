@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host') || ''
+  const url = request.nextUrl
   
   // Extract subdomain from host
   // Examples:
@@ -19,14 +20,17 @@ export function middleware(request: NextRequest) {
   const subdomainMatch = host.match(/^([a-z0-9-]+)\./) 
   const subdomain = subdomainMatch ? subdomainMatch[1] : null
   
-  // Don't process root domain (kedyapp.com) or localhost without subdomain
-  const isRootDomain = !subdomain || host === 'localhost:3000'
+  // For development: check for ?salon=slug in query params
+  const devSalon = url.searchParams.get('salon')
   
   const response = NextResponse.next()
   
-  // Set tenant context header if subdomain exists
-  if (!isRootDomain && subdomain) {
+  // Set tenant context header if subdomain exists OR in development mode with salon param
+  if (subdomain) {
     response.headers.set('x-salon-slug', subdomain)
+  } else if (devSalon && (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    // Allow testing with query param in development
+    response.headers.set('x-salon-slug', devSalon)
   }
   
   return response

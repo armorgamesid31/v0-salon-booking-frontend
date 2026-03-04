@@ -11,12 +11,17 @@ export default async function Page() {
   const headersList = await headers()
   const salonSlug = headersList.get('x-salon-slug')
 
+  console.log('[Page] salonSlug from header:', salonSlug)
+
   // If no salon slug, display SaaS landing page (root domain)
   if (!salonSlug) {
+    console.log('[Page] No salonSlug, showing SaaSLandingPage')
     return <SaaSLandingPage />
   }
 
   try {
+    console.log('[Page] Fetching salon data for slug:', salonSlug)
+    
     // Fetch salon data and services using the slug
     // Note: Backend API needs to support slug-based lookup
     // For now, using salonId as fallback
@@ -25,8 +30,12 @@ export default async function Page() {
       getServices(salonSlug, 'female'), // Default to female
     ])
 
+    console.log('[Page] Salon data:', salonData)
+    console.log('[Page] Services:', services)
+
     // If salon not found, show 404
     if (!salonData || !salonData.id) {
+      console.log('[Page] Salon not found for slug:', salonSlug)
       notFound()
     }
 

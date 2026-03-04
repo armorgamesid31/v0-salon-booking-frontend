@@ -129,6 +129,27 @@ export function SaaSLandingPage() {
         </div>
       </section>
 
+      {/* Test Salons Section - Development Only */}
+      <section className="px-4 py-16 bg-slate-100 border-t border-slate-200">
+        <div className="max-w-6xl mx-auto">
+          <h3 className="text-lg font-semibold text-slate-700 mb-6">Development: Test Salons</h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <Link href="/?salon=palmbeauty" className="p-4 bg-white rounded-lg border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all">
+              <p className="font-medium text-slate-900">Palm Beauty Salon</p>
+              <p className="text-sm text-slate-600">localhost/?salon=palmbeauty</p>
+            </Link>
+            <Link href="/?salon=studio-glam" className="p-4 bg-white rounded-lg border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all">
+              <p className="font-medium text-slate-900">Studio Glam</p>
+              <p className="text-sm text-slate-600">localhost/?salon=studio-glam</p>
+            </Link>
+            <Link href="/?salon=luxe-spa" className="p-4 bg-white rounded-lg border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all">
+              <p className="font-medium text-slate-900">Luxe Spa & Beauty</p>
+              <p className="text-sm text-slate-600">localhost/?salon=luxe-spa</p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="px-4 py-12 bg-slate-900 text-slate-400">
         <div className="max-w-6xl mx-auto text-center">
