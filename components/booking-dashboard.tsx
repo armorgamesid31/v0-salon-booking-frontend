@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb, MessageCircle } from 'lucide-react'
@@ -27,8 +27,14 @@ const getIconComponent = (categoryKey: string) => {
   }
 }
 
-const SalonDashboardContent = () => {
+interface BookingDashboardProps {
+  forcedLanguage?: string
+}
+
+const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
@@ -64,11 +70,16 @@ const SalonDashboardContent = () => {
   const text = BOOKING_TEXT[language]
 
   useEffect(() => {
+    if (forcedLanguage) {
+      setLanguage(normalizeLanguage(forcedLanguage))
+      return
+    }
+
     const queryLang = searchParams.get('lang')
     const savedLang = typeof window !== 'undefined' ? window.localStorage.getItem('preferredLanguage') : null
     const lang = normalizeLanguage(queryLang || savedLang || detectBrowserLanguage())
     setLanguage(lang)
-  }, [searchParams])
+  }, [searchParams, forcedLanguage])
 
   useEffect(() => {
     if (isKnownCustomer && customerName) {
@@ -105,7 +116,7 @@ const SalonDashboardContent = () => {
     if (token) {
       getBookingContextByToken(token).then((context) => {
         if (context) {
-          if (context.customerLanguage) {
+          if (!forcedLanguage && context.customerLanguage) {
             const normalized = normalizeLanguage(context.customerLanguage)
             setLanguage(normalized)
             if (typeof window !== 'undefined') {
@@ -128,7 +139,7 @@ const SalonDashboardContent = () => {
         setSalonId(sId)
         loadSalonAndServices(sId, selectedGender);
     }
-  }, [searchParams])
+  }, [searchParams, forcedLanguage])
 
   // Refetch services when gender changes
   useEffect(() => {
@@ -267,6 +278,16 @@ const SalonDashboardContent = () => {
     setLanguage(next)
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('preferredLanguage', next)
+    }
+
+    if (forcedLanguage && pathname) {
+      const parts = pathname.split('/').filter(Boolean)
+      if (parts.length > 0) {
+        parts[0] = next
+        const nextPath = `/${parts.join('/')}`
+        const query = searchParams.toString()
+        router.push(`${nextPath}${query ? `?${query}` : ''}`)
+      }
     }
   }
 
@@ -549,9 +570,9 @@ const SalonDashboardContent = () => {
   )
 }
 
-const SalonDashboard = () => (
+const SalonDashboard = ({ forcedLanguage }: BookingDashboardProps) => (
     <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
-        <SalonDashboardContent />
+        <SalonDashboardContent forcedLanguage={forcedLanguage} />
     </Suspense>
 )
 

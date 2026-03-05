@@ -1,5 +1,5 @@
-import BookingDashboard from '@/components/booking-dashboard'
+import { redirect } from 'next/navigation'
 
-export default function RandevuPage() {
-  return <BookingDashboard />
+export default function LegacyBookingRedirect() {
+  redirect('/tr/booking')
 }

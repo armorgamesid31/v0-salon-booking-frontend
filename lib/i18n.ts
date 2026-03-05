@@ -1,6 +1,6 @@
 export type LanguageCode = 'tr' | 'en' | 'es' | 'fr' | 'de' | 'pt' | 'ru' | 'zh' | 'ar' | 'hi'
 
-export const DEFAULT_LANGUAGE: LanguageCode = 'en'
+export const DEFAULT_LANGUAGE: LanguageCode = 'tr'
 
 export const LANGUAGES: Array<{ code: LanguageCode; label: string }> = [
   { code: 'tr', label: 'Turkce' },
