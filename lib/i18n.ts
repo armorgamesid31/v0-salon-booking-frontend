@@ -57,6 +57,7 @@ export const BOOKING_TEXT: Record<
     successTitle: string
     successInfo: string
     successButton: string
+    openWhatsapp: string
     loading: string
     fillInfoError: string
     genericError: string
@@ -89,6 +90,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Randevunuz Alindi!',
     successInfo: 'Onay mesaji telefonunuza gonderilecektir.',
     successButton: 'Harika!',
+    openWhatsapp: 'WhatsApp',
     loading: 'Yukleniyor...',
     fillInfoError: 'Lutfen bilgilerinizi doldurun.',
     genericError: 'Bir hata olustu.',
@@ -120,6 +122,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Your appointment is booked!',
     successInfo: 'A confirmation message will be sent to your phone.',
     successButton: 'Great!',
+    openWhatsapp: 'WhatsApp',
     loading: 'Loading...',
     fillInfoError: 'Please fill in your details.',
     genericError: 'An error occurred.',
@@ -151,6 +154,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Tu cita esta reservada.',
     successInfo: 'Recibiras un mensaje de confirmacion.',
     successButton: 'Perfecto',
+    openWhatsapp: 'WhatsApp',
     loading: 'Cargando...',
     fillInfoError: 'Por favor completa tus datos.',
     genericError: 'Ocurrio un error.',
@@ -182,6 +186,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Votre rendez-vous est confirme.',
     successInfo: 'Un message de confirmation sera envoye.',
     successButton: 'Super',
+    openWhatsapp: 'WhatsApp',
     loading: 'Chargement...',
     fillInfoError: 'Veuillez remplir vos informations.',
     genericError: 'Une erreur est survenue.',
@@ -213,6 +218,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Ihr Termin wurde gebucht.',
     successInfo: 'Eine Bestatigung wurde gesendet.',
     successButton: 'Super',
+    openWhatsapp: 'WhatsApp',
     loading: 'Wird geladen...',
     fillInfoError: 'Bitte Daten ausfullen.',
     genericError: 'Ein Fehler ist aufgetreten.',
@@ -244,6 +250,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Seu agendamento foi confirmado.',
     successInfo: 'Uma mensagem de confirmacao sera enviada.',
     successButton: 'Perfeito',
+    openWhatsapp: 'WhatsApp',
     loading: 'Carregando...',
     fillInfoError: 'Preencha suas informacoes.',
     genericError: 'Ocorreu um erro.',
@@ -275,6 +282,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Vasha zapis uspeshna.',
     successInfo: 'Podtverzhdenie budet otpravleno.',
     successButton: 'Otlichno',
+    openWhatsapp: 'WhatsApp',
     loading: 'Zagruzka...',
     fillInfoError: 'Pozhaluysta, zapolnite dannye.',
     genericError: 'Proizoshla oshibka.',
@@ -306,6 +314,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Nin de yuyue chenggong.',
     successInfo: 'Queren xinxi jiang fasong dao nin de shouji.',
     successButton: 'Hao de',
+    openWhatsapp: 'WhatsApp',
     loading: 'Jiazai zhong...',
     fillInfoError: 'Qing xian wanshan xinxi.',
     genericError: 'Fasheng cuowu.',
@@ -337,6 +346,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Tam hajzuk binajah.',
     successInfo: 'Sayusalu ilayk risalat ta kid.',
     successButton: 'Mumtaz',
+    openWhatsapp: 'WhatsApp',
     loading: 'Jari at-tahmil...',
     fillInfoError: 'Yurja idkhal al-bayanat.',
     genericError: 'Hadath khata.',
@@ -368,6 +378,7 @@ export const BOOKING_TEXT: Record<
     successTitle: 'Aapki booking ho gayi hai.',
     successInfo: 'Confirmation message phone par bheja jayega.',
     successButton: 'Bahut badhiya',
+    openWhatsapp: 'WhatsApp',
     loading: 'Load ho raha hai...',
     fillInfoError: 'Kripya apni jankari bharen.',
     genericError: 'Ek truti hui.',
@@ -380,6 +391,12 @@ export const HOME_TEXT: Record<
   {
     bookNow: string
     reserveAppointment: string
+    aboutTitle: string
+    galleryTitle: string
+    instagramTitle: string
+    contactTitle: string
+    expertsTitle: string
+    openWhatsapp: string
     categories: string
     servicesCount: (count: number) => string
     clientReviews: string
@@ -392,6 +409,12 @@ export const HOME_TEXT: Record<
   tr: {
     bookNow: 'Randevu Al',
     reserveAppointment: 'Randevu Olustur',
+    aboutTitle: 'Salon Hakkinda',
+    galleryTitle: 'Galeri',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Iletisim Bilgileri',
+    expertsTitle: 'Uzman Ekibimiz',
+    openWhatsapp: 'WhatsApp ile Yaz',
     categories: 'Kategoriler',
     servicesCount: (count) => `${count} hizmet`,
     clientReviews: 'Musteri Yorumlari',
@@ -403,6 +426,12 @@ export const HOME_TEXT: Record<
   en: {
     bookNow: 'Book Now',
     reserveAppointment: 'Reserve Your Appointment',
+    aboutTitle: 'About the Salon',
+    galleryTitle: 'Gallery',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Contact Information',
+    expertsTitle: 'Our Experts',
+    openWhatsapp: 'Chat on WhatsApp',
     categories: 'Categories',
     servicesCount: (count) => `${count} services`,
     clientReviews: 'Client Reviews',
@@ -414,6 +443,12 @@ export const HOME_TEXT: Record<
   es: {
     bookNow: 'Reservar',
     reserveAppointment: 'Reserva tu cita',
+    aboutTitle: 'Sobre el salon',
+    galleryTitle: 'Galeria',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Contacto',
+    expertsTitle: 'Nuestros expertos',
+    openWhatsapp: 'Abrir WhatsApp',
     categories: 'Categorias',
     servicesCount: (count) => `${count} servicios`,
     clientReviews: 'Resenas',
@@ -425,6 +460,12 @@ export const HOME_TEXT: Record<
   fr: {
     bookNow: 'Reserver',
     reserveAppointment: 'Reservez votre rendez-vous',
+    aboutTitle: 'A propos du salon',
+    galleryTitle: 'Galerie',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Contact',
+    expertsTitle: 'Nos experts',
+    openWhatsapp: 'Ouvrir WhatsApp',
     categories: 'Categories',
     servicesCount: (count) => `${count} services`,
     clientReviews: 'Avis clients',
@@ -436,6 +477,12 @@ export const HOME_TEXT: Record<
   de: {
     bookNow: 'Jetzt buchen',
     reserveAppointment: 'Termin reservieren',
+    aboutTitle: 'Uber den Salon',
+    galleryTitle: 'Galerie',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Kontakt',
+    expertsTitle: 'Unsere Experten',
+    openWhatsapp: 'WhatsApp offnen',
     categories: 'Kategorien',
     servicesCount: (count) => `${count} Services`,
     clientReviews: 'Kundenbewertungen',
@@ -447,6 +494,12 @@ export const HOME_TEXT: Record<
   pt: {
     bookNow: 'Agendar',
     reserveAppointment: 'Reserve seu horario',
+    aboutTitle: 'Sobre o salao',
+    galleryTitle: 'Galeria',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Contato',
+    expertsTitle: 'Nossos especialistas',
+    openWhatsapp: 'Abrir WhatsApp',
     categories: 'Categorias',
     servicesCount: (count) => `${count} servicos`,
     clientReviews: 'Avaliacoes',
@@ -458,6 +511,12 @@ export const HOME_TEXT: Record<
   ru: {
     bookNow: 'Zapisatsya',
     reserveAppointment: 'Zabronirovat vizit',
+    aboutTitle: 'O salone',
+    galleryTitle: 'Galereya',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Kontakty',
+    expertsTitle: 'Nashi specialisty',
+    openWhatsapp: 'Otkryt WhatsApp',
     categories: 'Kategorii',
     servicesCount: (count) => `${count} uslug`,
     clientReviews: 'Otzivy klientov',
@@ -469,6 +528,12 @@ export const HOME_TEXT: Record<
   zh: {
     bookNow: 'Liji yuyue',
     reserveAppointment: 'Yuyue nin de fuwu',
+    aboutTitle: 'Guanyu men dian',
+    galleryTitle: 'Tuku',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Lianxi xinxi',
+    expertsTitle: 'Women de zhuanjia',
+    openWhatsapp: 'Dak kai WhatsApp',
     categories: 'Fenlei',
     servicesCount: (count) => `${count} xiang fuwu`,
     clientReviews: 'Kehu pingjia',
@@ -480,6 +545,12 @@ export const HOME_TEXT: Record<
   ar: {
     bookNow: 'Ihjez al-an',
     reserveAppointment: 'Ihjez mawidak',
+    aboutTitle: 'An as-salon',
+    galleryTitle: 'Al-maarad',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Bayanat al-ittisal',
+    expertsTitle: 'Khobaraona',
+    openWhatsapp: 'Iftah WhatsApp',
     categories: 'Al-fiat',
     servicesCount: (count) => `${count} khadamat`,
     clientReviews: 'Ara al-omalaa',
@@ -491,6 +562,12 @@ export const HOME_TEXT: Record<
   hi: {
     bookNow: 'Abhi book karein',
     reserveAppointment: 'Apni appointment reserve karein',
+    aboutTitle: 'Salon ke baare mein',
+    galleryTitle: 'Gallery',
+    instagramTitle: 'Instagram',
+    contactTitle: 'Sampark jankari',
+    expertsTitle: 'Hamare experts',
+    openWhatsapp: 'WhatsApp kholen',
     categories: 'Categories',
     servicesCount: (count) => `${count} services`,
     clientReviews: 'Client reviews',

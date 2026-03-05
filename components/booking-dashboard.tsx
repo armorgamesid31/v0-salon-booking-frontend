@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb } from 'lucide-react'
+import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb, MessageCircle } from 'lucide-react'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee } from '@/lib/types'
 import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability, createAppointment } from '@/lib/api'
 import LanguageSelector from '@/components/language-selector'
@@ -260,6 +260,8 @@ const SalonDashboardContent = () => {
   })).filter((cat) => cat.services.length > 0)
 
   if (!salonData) return <div className="flex h-screen items-center justify-center">{text.loading}</div>
+  const whatsappPhone = (salonData?.whatsappPhone || '').replace(/[^\d]/g, '')
+  const whatsappUrl = whatsappPhone ? `https://wa.me/${whatsappPhone}` : ''
 
   const handleLanguageChange = (next: LanguageCode) => {
     setLanguage(next)
@@ -531,6 +533,17 @@ const SalonDashboardContent = () => {
                   </CardContent>
               </Card>
           </div>
+      )}
+      {whatsappUrl && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-24 right-4 z-[70] inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-xs font-semibold text-white shadow-lg hover:bg-emerald-500"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {text.openWhatsapp}
+        </a>
       )}
     </div>
   )

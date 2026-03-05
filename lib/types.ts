@@ -4,6 +4,7 @@ export interface Salon {
   name: string
   description: string
   logoUrl?: string
+  whatsappPhone?: string
   headerMessage?: string
   phone?: string
   address?: string
@@ -100,4 +101,76 @@ export interface BookingContext {
   isKnownCustomer: boolean
   appointments?: Appointment[]
   activePackages?: any[]
+}
+
+export interface HomepageWorkingHours {
+  workStartHour: number
+  workEndHour: number
+  timezone: string
+}
+
+export interface HomepageSalon {
+  id: number
+  slug: string
+  name: string
+  logoUrl?: string | null
+  tagline?: string | null
+  about?: string | null
+  heroImageUrl?: string | null
+  instagramUrl?: string | null
+  workingHours?: HomepageWorkingHours
+}
+
+export interface HomepageCategory {
+  id: number
+  name: string
+  marketingDescription?: string | null
+  icon?: string | null
+  displayOrder?: number | null
+  serviceCount?: number
+}
+
+export interface HomepageExpert {
+  id: number
+  name: string
+  title?: string | null
+  bio?: string | null
+}
+
+export interface HomepageGalleryItem {
+  id: number | string
+  imageUrl: string
+  altText?: string | null
+  displayOrder?: number | null
+}
+
+export interface HomepageTestimonial {
+  id: number | string
+  templateType?: string | null
+  generatedText: string
+  isGenerated?: boolean | null
+  expert?: {
+    id: number
+    name: string
+    title?: string | null
+  } | null
+  category?: {
+    id: number
+    name: string
+  } | null
+}
+
+export interface HomepageBooking {
+  mode: 'INTERNAL' | 'WHATSAPP'
+  whatsappPhone: string
+  bookingUrl: string
+}
+
+export interface SalonHomepageResponse {
+  salon: HomepageSalon
+  categories: HomepageCategory[]
+  experts: HomepageExpert[]
+  gallery: HomepageGalleryItem[]
+  testimonials: HomepageTestimonial[]
+  booking: HomepageBooking
 }

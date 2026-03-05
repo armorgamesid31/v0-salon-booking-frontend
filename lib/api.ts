@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './constants'
-import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext } from './types'
+import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext, SalonHomepageResponse } from './types'
 
 /**
  * Multi-tenant SaaS API helpers
@@ -35,6 +35,7 @@ export async function getSalonStrict(): Promise<Salon | null> {
       name: data.salon.name,
       description: '',
       logoUrl: data.salon.logoUrl || null,
+      whatsappPhone: data.salon.whatsappPhone || '',
       headerMessage: 'Hizmetini Seç',
     }
   } catch (error) {
@@ -54,6 +55,7 @@ export async function getSalon(salonId: string): Promise<Salon> {
       name: data.salon.name,
       description: '',
       logoUrl: data.salon.logoUrl || null,
+      whatsappPhone: data.salon.whatsappPhone || '',
       headerMessage: 'Hizmetini Seç',
     }
   } catch (error) {
@@ -241,3 +243,8 @@ export async function getAppointments(salonId: string, customerId: string): Prom
 }
 
 export async function getPackages(salonId: string): Promise<Package[]> { return [] }
+
+export async function getSalonHomepageBySlug(slug: string): Promise<SalonHomepageResponse> {
+  const url = `${API_BASE_URL}/api/salons/${slug}/homepage`
+  return fetchFromAPI<SalonHomepageResponse>(url)
+}
