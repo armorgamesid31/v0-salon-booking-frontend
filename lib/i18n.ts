@@ -380,7 +380,8 @@ export const HOME_TEXT: Record<
   {
     bookNow: string
     reserveAppointment: string
-    ourServices: string
+    categories: string
+    servicesCount: (count: number) => string
     clientReviews: string
     getInTouch: string
     loading: string
@@ -391,7 +392,8 @@ export const HOME_TEXT: Record<
   tr: {
     bookNow: 'Randevu Al',
     reserveAppointment: 'Randevu Olustur',
-    ourServices: 'Hizmetlerimiz',
+    categories: 'Kategoriler',
+    servicesCount: (count) => `${count} hizmet`,
     clientReviews: 'Musteri Yorumlari',
     getInTouch: 'Iletisim',
     loading: 'Yukleniyor...',
@@ -401,7 +403,8 @@ export const HOME_TEXT: Record<
   en: {
     bookNow: 'Book Now',
     reserveAppointment: 'Reserve Your Appointment',
-    ourServices: 'Our Services',
+    categories: 'Categories',
+    servicesCount: (count) => `${count} services`,
     clientReviews: 'Client Reviews',
     getInTouch: 'Get in Touch',
     loading: 'Loading...',
@@ -411,7 +414,8 @@ export const HOME_TEXT: Record<
   es: {
     bookNow: 'Reservar',
     reserveAppointment: 'Reserva tu cita',
-    ourServices: 'Nuestros servicios',
+    categories: 'Categorias',
+    servicesCount: (count) => `${count} servicios`,
     clientReviews: 'Resenas',
     getInTouch: 'Contacto',
     loading: 'Cargando...',
@@ -421,7 +425,8 @@ export const HOME_TEXT: Record<
   fr: {
     bookNow: 'Reserver',
     reserveAppointment: 'Reservez votre rendez-vous',
-    ourServices: 'Nos services',
+    categories: 'Categories',
+    servicesCount: (count) => `${count} services`,
     clientReviews: 'Avis clients',
     getInTouch: 'Contact',
     loading: 'Chargement...',
@@ -431,7 +436,8 @@ export const HOME_TEXT: Record<
   de: {
     bookNow: 'Jetzt buchen',
     reserveAppointment: 'Termin reservieren',
-    ourServices: 'Unsere Leistungen',
+    categories: 'Kategorien',
+    servicesCount: (count) => `${count} Services`,
     clientReviews: 'Kundenbewertungen',
     getInTouch: 'Kontakt',
     loading: 'Wird geladen...',
@@ -441,7 +447,8 @@ export const HOME_TEXT: Record<
   pt: {
     bookNow: 'Agendar',
     reserveAppointment: 'Reserve seu horario',
-    ourServices: 'Nossos servicos',
+    categories: 'Categorias',
+    servicesCount: (count) => `${count} servicos`,
     clientReviews: 'Avaliacoes',
     getInTouch: 'Contato',
     loading: 'Carregando...',
@@ -451,7 +458,8 @@ export const HOME_TEXT: Record<
   ru: {
     bookNow: 'Zapisatsya',
     reserveAppointment: 'Zabronirovat vizit',
-    ourServices: 'Nashi uslugi',
+    categories: 'Kategorii',
+    servicesCount: (count) => `${count} uslug`,
     clientReviews: 'Otzivy klientov',
     getInTouch: 'Kontakty',
     loading: 'Zagruzka...',
@@ -461,7 +469,8 @@ export const HOME_TEXT: Record<
   zh: {
     bookNow: 'Liji yuyue',
     reserveAppointment: 'Yuyue nin de fuwu',
-    ourServices: 'Women de fuwu',
+    categories: 'Fenlei',
+    servicesCount: (count) => `${count} xiang fuwu`,
     clientReviews: 'Kehu pingjia',
     getInTouch: 'Lianxi women',
     loading: 'Jiazai zhong...',
@@ -471,7 +480,8 @@ export const HOME_TEXT: Record<
   ar: {
     bookNow: 'Ihjez al-an',
     reserveAppointment: 'Ihjez mawidak',
-    ourServices: 'Khadamatuna',
+    categories: 'Al-fiat',
+    servicesCount: (count) => `${count} khadamat`,
     clientReviews: 'Ara al-omalaa',
     getInTouch: 'Tawasol maana',
     loading: 'Jari at-tahmil...',
@@ -481,7 +491,8 @@ export const HOME_TEXT: Record<
   hi: {
     bookNow: 'Abhi book karein',
     reserveAppointment: 'Apni appointment reserve karein',
-    ourServices: 'Hamari sevayen',
+    categories: 'Categories',
+    servicesCount: (count) => `${count} services`,
     clientReviews: 'Client reviews',
     getInTouch: 'Sampark karein',
     loading: 'Load ho raha hai...',

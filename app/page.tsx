@@ -24,16 +24,13 @@ function buildBookingUrl(searchParams: URLSearchParams): string {
   return query ? `/randevu?${query}` : '/randevu'
 }
 
-function mapServices(categories: ServiceCategory[]) {
-  return categories.flatMap((category) =>
-    category.services.map((service) => ({
-      id: service.id,
-      name: service.name,
-      description: category.name,
-      price: `${service.salePrice || service.originalPrice}₺`,
-      duration: service.duration,
-    }))
-  )
+function mapCategories(categories: ServiceCategory[]) {
+  return categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    serviceCount: category.services.length,
+    previewServices: category.services.slice(0, 3).map((service) => service.name),
+  }))
 }
 
 function extractTenantSlug(hostname: string): string | null {
@@ -163,15 +160,12 @@ export default function HomePage() {
 
   return (
     <main>
-      <div className="fixed right-4 top-4 z-[60]">
-        <LanguageSelector value={language} onChange={handleLanguageChange} />
-      </div>
       <SalonHomepage
         name={salon.name}
         logoUrl={salon.logoUrl || '/placeholder-logo.png'}
         heroImageUrl={FALLBACK_HERO}
         description={salon.description || 'Salonunuzu kesfedin ve online randevu alin.'}
-        services={mapServices(categories)}
+        categories={mapCategories(categories)}
         testimonials={[]}
         address={salon.address}
         phone={salon.phone}
@@ -180,10 +174,12 @@ export default function HomePage() {
           primaryColor: '#2d1f1a',
           secondaryColor: '#d4a574',
         }}
+        languageControl={<LanguageSelector value={language} onChange={handleLanguageChange} />}
         labels={{
           bookNow: text.bookNow,
           reserveAppointment: text.reserveAppointment,
-          ourServices: text.ourServices,
+          categories: text.categories,
+          servicesCount: text.servicesCount,
           clientReviews: text.clientReviews,
           getInTouch: text.getInTouch,
         }}

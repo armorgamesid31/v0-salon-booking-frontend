@@ -1,12 +1,12 @@
 import Image from 'next/image'
 import { Star, MapPin, Phone, Mail, Instagram, Facebook } from 'lucide-react'
+import type { ReactNode } from 'react'
 
-interface Service {
+interface CategoryItem {
   id: string
   name: string
-  description?: string
-  price?: string
-  duration?: string
+  serviceCount: number
+  previewServices?: string[]
 }
 
 interface Testimonial {
@@ -31,7 +31,7 @@ interface SalonHomepageData {
   logoUrl: string
   heroImageUrl?: string
   description?: string
-  services: Service[]
+  categories: CategoryItem[]
   testimonials?: Testimonial[]
   address?: string
   phone?: string
@@ -39,10 +39,12 @@ interface SalonHomepageData {
   socialLinks?: SocialLinks
   bookingUrl: string
   theme?: Theme
+  languageControl?: ReactNode
   labels: {
     bookNow: string
     reserveAppointment: string
-    ourServices: string
+    categories: string
+    servicesCount: (count: number) => string
     clientReviews: string
     getInTouch: string
   }
@@ -53,7 +55,7 @@ export default function SalonHomepage({
   logoUrl,
   heroImageUrl,
   description,
-  services,
+  categories,
   testimonials,
   address,
   phone,
@@ -61,6 +63,7 @@ export default function SalonHomepage({
   socialLinks,
   bookingUrl,
   theme = {},
+  languageControl,
   labels,
 }: SalonHomepageData) {
   const primaryColor = theme.primaryColor || '#1a1a1a'
@@ -82,13 +85,16 @@ export default function SalonHomepage({
               />
             </div>
 
-            <a
-              href={bookingUrl}
-              className="px-6 md:px-8 py-2 md:py-2.5 rounded-full font-medium text-sm md:text-base text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: secondaryColor }}
-            >
-              {labels.bookNow}
-            </a>
+            <div className="flex items-center gap-3">
+              {languageControl}
+              <a
+                href={bookingUrl}
+                className="px-6 md:px-8 py-2 md:py-2.5 rounded-full font-medium text-sm md:text-base text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: secondaryColor }}
+              >
+                {labels.bookNow}
+              </a>
+            </div>
           </div>
         </div>
       </nav>
@@ -99,7 +105,7 @@ export default function SalonHomepage({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
             <div className="order-2 md:order-1">
               <h1
-                className="text-4xl md:text-5xl lg:text-6xl font-serif font-light leading-tight mb-6 text-pretty"
+                className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight mb-6 text-pretty"
                 style={{ color: primaryColor }}
               >
                 {name}
@@ -138,10 +144,10 @@ export default function SalonHomepage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 md:mb-16">
             <h2
-              className="text-3xl md:text-4xl lg:text-5xl font-serif font-light mb-4"
+              className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-4"
               style={{ color: primaryColor }}
             >
-              {labels.ourServices}
+              {labels.categories}
             </h2>
             <div
               className="w-12 h-1 mx-auto rounded-full"
@@ -150,36 +156,29 @@ export default function SalonHomepage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service) => (
+            {categories.map((category) => (
               <div
-                key={service.id}
+                key={category.id}
                 className="border border-neutral-200 rounded-lg p-6 md:p-8 hover:border-neutral-300 transition-colors"
               >
                 <h3
-                  className="text-xl md:text-2xl font-serif font-light mb-3"
+                  className="text-xl md:text-2xl font-semibold mb-3"
                   style={{ color: primaryColor }}
                 >
-                  {service.name}
+                  {category.name}
                 </h3>
-                {service.description && (
+                {category.previewServices && category.previewServices.length > 0 && (
                   <p className="text-neutral-600 mb-4 leading-relaxed">
-                    {service.description}
+                    {category.previewServices.join(', ')}
                   </p>
                 )}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-neutral-100">
-                  {service.price && (
-                    <span
-                      className="text-lg md:text-xl font-semibold"
-                      style={{ color: secondaryColor }}
-                    >
-                      {service.price}
-                    </span>
-                  )}
-                  {service.duration && (
-                    <span className="text-sm text-neutral-500">
-                      {service.duration}
-                    </span>
-                  )}
+                  <span
+                    className="text-base md:text-lg font-semibold"
+                    style={{ color: secondaryColor }}
+                  >
+                    {labels.servicesCount(category.serviceCount)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -193,7 +192,7 @@ export default function SalonHomepage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12 md:mb-16">
               <h2
-                className="text-3xl md:text-4xl lg:text-5xl font-serif font-light mb-4"
+                className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-4"
                 style={{ color: primaryColor }}
               >
                 {labels.clientReviews}
@@ -234,7 +233,7 @@ export default function SalonHomepage({
                   <p className="text-neutral-700 mb-4 leading-relaxed italic">
                     "{testimonial.comment}"
                   </p>
-                  <p
+                    <p
                     className="font-semibold"
                     style={{ color: primaryColor }}
                   >
@@ -253,7 +252,7 @@ export default function SalonHomepage({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16">
             <div>
               <h2
-                className="text-3xl md:text-4xl font-serif font-light mb-8"
+                className="text-3xl md:text-4xl font-semibold mb-8"
                 style={{ color: primaryColor }}
               >
                 {labels.getInTouch}

@@ -292,7 +292,7 @@ const SalonDashboardContent = () => {
           <div className="text-center">
             <p className="text-sm md:text-base text-foreground">{welcomeMessage}</p>
           </div>
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex justify-end">
             <LanguageSelector value={language} onChange={handleLanguageChange} />
           </div>
         </div>
