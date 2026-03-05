@@ -17,6 +17,7 @@ export interface HomepageLabels {
   contactTitle: string
   expertsTitle: string
   openWhatsapp: string
+  workingSchedule: string
   categories: string
   servicesCount: (count: number) => string
   clientReviews: string
@@ -32,4 +33,5 @@ export interface SalonHomepageProps {
   booking: HomepageBooking
   labels: HomepageLabels
   languageControl?: ReactNode
+  locale?: string
 }

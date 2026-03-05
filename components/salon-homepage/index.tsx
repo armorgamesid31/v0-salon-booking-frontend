@@ -18,18 +18,18 @@ export default function SalonHomepage({
   booking,
   labels,
   languageControl,
+  locale,
 }: SalonHomepageProps) {
   return (
     <div className="min-h-screen bg-white">
       <nav className="fixed top-0 w-full z-50 bg-white/95 border-b border-neutral-200 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <img
               src={salon.logoUrl || '/placeholder-logo.png'}
               alt={salon.name}
               className="h-10 w-10 rounded-full object-cover border border-neutral-200"
             />
-            <span className="font-semibold text-neutral-900">{salon.name}</span>
           </div>
           <div className="flex items-center gap-3">
             {languageControl}
@@ -56,9 +56,11 @@ export default function SalonHomepage({
         title={labels.contactTitle}
         expertsTitle={labels.expertsTitle}
         openWhatsappLabel={labels.openWhatsapp}
+        workingScheduleLabel={labels.workingSchedule}
         salon={salon}
         experts={experts}
         whatsappUrl={booking.whatsappPhone ? `https://wa.me/${booking.whatsappPhone}` : undefined}
+        locale={locale}
       />
       <Cta
         title={labels.getInTouch}

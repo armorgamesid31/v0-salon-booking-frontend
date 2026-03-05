@@ -107,6 +107,7 @@ export interface HomepageWorkingHours {
   workStartHour: number
   workEndHour: number
   timezone: string
+  workingDays?: number[]
 }
 
 export interface HomepageSalon {
@@ -126,6 +127,7 @@ export interface HomepageCategory {
   name: string
   marketingDescription?: string | null
   icon?: string | null
+  coverImageUrl?: string | null
   displayOrder?: number | null
   serviceCount?: number
 }
@@ -135,6 +137,7 @@ export interface HomepageExpert {
   name: string
   title?: string | null
   bio?: string | null
+  profileImageUrl?: string | null
 }
 
 export interface HomepageGalleryItem {

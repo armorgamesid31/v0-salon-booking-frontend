@@ -397,6 +397,7 @@ export const HOME_TEXT: Record<
     contactTitle: string
     expertsTitle: string
     openWhatsapp: string
+    workingSchedule: string
     categories: string
     servicesCount: (count: number) => string
     clientReviews: string
@@ -415,6 +416,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Iletisim Bilgileri',
     expertsTitle: 'Uzman Ekibimiz',
     openWhatsapp: 'WhatsApp ile Yaz',
+    workingSchedule: 'Calisma Programi',
     categories: 'Kategoriler',
     servicesCount: (count) => `${count} hizmet`,
     clientReviews: 'Musteri Yorumlari',
@@ -432,6 +434,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Contact Information',
     expertsTitle: 'Our Experts',
     openWhatsapp: 'Chat on WhatsApp',
+    workingSchedule: 'Working Schedule',
     categories: 'Categories',
     servicesCount: (count) => `${count} services`,
     clientReviews: 'Client Reviews',
@@ -449,6 +452,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Contacto',
     expertsTitle: 'Nuestros expertos',
     openWhatsapp: 'Abrir WhatsApp',
+    workingSchedule: 'Horario',
     categories: 'Categorias',
     servicesCount: (count) => `${count} servicios`,
     clientReviews: 'Resenas',
@@ -466,6 +470,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Contact',
     expertsTitle: 'Nos experts',
     openWhatsapp: 'Ouvrir WhatsApp',
+    workingSchedule: 'Horaires',
     categories: 'Categories',
     servicesCount: (count) => `${count} services`,
     clientReviews: 'Avis clients',
@@ -483,6 +488,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Kontakt',
     expertsTitle: 'Unsere Experten',
     openWhatsapp: 'WhatsApp offnen',
+    workingSchedule: 'Arbeitszeiten',
     categories: 'Kategorien',
     servicesCount: (count) => `${count} Services`,
     clientReviews: 'Kundenbewertungen',
@@ -500,6 +506,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Contato',
     expertsTitle: 'Nossos especialistas',
     openWhatsapp: 'Abrir WhatsApp',
+    workingSchedule: 'Horario de atendimento',
     categories: 'Categorias',
     servicesCount: (count) => `${count} servicos`,
     clientReviews: 'Avaliacoes',
@@ -517,6 +524,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Kontakty',
     expertsTitle: 'Nashi specialisty',
     openWhatsapp: 'Otkryt WhatsApp',
+    workingSchedule: 'Grafik raboty',
     categories: 'Kategorii',
     servicesCount: (count) => `${count} uslug`,
     clientReviews: 'Otzivy klientov',
@@ -534,6 +542,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Lianxi xinxi',
     expertsTitle: 'Women de zhuanjia',
     openWhatsapp: 'Dak kai WhatsApp',
+    workingSchedule: 'Yingye shijian',
     categories: 'Fenlei',
     servicesCount: (count) => `${count} xiang fuwu`,
     clientReviews: 'Kehu pingjia',
@@ -551,6 +560,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Bayanat al-ittisal',
     expertsTitle: 'Khobaraona',
     openWhatsapp: 'Iftah WhatsApp',
+    workingSchedule: 'Mawaeid al-amal',
     categories: 'Al-fiat',
     servicesCount: (count) => `${count} khadamat`,
     clientReviews: 'Ara al-omalaa',
@@ -568,6 +578,7 @@ export const HOME_TEXT: Record<
     contactTitle: 'Sampark jankari',
     expertsTitle: 'Hamare experts',
     openWhatsapp: 'WhatsApp kholen',
+    workingSchedule: 'Working schedule',
     categories: 'Categories',
     servicesCount: (count) => `${count} services`,
     clientReviews: 'Client reviews',

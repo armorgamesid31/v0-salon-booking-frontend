@@ -6,7 +6,7 @@ import SalonHomepage from '@/components/salon-homepage'
 import LanguageSelector from '@/components/language-selector'
 import { getSalonHomepageBySlug } from '@/lib/api'
 import type { SalonHomepageResponse } from '@/lib/types'
-import { DEFAULT_LANGUAGE, detectBrowserLanguage, HOME_TEXT, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
+import { DEFAULT_LANGUAGE, detectBrowserLanguage, HOME_TEXT, LOCALE_MAP, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
 
 const BASE_DOMAIN = 'kedyapp.com'
 const RESERVED_SLUGS = ['www', 'api', 'admin', 'portal']
@@ -122,6 +122,7 @@ export default function HomePage() {
           ...homepageData.booking,
           bookingUrl,
         }}
+        locale={LOCALE_MAP[language]}
         languageControl={<LanguageSelector value={language} onChange={handleLanguageChange} />}
         labels={{
           bookNow: text.bookNow,
@@ -136,6 +137,7 @@ export default function HomePage() {
           contactTitle: text.contactTitle,
           expertsTitle: text.expertsTitle,
           openWhatsapp: text.openWhatsapp,
+          workingSchedule: text.workingSchedule,
         }}
       />
     </main>
