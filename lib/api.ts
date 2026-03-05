@@ -5,15 +5,44 @@ import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiRespons
  * Multi-tenant SaaS API helpers
  */
 
+class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 async function fetchFromAPI<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
   const isJson = response.headers.get('content-type')?.includes('application/json')
   const data = isJson ? await response.json().catch(() => ({})) : null
 
   if (!response.ok) {
-    throw new Error(data?.message || `API error: ${response.status}`)
+    throw new ApiError(data?.message || `API error: ${response.status}`, response.status)
   }
   return data as T
+}
+
+export async function getSalonStrict(): Promise<Salon | null> {
+  const url = `${API_BASE_URL}/api/salon/public`
+  try {
+    const data = await fetchFromAPI<{ salon: any }>(url)
+    return {
+      id: data.salon.id.toString(),
+      name: data.salon.name,
+      description: '',
+      logoUrl: data.salon.logoUrl || null,
+      headerMessage: 'Hizmetini Seç',
+    }
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 400 || error.status === 404)) {
+      return null
+    }
+    throw error
+  }
 }
 
 export async function getSalon(salonId: string): Promise<Salon> {
@@ -182,6 +211,7 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       customerName: data.customerName,
       customerPhone: data.customerPhone,
       customerGender: data.customerGender,
+      customerLanguage: data.customerLanguage || data.language || null,
       salonId: data.salonId.toString(),
       salonName: data.salonName,
       isKnownCustomer: data.isKnownCustomer,

@@ -39,6 +39,13 @@ interface SalonHomepageData {
   socialLinks?: SocialLinks
   bookingUrl: string
   theme?: Theme
+  labels: {
+    bookNow: string
+    reserveAppointment: string
+    ourServices: string
+    clientReviews: string
+    getInTouch: string
+  }
 }
 
 export default function SalonHomepage({
@@ -54,6 +61,7 @@ export default function SalonHomepage({
   socialLinks,
   bookingUrl,
   theme = {},
+  labels,
 }: SalonHomepageData) {
   const primaryColor = theme.primaryColor || '#1a1a1a'
   const secondaryColor = theme.secondaryColor || '#d4a574'
@@ -79,7 +87,7 @@ export default function SalonHomepage({
               className="px-6 md:px-8 py-2 md:py-2.5 rounded-full font-medium text-sm md:text-base text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: secondaryColor }}
             >
-              Book Now
+              {labels.bookNow}
             </a>
           </div>
         </div>
@@ -106,7 +114,7 @@ export default function SalonHomepage({
                 className="inline-block px-8 md:px-10 py-3 md:py-4 rounded-full font-medium text-white transition-all hover:shadow-lg text-base md:text-lg"
                 style={{ backgroundColor: secondaryColor }}
               >
-                Reserve Your Appointment
+                {labels.reserveAppointment}
               </a>
             </div>
 
@@ -133,7 +141,7 @@ export default function SalonHomepage({
               className="text-3xl md:text-4xl lg:text-5xl font-serif font-light mb-4"
               style={{ color: primaryColor }}
             >
-              Our Services
+              {labels.ourServices}
             </h2>
             <div
               className="w-12 h-1 mx-auto rounded-full"
@@ -188,7 +196,7 @@ export default function SalonHomepage({
                 className="text-3xl md:text-4xl lg:text-5xl font-serif font-light mb-4"
                 style={{ color: primaryColor }}
               >
-                Client Reviews
+                {labels.clientReviews}
               </h2>
               <div
                 className="w-12 h-1 mx-auto rounded-full"
@@ -248,7 +256,7 @@ export default function SalonHomepage({
                 className="text-3xl md:text-4xl font-serif font-light mb-8"
                 style={{ color: primaryColor }}
               >
-                Get in Touch
+                {labels.getInTouch}
               </h2>
 
               <div className="space-y-6">

@@ -94,6 +94,7 @@ export interface BookingContext {
   customerName: string
   customerPhone: string
   customerGender?: 'male' | 'female'
+  customerLanguage?: string | null
   salonId: string
   salonName: string
   isKnownCustomer: boolean
