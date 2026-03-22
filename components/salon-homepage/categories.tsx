@@ -26,15 +26,15 @@ export function Categories({ title, categories, servicesCount }: CategoriesProps
   }
 
   return (
-    <section className="py-14 bg-white">
+    <section className="py-14 bg-card">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-center justify-between gap-3">
-          <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900">{title}</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-foreground">{title}</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => scrollByCard('prev')}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-background"
               aria-label="Previous category"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -42,7 +42,7 @@ export function Categories({ title, categories, servicesCount }: CategoriesProps
             <button
               type="button"
               onClick={() => scrollByCard('next')}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:bg-background"
               aria-label="Next category"
             >
               <ChevronRight className="h-5 w-5" />
@@ -59,13 +59,13 @@ export function Categories({ title, categories, servicesCount }: CategoriesProps
             return (
               <article
                 key={category.id}
-                className="min-w-[82%] sm:min-w-[56%] lg:min-w-[38%] xl:min-w-[30%] snap-start overflow-hidden rounded-3xl border border-neutral-200 bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-700 text-white shadow-sm"
+                className="min-w-[82%] sm:min-w-[56%] lg:min-w-[38%] xl:min-w-[30%] snap-start overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary via-secondary to-accent text-white shadow-sm"
               >
                 <div className="relative h-44 w-full">
                   {imageSrc ? (
                     <img src={imageSrc} alt={category.name} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-amber-300 via-rose-300 to-orange-300" />
+                    <div className="h-full w-full bg-gradient-to-br from-primary via-secondary to-accent" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                   <span className="absolute left-4 top-4 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">

@@ -560,7 +560,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-24 right-4 z-[70] inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-xs font-semibold text-white shadow-lg hover:bg-emerald-500"
+          className="fixed bottom-24 right-4 z-[70] inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-xs font-semibold text-accent-foreground shadow-lg hover:opacity-90"
         >
           <MessageCircle className="h-4 w-4" />
           {text.openWhatsapp}
