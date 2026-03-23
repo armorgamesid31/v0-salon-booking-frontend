@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { fetchCategoryCitySeo } from '@/lib/server-api'
 import { isSupportedLocale, normalizeLocale } from '@/lib/locales'
 import { extractTenantSlug } from '@/lib/tenant'
+import { getRuntimeContent, getRuntimeText } from '@/lib/runtime-content'
 
 interface Props {
   params: Promise<{ locale: string; categorySlug: string; citySlug: string }>
@@ -62,6 +63,14 @@ export default async function CategoryCityPage({ params }: Props) {
 
   try {
     const data = await getCategoryCitySeo(normalizedLocale, categorySlug, citySlug, tenantSlug)
+    const runtimeContent = await getRuntimeContent({
+      surface: 'booking_page',
+      page: 'category_city',
+      locale: normalizedLocale,
+      tenantSlug,
+    })
+    const salonsLabel = getRuntimeText(runtimeContent, 'labels.salons', 'Salons')
+    const bookLabel = getRuntimeText(runtimeContent, 'labels.book', 'Book')
 
     return (
       <main className="mx-auto max-w-4xl px-4 py-10">
@@ -71,7 +80,7 @@ export default async function CategoryCityPage({ params }: Props) {
         <p className="mt-3 text-neutral-700">{data.category.marketingDescription}</p>
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold text-neutral-900">Salons</h2>
+          <h2 className="text-xl font-semibold text-neutral-900">{salonsLabel}</h2>
           <ul className="mt-3 space-y-3">
             {data.salons.map((salon) => (
               <li key={salon.id} className="rounded-lg border border-neutral-200 px-4 py-3">
@@ -80,7 +89,7 @@ export default async function CategoryCityPage({ params }: Props) {
                   {salon.city} {salon.district ? `- ${salon.district}` : ''}
                 </p>
                 <a href={salon.bookingUrl} className="mt-2 inline-flex text-sm font-semibold text-neutral-900 underline">
-                  Book
+                  {bookLabel}
                 </a>
               </li>
             ))}

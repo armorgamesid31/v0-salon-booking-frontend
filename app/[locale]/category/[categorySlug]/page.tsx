@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { fetchCategoryLanding } from '@/lib/server-api'
 import { isSupportedLocale, normalizeLocale } from '@/lib/locales'
 import { extractTenantSlug } from '@/lib/tenant'
+import { getRuntimeContent, getRuntimeText } from '@/lib/runtime-content'
 
 interface Props {
   params: Promise<{ locale: string; categorySlug: string }>
@@ -62,6 +63,14 @@ export default async function CategoryLandingPage({ params }: Props) {
 
   try {
     const data = await getCategoryLanding(normalizedLocale, categorySlug, tenantSlug)
+    const runtimeContent = await getRuntimeContent({
+      surface: 'booking_page',
+      page: 'category_landing',
+      locale: normalizedLocale,
+      tenantSlug,
+    })
+    const servicesLabel = getRuntimeText(runtimeContent, 'labels.services', 'Services')
+    const bookNowLabel = getRuntimeText(runtimeContent, 'labels.bookNow', 'Book Now')
 
     return (
       <main className="mx-auto max-w-4xl px-4 py-10">
@@ -77,7 +86,7 @@ export default async function CategoryLandingPage({ params }: Props) {
         )}
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold text-neutral-900">Services</h2>
+          <h2 className="text-xl font-semibold text-neutral-900">{servicesLabel}</h2>
           <ul className="mt-3 space-y-2">
             {data.services.map((service) => (
               <li key={service.id} className="rounded-lg border border-neutral-200 px-4 py-3 text-sm">
@@ -91,7 +100,7 @@ export default async function CategoryLandingPage({ params }: Props) {
           href={data.cta.bookingUrl}
           className="mt-8 inline-flex rounded-full bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white"
         >
-          Book Now
+          {bookNowLabel}
         </a>
       </main>
     )

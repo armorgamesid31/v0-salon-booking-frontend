@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, Suspense, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,6 +10,8 @@ import { getBookingContextByToken, registerCustomer, getSalon, getServices, getS
 import LanguageSelector from '@/components/language-selector'
 import { BOOKING_TEXT, DEFAULT_LANGUAGE, detectBrowserLanguage, LOCALE_MAP, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
 import { DUMMY_SALON } from '@/lib/constants'
+import { extractTenantSlug } from '@/lib/tenant'
+import { getRuntimeContent, getRuntimeText, type RuntimeContentMap } from '@/lib/runtime-content'
 
 // Fixed icons helper
 const getIconComponent = (categoryKey: string) => {
@@ -33,6 +35,7 @@ interface BookingDashboardProps {
 
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
+  const searchParamsString = searchParams.toString()
   const pathname = usePathname()
   const router = useRouter()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -51,6 +54,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
   const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
   const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE)
+  const [runtimeContent, setRuntimeContent] = useState<RuntimeContentMap>({})
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
@@ -67,7 +71,46 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     birthDate: '',
     acceptMarketing: false,
   })
-  const text = BOOKING_TEXT[language]
+  const text = useMemo(() => {
+    const fallback = BOOKING_TEXT[language]
+
+    return {
+      ...fallback,
+      welcomeDefault: getRuntimeText(runtimeContent, 'common.welcomeDefault', fallback.welcomeDefault),
+      welcomeBack: (name: string) => {
+        const template = getRuntimeText(runtimeContent, 'common.welcomeBackTemplate', '')
+        return template ? template.replace('{name}', name) : fallback.welcomeBack(name)
+      },
+      people: getRuntimeText(runtimeContent, 'common.people', fallback.people),
+      searchPlaceholder: getRuntimeText(runtimeContent, 'common.searchPlaceholder', fallback.searchPlaceholder),
+      add: getRuntimeText(runtimeContent, 'common.add', fallback.add),
+      added: getRuntimeText(runtimeContent, 'common.added', fallback.added),
+      selectDate: getRuntimeText(runtimeContent, 'common.selectDate', fallback.selectDate),
+      selectTime: getRuntimeText(runtimeContent, 'common.selectTime', fallback.selectTime),
+      noAppointment: getRuntimeText(runtimeContent, 'common.noAppointment', fallback.noAppointment),
+      confirmAppointment: getRuntimeText(runtimeContent, 'common.confirmAppointment', fallback.confirmAppointment),
+      selectSpecialist: getRuntimeText(runtimeContent, 'common.selectSpecialist', fallback.selectSpecialist),
+      confirmSelection: getRuntimeText(runtimeContent, 'common.confirmSelection', fallback.confirmSelection),
+      completeProfile: getRuntimeText(runtimeContent, 'common.completeProfile', fallback.completeProfile),
+      fullName: getRuntimeText(runtimeContent, 'common.fullName', fallback.fullName),
+      phone: getRuntimeText(runtimeContent, 'common.phone', fallback.phone),
+      registerContinue: getRuntimeText(runtimeContent, 'common.registerContinue', fallback.registerContinue),
+      approvalTitle: getRuntimeText(runtimeContent, 'common.approvalTitle', fallback.approvalTitle),
+      dateAndTime: getRuntimeText(runtimeContent, 'common.dateAndTime', fallback.dateAndTime),
+      details: getRuntimeText(runtimeContent, 'common.details', fallback.details),
+      services: getRuntimeText(runtimeContent, 'common.services', fallback.services),
+      completeBooking: getRuntimeText(runtimeContent, 'common.completeBooking', fallback.completeBooking),
+      bookingInProgress: getRuntimeText(runtimeContent, 'common.bookingInProgress', fallback.bookingInProgress),
+      successTitle: getRuntimeText(runtimeContent, 'common.successTitle', fallback.successTitle),
+      successInfo: getRuntimeText(runtimeContent, 'common.successInfo', fallback.successInfo),
+      successButton: getRuntimeText(runtimeContent, 'common.successButton', fallback.successButton),
+      openWhatsapp: getRuntimeText(runtimeContent, 'common.openWhatsapp', fallback.openWhatsapp),
+      loading: getRuntimeText(runtimeContent, 'common.loading', fallback.loading),
+      fillInfoError: getRuntimeText(runtimeContent, 'errors.fillInfo', fallback.fillInfoError),
+      genericError: getRuntimeText(runtimeContent, 'errors.generic', fallback.genericError),
+      bookingFailed: getRuntimeText(runtimeContent, 'errors.bookingFailed', fallback.bookingFailed),
+    }
+  }, [language, runtimeContent])
 
   useEffect(() => {
     if (forcedLanguage) {
@@ -80,6 +123,30 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     const lang = normalizeLanguage(queryLang || savedLang || detectBrowserLanguage())
     setLanguage(lang)
   }, [searchParams, forcedLanguage])
+
+  useEffect(() => {
+    let active = true
+
+    const params = new URLSearchParams(searchParamsString)
+    const tenantSlug = extractTenantSlug(window.location.hostname) || params.get('slug') || undefined
+    const requestedSalonId = salonId || params.get('salonId') || undefined
+
+    getRuntimeContent({
+      surface: 'booking_page',
+      page: 'booking_dashboard',
+      locale: language,
+      tenantSlug,
+      salonId: requestedSalonId,
+    }).then((content) => {
+      if (active) {
+        setRuntimeContent(content)
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [language, salonId, searchParamsString])
 
   useEffect(() => {
     if (isKnownCustomer && customerName) {

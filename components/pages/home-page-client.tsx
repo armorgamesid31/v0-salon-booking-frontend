@@ -9,6 +9,7 @@ import type { SalonHomepageResponse } from '@/lib/types'
 import { HOME_TEXT, LOCALE_MAP, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
 import { extractTenantSlug } from '@/lib/tenant'
 import { normalizeLocale } from '@/lib/locales'
+import { getRuntimeContent, getRuntimeText, type RuntimeContentMap } from '@/lib/runtime-content'
 
 interface HomePageClientProps {
   locale: string
@@ -38,10 +39,33 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
   const [homepageData, setHomepageData] = useState<SalonHomepageResponse | null>(null)
   const [tenantNotFound, setTenantNotFound] = useState(false)
   const [language, setLanguage] = useState<LanguageCode>(normalizeLanguage(locale))
+  const [runtimeContent, setRuntimeContent] = useState<RuntimeContentMap>({})
 
   useEffect(() => {
     setLanguage(normalizeLanguage(locale))
   }, [locale])
+
+  useEffect(() => {
+    let active = true
+
+    const params = new URLSearchParams(searchParamsString)
+    const tenantSlug = extractTenantSlug(window.location.hostname) || params.get('slug') || undefined
+
+    getRuntimeContent({
+      surface: 'booking_page',
+      page: 'home',
+      locale: language,
+      tenantSlug,
+    }).then((content) => {
+      if (active) {
+        setRuntimeContent(content)
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [language, searchParamsString])
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString)
@@ -69,7 +93,32 @@ export default function HomePageClient({ locale }: HomePageClientProps) {
     return buildBookingUrl(params, language, homepageData.booking.bookingUrl || '/randevu')
   }, [homepageData, searchParamsString, language])
 
-  const text = HOME_TEXT[language]
+  const text = useMemo(() => {
+    const fallback = HOME_TEXT[language]
+    const servicesCountLabel = getRuntimeText(runtimeContent, 'stats.servicesCountLabel', '')
+
+    return {
+      ...fallback,
+      bookNow: getRuntimeText(runtimeContent, 'common.bookNow', fallback.bookNow),
+      reserveAppointment: getRuntimeText(runtimeContent, 'common.reserveAppointment', fallback.reserveAppointment),
+      aboutTitle: getRuntimeText(runtimeContent, 'common.aboutTitle', fallback.aboutTitle),
+      galleryTitle: getRuntimeText(runtimeContent, 'common.galleryTitle', fallback.galleryTitle),
+      instagramTitle: getRuntimeText(runtimeContent, 'common.instagramTitle', fallback.instagramTitle),
+      contactTitle: getRuntimeText(runtimeContent, 'common.contactTitle', fallback.contactTitle),
+      expertsTitle: getRuntimeText(runtimeContent, 'common.expertsTitle', fallback.expertsTitle),
+      openWhatsapp: getRuntimeText(runtimeContent, 'common.openWhatsapp', fallback.openWhatsapp),
+      workingSchedule: getRuntimeText(runtimeContent, 'common.workingSchedule', fallback.workingSchedule),
+      categories: getRuntimeText(runtimeContent, 'common.categories', fallback.categories),
+      clientReviews: getRuntimeText(runtimeContent, 'common.clientReviews', fallback.clientReviews),
+      getInTouch: getRuntimeText(runtimeContent, 'common.getInTouch', fallback.getInTouch),
+      loading: getRuntimeText(runtimeContent, 'common.loading', fallback.loading),
+      tenantNotFoundTitle: getRuntimeText(runtimeContent, 'errors.tenantNotFoundTitle', fallback.tenantNotFoundTitle),
+      tenantNotFoundDesc: getRuntimeText(runtimeContent, 'errors.tenantNotFoundDescription', fallback.tenantNotFoundDesc),
+      servicesCount: servicesCountLabel
+        ? (count: number) => `${count} ${servicesCountLabel}`
+        : fallback.servicesCount,
+    }
+  }, [language, runtimeContent])
 
   const handleLanguageChange = (next: LanguageCode) => {
     setLanguage(next)
