@@ -96,6 +96,9 @@ export interface BookingContext {
   customerPhone: string
   customerGender?: 'male' | 'female'
   customerLanguage?: string | null
+  originChannel?: 'WHATSAPP' | 'INSTAGRAM' | string | null
+  originPhone?: string | null
+  originInstagramId?: string | null
   salonId: string
   salonName: string
   isKnownCustomer: boolean

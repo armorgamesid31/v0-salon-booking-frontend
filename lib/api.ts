@@ -159,7 +159,16 @@ export async function createAppointment(
 }
 
 export async function registerCustomer(
-  data: { fullName: string; phone: string; gender: string; birthDate: string; acceptMarketing: boolean }
+  data: {
+    fullName: string;
+    phone: string;
+    gender: string;
+    birthDate: string;
+    acceptMarketing: boolean;
+    originChannel?: string | null;
+    originPhone?: string | null;
+    instagramId?: string | null;
+  }
 ): Promise<{ customerId: string; success: boolean }> {
   const url = `${API_BASE_URL}/api/customers/register`
   const result = await fetchFromAPI<any>(url, {
@@ -214,6 +223,9 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       customerPhone: data.customerPhone,
       customerGender: data.customerGender,
       customerLanguage: data.customerLanguage || data.language || null,
+      originChannel: data.originChannel || null,
+      originPhone: data.originPhone || null,
+      originInstagramId: data.originInstagramId || null,
       salonId: data.salonId.toString(),
       salonName: data.salonName,
       isKnownCustomer: data.isKnownCustomer,

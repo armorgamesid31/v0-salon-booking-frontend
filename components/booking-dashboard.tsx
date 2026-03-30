@@ -50,6 +50,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [isKnownCustomer, setIsKnownCustomer] = useState<boolean>(false)
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [salonId, setSalonId] = useState<string>('')
+  const [originChannel, setOriginChannel] = useState<string | null>(null)
+  const [originPhone, setOriginPhone] = useState<string | null>(null)
+  const [originInstagramId, setOriginInstagramId] = useState<string | null>(null)
   const [salonData, setSalonData] = useState<any>(null)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
   const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
@@ -192,9 +195,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           }
           setSalonId(context.salonId)
           setIsKnownCustomer(context.isKnownCustomer)
+          setOriginChannel(context.originChannel || null)
+          setOriginPhone(context.originPhone || null)
+          setOriginInstagramId(context.originInstagramId || null)
           if (context.isKnownCustomer && context.customerId) {
             setCustomerId(context.customerId)
             setCustomerName(context.customerName)
+          }
+          if (!context.isKnownCustomer) {
+            setRegistrationForm((prev) => ({
+              ...prev,
+              fullName: context.customerName || prev.fullName,
+              phone: context.customerPhone || prev.phone,
+              gender: (context.customerGender as any) || prev.gender
+            }));
           }
           const gender = context.customerGender || 'female';
           setSelectedGender(gender as 'female' | 'male');
@@ -554,7 +568,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             <Button onClick={async () => {
                 if (!registrationForm.fullName || !registrationForm.phone) return alert(text.fillInfoError);
                 try {
-                  const res = await registerCustomer(registrationForm);
+                  const res = await registerCustomer({
+                    ...registrationForm,
+                    originChannel,
+                    originPhone,
+                    instagramId: originInstagramId
+                  });
                   if (res.customerId) { 
                       setCustomerId(res.customerId); 
                       setCustomerName(registrationForm.fullName);
