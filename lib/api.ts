@@ -180,6 +180,7 @@ export async function registerCustomer(
     originChannel?: string | null;
     originPhone?: string | null;
     instagramId?: string | null;
+    magicToken?: string | null;
   }
 ): Promise<{ customerId: string; success: boolean }> {
   const url = `${API_BASE_URL}/api/customers/register`

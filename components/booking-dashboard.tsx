@@ -49,6 +49,7 @@ const getMagicToken = (params: URLSearchParams): string | null => {
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
+  const magicToken = getMagicToken(searchParams)
   const pathname = usePathname()
   const router = useRouter()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -181,7 +182,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   // Fetch initial salon and services data
   useEffect(() => {
-    const token = getMagicToken(searchParams)
+    const token = magicToken
     
     const loadSalonAndServices = async (sId: string, gender: string) => {
         try {
@@ -233,7 +234,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         setSalonId(sId)
         loadSalonAndServices(sId, selectedGender);
     }
-  }, [searchParams, forcedLanguage])
+  }, [searchParams, forcedLanguage, magicToken])
 
   // Refetch services when gender changes
   useEffect(() => {
@@ -585,7 +586,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     ...registrationForm,
                     originChannel,
                     originPhone,
-                    instagramId: originInstagramId
+                    instagramId: originInstagramId,
+                    magicToken,
                   });
                   if (res.customerId) { 
                       setCustomerId(res.customerId); 
