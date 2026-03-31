@@ -91,10 +91,10 @@ export interface ApiResponse<T> {
 
 // Booking Context (Magic Link)
 export interface BookingContext {
-  customerId: string
-  customerName: string
+  customerId: string | null
+  customerName: string | null
   customerPhone: string
-  customerGender?: 'male' | 'female'
+  customerGender?: 'male' | 'female' | 'other' | null
   customerLanguage?: string | null
   originChannel?: 'WHATSAPP' | 'INSTAGRAM' | string | null
   originPhone?: string | null
@@ -102,6 +102,8 @@ export interface BookingContext {
   salonId: string
   salonName: string
   isKnownCustomer: boolean
+  identityLinked?: boolean
+  identitySessionId?: string | null
   appointments?: Appointment[]
   activePackages?: any[]
 }

@@ -247,10 +247,15 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       salonId: data.salonId.toString(),
       salonName: data.salonName,
       isKnownCustomer: data.isKnownCustomer,
+      identityLinked: Boolean(data.identityLinked),
+      identitySessionId: data.identitySessionId || null,
       appointments: data.appointments || [],
       activePackages: [],
     }
   } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 410)) {
+      return null
+    }
     console.error('getBookingContextByToken error:', error)
     return null
   }

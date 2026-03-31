@@ -214,19 +214,24 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           setOriginInstagramId(context.originInstagramId || null)
           if (context.isKnownCustomer && context.customerId) {
             setCustomerId(context.customerId)
-            setCustomerName(context.customerName)
+            setCustomerName(context.customerName || '')
           }
           if (!context.isKnownCustomer) {
+            const normalizedGender = context.customerGender === 'male' ? 'male' : 'female'
             setRegistrationForm((prev) => ({
               ...prev,
               fullName: context.customerName || prev.fullName,
               phone: context.customerPhone || prev.phone,
-              gender: (context.customerGender as any) || prev.gender
+              gender: normalizedGender || prev.gender
             }));
           }
-          const gender = context.customerGender || 'female';
-          setSelectedGender(gender as 'female' | 'male');
+          const gender = context.customerGender === 'male' ? 'male' : 'female';
+          setSelectedGender(gender);
           loadSalonAndServices(context.salonId, gender);
+        } else {
+          const fallbackSalonId = searchParams.get('salonId') || '1';
+          setSalonId(fallbackSalonId);
+          loadSalonAndServices(fallbackSalonId, selectedGender);
         }
       })
     } else {
