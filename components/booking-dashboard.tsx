@@ -46,10 +46,39 @@ const getMagicToken = (params: URLSearchParams): string | null => {
   return null
 }
 
+const TOKEN_STORAGE_KEY = 'booking_magic_token'
+
+const looksLikeToken = (value: string | null | undefined): value is string => {
+  const candidate = (value || '').trim()
+  return /^[A-Za-z0-9_-]{8,}$/.test(candidate)
+}
+
+const parseTokenFromRawSearch = (rawSearch: string): string | null => {
+  const search = (rawSearch || '').replace(/^\?/, '')
+  if (!search) return null
+
+  const chunks = search.split('&').map((p) => p.trim()).filter(Boolean)
+  for (const chunk of chunks) {
+    const [rawKey, rawValue] = chunk.split('=')
+    const key = decodeURIComponent(rawKey || '')
+    const value = decodeURIComponent(rawValue || '')
+
+    if (key === 'token' && looksLikeToken(value)) {
+      return value
+    }
+
+    if (looksLikeToken(key) && !value && key !== 'lang' && key !== 'slug' && key !== 'salonId') {
+      return key
+    }
+  }
+
+  return null
+}
+
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
-  const magicToken = getMagicToken(searchParams)
+  const [stableMagicToken, setStableMagicToken] = useState<string | null>(null)
   const pathname = usePathname()
   const router = useRouter()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -130,6 +159,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [language, runtimeContent])
 
   useEffect(() => {
+    const fromSearchParams = getMagicToken(searchParams)
+    const fromRawSearch = typeof window !== 'undefined' ? parseTokenFromRawSearch(window.location.search) : null
+    const fromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem(TOKEN_STORAGE_KEY) : null
+
+    const resolved = fromSearchParams || fromRawSearch || fromStorage
+    if (resolved && looksLikeToken(resolved)) {
+      setStableMagicToken(resolved)
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(TOKEN_STORAGE_KEY, resolved)
+      }
+    }
+  }, [searchParamsString, searchParams])
+
+  useEffect(() => {
     if (forcedLanguage) {
       setLanguage(normalizeLanguage(forcedLanguage))
       return
@@ -182,7 +225,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   // Fetch initial salon and services data
   useEffect(() => {
-    const token = magicToken
+    const token = stableMagicToken
     
     const loadSalonAndServices = async (sId: string, gender: string) => {
         try {
@@ -239,7 +282,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         setSalonId(sId)
         loadSalonAndServices(sId, selectedGender);
     }
-  }, [searchParams, forcedLanguage, magicToken])
+  }, [searchParams, forcedLanguage, stableMagicToken])
 
   // Refetch services when gender changes
   useEffect(() => {
@@ -385,7 +428,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       if (parts.length > 0) {
         parts[0] = next
         const nextPath = `/${parts.join('/')}`
-        const query = searchParams.toString()
+        const queryParams = new URLSearchParams(searchParams.toString())
+        if (stableMagicToken && !queryParams.get('token')) {
+          queryParams.set('token', stableMagicToken)
+        }
+        const query = queryParams.toString()
         router.push(`${nextPath}${query ? `?${query}` : ''}`)
       }
     }
@@ -592,7 +639,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     originChannel,
                     originPhone,
                     instagramId: originInstagramId,
-                    magicToken,
+                    magicToken: stableMagicToken,
                   });
                   if (res.customerId) { 
                       setCustomerId(res.customerId); 

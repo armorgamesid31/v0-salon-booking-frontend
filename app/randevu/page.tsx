@@ -1,21 +1,12 @@
-import { redirect } from 'next/navigation'
+'use client'
 
-interface Props {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
+import { useEffect } from 'react'
 
-export default async function LegacyBookingRedirect({ searchParams }: Props) {
-  const entries = Object.entries((await searchParams) || {})
-  const qp = new URLSearchParams()
-  for (const [key, value] of entries) {
-    if (Array.isArray(value)) {
-      value.forEach((v) => qp.append(key, v))
-    } else if (value !== undefined) {
-      qp.append(key, value)
-    } else {
-      qp.append(key, '')
-    }
-  }
-  const query = qp.toString()
-  redirect(query ? `/tr/booking?${query}` : '/tr/booking')
+export default function LegacyBookingRedirect() {
+  useEffect(() => {
+    const search = typeof window !== 'undefined' ? window.location.search : ''
+    window.location.replace(`/tr/booking${search || ''}`)
+  }, [])
+
+  return null
 }

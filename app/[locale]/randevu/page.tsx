@@ -1,28 +1,17 @@
-import { notFound, redirect } from 'next/navigation'
-import { isSupportedLocale } from '@/lib/locales'
+'use client'
 
-interface Props {
-  params: Promise<{ locale: string }>
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
+import { useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import { normalizeLocale } from '@/lib/locales'
 
-export default async function LocalizedLegacyBookingRedirect({ params, searchParams }: Props) {
-  const { locale } = await params
-  if (!isSupportedLocale(locale)) {
-    notFound()
-  }
+export default function LocalizedLegacyBookingRedirect() {
+  const params = useParams<{ locale: string }>()
 
-  const entries = Object.entries((await searchParams) || {})
-  const qp = new URLSearchParams()
-  for (const [key, value] of entries) {
-    if (Array.isArray(value)) {
-      value.forEach((v) => qp.append(key, v))
-    } else if (value !== undefined) {
-      qp.append(key, value)
-    } else {
-      qp.append(key, '')
-    }
-  }
-  const query = qp.toString()
-  redirect(query ? `/${locale}/booking?${query}` : `/${locale}/booking`)
+  useEffect(() => {
+    const locale = normalizeLocale(params?.locale)
+    const search = typeof window !== 'undefined' ? window.location.search : ''
+    window.location.replace(`/${locale}/booking${search || ''}`)
+  }, [params?.locale])
+
+  return null
 }
