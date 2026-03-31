@@ -15,13 +15,26 @@ interface HomePageClientProps {
   locale: string
 }
 
+const getMagicToken = (params: URLSearchParams): string | null => {
+  const direct = params.get('token')
+  if (direct) return direct
+
+  for (const [key, value] of params.entries()) {
+    if (!value && key && key.length >= 8 && key !== 'salonId' && key !== 'slug' && key !== 'lang') {
+      return key
+    }
+  }
+
+  return null
+}
+
 function buildBookingUrl(searchParams: URLSearchParams, locale: LanguageCode, baseUrl: string): string {
   if (baseUrl.startsWith('https://wa.me/')) {
     return baseUrl
   }
 
   const params = new URLSearchParams()
-  const token = searchParams.get('token')
+  const token = getMagicToken(searchParams)
   const salonId = searchParams.get('salonId')
 
   if (token) params.set('token', token)

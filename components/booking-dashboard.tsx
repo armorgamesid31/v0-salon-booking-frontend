@@ -33,6 +33,19 @@ interface BookingDashboardProps {
   forcedLanguage?: string
 }
 
+const getMagicToken = (params: URLSearchParams): string | null => {
+  const direct = params.get('token')
+  if (direct) return direct
+
+  for (const [key, value] of params.entries()) {
+    if (!value && key && key.length >= 8 && key !== 'salonId' && key !== 'slug' && key !== 'lang') {
+      return key
+    }
+  }
+
+  return null
+}
+
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
@@ -168,7 +181,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   // Fetch initial salon and services data
   useEffect(() => {
-    const token = searchParams.get('token')
+    const token = getMagicToken(searchParams)
     
     const loadSalonAndServices = async (sId: string, gender: string) => {
         try {
