@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './constants'
+import { extractTenantSlug } from './tenant'
 import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext, SalonHomepageResponse } from './types'
 
 /**
@@ -16,7 +17,18 @@ class ApiError extends Error {
 }
 
 async function fetchFromAPI<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options)
+  const headers = new Headers(options?.headers || {})
+
+  if (typeof window !== 'undefined') {
+    const slugFromHost = extractTenantSlug(window.location.hostname)
+    const slugFromQuery = new URLSearchParams(window.location.search).get('slug')
+    const tenantSlug = slugFromHost || (slugFromQuery ? slugFromQuery.trim().toLowerCase() : null)
+    if (tenantSlug && !headers.has('x-tenant-slug')) {
+      headers.set('x-tenant-slug', tenantSlug)
+    }
+  }
+
+  const response = await fetch(url, { ...options, headers })
   const isJson = response.headers.get('content-type')?.includes('application/json')
   const data = isJson ? await response.json().catch(() => ({})) : null
 
@@ -190,12 +202,17 @@ export async function checkAvailability(
 ): Promise<{ available: boolean; slots?: string[] }> {
   try {
     const url = `${API_BASE_URL}/availability/slots`
+    const peopleCount = Math.max(1, Number(numberOfPeople) || 1)
+    const groups = Array.from({ length: peopleCount }, (_, index) => ({
+      personId: `p${index + 1}`,
+      services: [parseInt(serviceId)],
+    }))
     const data = await fetchFromAPI<any>(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         date: date,
-        groups: [{ personId: 'p1', services: [parseInt(serviceId)] }]
+        groups,
       }),
     })
     
