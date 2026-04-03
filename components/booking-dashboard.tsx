@@ -189,15 +189,13 @@ const packageUsageKey = (packageId: string, serviceId: string) => `${packageId}:
 
 const canUpdateAppointment = (item: BookingContextAppointment) => {
   const status = String(item.status || '').trim().toUpperCase()
-  const isFuture = new Date(item.startTime).getTime() > Date.now()
-  const computed = isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+  const computed = status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED'
   return Boolean(item.canUpdate) || computed
 }
 
 const canCancelAppointment = (item: BookingContextAppointment) => {
   const status = String(item.status || '').trim().toUpperCase()
-  const isFuture = new Date(item.startTime).getTime() > Date.now()
-  const computed = isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+  const computed = status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED'
   return Boolean(item.canCancel) || computed
 }
 
@@ -562,10 +560,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null }) => {
     const { packageId, serviceId } = input
-    const matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
-
+    let matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
+    if (!matched && salonId) {
+      try {
+        const unfiltered = await getServices(salonId)
+        const unfilteredFlat = unfiltered.flatMap((category) =>
+          category.services.map((service) => ({ categoryName: category.name, service })),
+        )
+        matched = unfilteredFlat.find((row) => row.service.id === serviceId)
+      } catch {
+        // no-op, handled by alert below
+      }
+    }
     if (!matched) {
-      alert('Bu paket hizmeti bu cinsiyet filtresinde listelenmiyor.')
+      alert('Package service could not be loaded. Please refresh the page and try again.')
       return
     }
 
@@ -684,7 +692,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [recentAppointments])
 
   const openRescheduleModalForGroup = (groupItems: BookingContextAppointment[]) => {
-    if (!stableMagicToken || !groupItems.length) return
+    if (!groupItems.length) return
+    if (!stableMagicToken) {
+      alert('Secure booking link is required to update this appointment.')
+      return
+    }
     const sorted = [...groupItems].sort(
       (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
     )
@@ -831,7 +843,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }
 
   const handleCancelGroup = async (groupItems: BookingContextAppointment[]) => {
-    if (!stableMagicToken) return
+    if (!stableMagicToken) {
+      alert('Secure booking link is required to cancel this appointment.')
+      return
+    }
     const appointmentIds = groupItems
       .map((item) => Number(item.id))
       .filter((id) => Number.isInteger(id) && id > 0)
@@ -850,7 +865,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }
 
   const openEvaluateModal = (groupItems: BookingContextAppointment[]) => {
-    const candidate = groupItems.find((item) => item.canEvaluate)
+    if (!stableMagicToken) {
+      alert('Secure booking link is required to submit feedback.')
+      return
+    }
+    const candidate = groupItems.find((item) => canEvaluateAppointment(item))
     if (!candidate) return
     setFeedbackModal({
       appointmentId: Number(candidate.id),
@@ -1147,56 +1166,50 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             <p className="text-[10px] font-medium text-violet-600">Includes rescheduled record</p>
                           ) : null}
 
-                          {stableMagicToken ? (
-                            <div className="pt-1 space-y-1.5">
-                              <div className="grid grid-cols-2 gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRepeatGroup(group.items)}
-                                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/40"
-                                >
-                                  <RefreshCcw className="h-3.5 w-3.5" />
-                                  Repeat
-                                </button>
-                                {group.cancelableItems.length ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleCancelGroup(group.cancelableItems)}
-                                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-rose-300/50 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-500/15"
-                                  >
-                                    <Ban className="h-3.5 w-3.5" />
-                                    Cancel
-                                  </button>
-                                ) : null}
-                              </div>
-
-                              {group.updatableItems.length ? (
+                          <div className="pt-1 space-y-1.5">
+                            <div className="grid grid-cols-2 gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => openRescheduleModalForGroup(group.updatableItems)}
-                                className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
+                                onClick={() => handleRepeatGroup(group.items)}
+                                className="inline-flex items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/40"
                               >
-                                <PencilLine className="h-3.5 w-3.5" />
-                                Update Appointment
+                                <RefreshCcw className="h-3.5 w-3.5" />
+                                Repeat
                               </button>
-                              ) : null}
-
-                              {group.evaluableItems.length ? (
+                              {group.cancelableItems.length ? (
                                 <button
                                   type="button"
-                                  onClick={() => openEvaluateModal(group.evaluableItems)}
-                                  className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/15"
+                                  onClick={() => void handleCancelGroup(group.cancelableItems)}
+                                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-rose-300/50 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-500/15"
                                 >
-                                  <Star className="h-3.5 w-3.5" />
-                                  Evaluate
+                                  <Ban className="h-3.5 w-3.5" />
+                                  Cancel
                                 </button>
                               ) : null}
                             </div>
-                          ) : (
-                            <div className="pt-1">
-                              <p className="text-[10px] text-muted-foreground">Updates are available for future booked/confirmed visits.</p>
-                            </div>
-                          )}
+
+                            {group.updatableItems.length ? (
+                            <button
+                              type="button"
+                              onClick={() => openRescheduleModalForGroup(group.updatableItems)}
+                              className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
+                            >
+                              <PencilLine className="h-3.5 w-3.5" />
+                              Update Appointment
+                            </button>
+                            ) : null}
+
+                            {group.evaluableItems.length ? (
+                              <button
+                                type="button"
+                                onClick={() => openEvaluateModal(group.evaluableItems)}
+                                className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/15"
+                              >
+                                <Star className="h-3.5 w-3.5" />
+                                Evaluate
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                         )
                       })}
