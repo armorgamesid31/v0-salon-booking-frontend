@@ -190,22 +190,22 @@ const packageUsageKey = (packageId: string, serviceId: string) => `${packageId}:
 const canUpdateAppointment = (item: BookingContextAppointment) => {
   const status = String(item.status || '').trim().toUpperCase()
   const isFuture = new Date(item.startTime).getTime() > Date.now()
-  if (typeof item.canUpdate === 'boolean') return item.canUpdate
-  return isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+  const computed = isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+  return Boolean(item.canUpdate) || computed
 }
 
 const canCancelAppointment = (item: BookingContextAppointment) => {
   const status = String(item.status || '').trim().toUpperCase()
   const isFuture = new Date(item.startTime).getTime() > Date.now()
-  if (typeof item.canCancel === 'boolean') return item.canCancel
-  return isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+  const computed = isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+  return Boolean(item.canCancel) || computed
 }
 
 const canEvaluateAppointment = (item: BookingContextAppointment) => {
   const status = String(item.status || '').trim().toUpperCase()
   const isPast = new Date(item.endTime).getTime() <= Date.now()
-  if (typeof item.canEvaluate === 'boolean') return item.canEvaluate
-  return isPast && status === 'COMPLETED'
+  const computed = isPast && status === 'COMPLETED'
+  return Boolean(item.canEvaluate) || computed
 }
 
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
@@ -253,8 +253,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [isBooking, setIsBooking] = useState(false)
   const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
   const [logoError, setLogoError] = useState(false)
-  const [packagesOpen, setPackagesOpen] = useState(true)
-  const [appointmentsOpen, setAppointmentsOpen] = useState(true)
+  const [packagesOpen, setPackagesOpen] = useState(false)
+  const [appointmentsOpen, setAppointmentsOpen] = useState(false)
 
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
