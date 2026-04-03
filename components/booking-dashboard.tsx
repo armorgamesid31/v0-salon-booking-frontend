@@ -86,6 +86,15 @@ type SelectedServiceEntry = {
   service: ImportedServiceItem
   source: 'MANUAL' | 'PACKAGE'
   packageId?: string
+  personIndex: number
+}
+
+type PersonPickerState = {
+  source: 'MANUAL' | 'PACKAGE'
+  serviceId: string
+  packageId?: string
+  serviceName?: string | null
+  categoryName?: string
 }
 
 const getMagicToken = (params: URLSearchParams): string | null => {
@@ -225,7 +234,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const router = useRouter()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
+  const [specialistModal, setSpecialistModal] = useState<{entryId: string, personIndex: number, service: ImportedServiceItem, staff: Employee[]} | null>(null)
+  const [personPicker, setPersonPicker] = useState<PersonPickerState | null>(null)
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
   const [packageUsageByKey, setPackageUsageByKey] = useState<Record<string, number>>({})
   const [selectedServices, setSelectedServices] = useState<SelectedServiceEntry[]>([])
@@ -497,6 +507,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           getServices(salonId, selectedGender).then(setAvailableServices)
           setSelectedServices([])
           setPackageUsageByKey({})
+          setSelectedSpecialistIds({})
           setSelectedDate(null)
           setSelectedTimeSlot(null)
       }
@@ -511,7 +522,16 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const day = String(selectedDate).padStart(2, '0')
         const dateStr = `${year}-${month}-${day}`
 
-        checkAvailability(salonId, selectedServices[0].service.id, dateStr, numberOfPeople)
+        const serviceGroups = Array.from({ length: numberOfPeople }, (_, index) => {
+          const personIndex = index + 1
+          return selectedServices
+            .filter((entry) => entry.personIndex === personIndex)
+            .map((entry) => Number(entry.service.id))
+            .filter((id) => Number.isInteger(id) && id > 0)
+        })
+
+        const fallbackServiceId = selectedServices[0].service.id
+        checkAvailability(salonId, fallbackServiceId, dateStr, numberOfPeople, serviceGroups)
             .then(res => {
                 if (res.available && res.slots) {
                     setAvailableSlots(res.slots.map(s => ({ time: s, available: true })))
@@ -522,31 +542,66 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
   }, [selectedDate, selectedServices, numberOfPeople, salonId])
 
+  useEffect(() => {
+    setSelectedServices((prev) => {
+      const filtered = prev.filter((entry) => entry.personIndex <= numberOfPeople)
+      const validEntryIds = new Set(filtered.map((entry) => entry.entryId))
+      setSelectedSpecialistIds((prevMap) => {
+        const next: Record<string, string> = {}
+        for (const [entryId, staffId] of Object.entries(prevMap)) {
+          if (validEntryIds.has(entryId)) {
+            next[entryId] = staffId
+          }
+        }
+        return next
+      })
+      return filtered
+    })
+  }, [numberOfPeople])
+
   const calculateTotalDuration = () => {
     return selectedServices.reduce((sum, entry) => {
         return sum + (parseInt(entry.service.duration) || 0);
     }, 0);
   }
 
-  const countSelectedService = (serviceId: string, source?: 'MANUAL' | 'PACKAGE') => {
+  const countSelectedService = (serviceId: string, source?: 'MANUAL' | 'PACKAGE', personIndex?: number) => {
     return selectedServices.filter(
-      (entry) => entry.service.id === serviceId && (!source || entry.source === source),
+      (entry) =>
+        entry.service.id === serviceId &&
+        (!source || entry.source === source) &&
+        (!personIndex || entry.personIndex === personIndex),
     ).length
   }
 
   const buildEntryId = (serviceId: string) =>
     `${serviceId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`
 
-  const isPackageServiceSelected = (packageId: string, serviceId: string) => {
+  const isPackageServiceSelected = (packageId: string, serviceId: string, personIndex?: number) => {
     return selectedServices.some(
       (entry) =>
         entry.source === 'PACKAGE' &&
         String(entry.packageId) === String(packageId) &&
-        String(entry.service.id) === String(serviceId),
+        String(entry.service.id) === String(serviceId) &&
+        (personIndex ? entry.personIndex === personIndex : true),
     )
   }
 
-  const handleServiceToggle = async (service: any, categoryName: string) => {
+  const personLabel = (personIndex: number) =>
+    language === 'tr' ? `Kisi ${personIndex}` : `Person ${personIndex}`
+
+  const handleServiceToggle = async (service: any, categoryName: string, personIndex?: number) => {
+    if (numberOfPeople > 1 && !personIndex) {
+      setPersonPicker({
+        source: 'MANUAL',
+        serviceId: String(service.id),
+        serviceName: service.name,
+        categoryName,
+      })
+      return
+    }
+
+    const targetPersonIndex = personIndex || 1
     const serviceData: ImportedServiceItem = {
       id: service.id,
       name: `${categoryName} - ${service.name}`,
@@ -556,22 +611,34 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       requiresSpecialist: service.requiresSpecialist
     }
 
-    const manualCount = countSelectedService(service.id, 'MANUAL')
+    const manualCount = countSelectedService(service.id, 'MANUAL', targetPersonIndex)
     if (manualCount > 0) {
       setSelectedServices((prev) => {
-        const index = prev.findIndex((entry) => entry.service.id === service.id && entry.source === 'MANUAL')
+        const index = prev.findIndex(
+          (entry) => entry.service.id === service.id && entry.source === 'MANUAL' && entry.personIndex === targetPersonIndex,
+        )
         if (index === -1) return prev
         const next = [...prev]
+        const removed = next[index]
+        if (removed) {
+          setSelectedSpecialistIds((map) => {
+            const copy = { ...map }
+            delete copy[removed.entryId]
+            return copy
+          })
+        }
         next.splice(index, 1)
         return next
       })
     } else {
+      const entryId = buildEntryId(service.id)
       setSelectedServices((prev) => [
         ...prev,
         {
-          entryId: buildEntryId(service.id),
+          entryId,
           service: serviceData,
           source: 'MANUAL',
+          personIndex: targetPersonIndex,
         },
       ])
       // If specialist is required, only show modal if there's more than one choice.
@@ -579,7 +646,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       if (service.requiresSpecialist) {
           const staff = await getStaffForService(service.id.toString());
           if (staff && staff.length > 1) {
-            setSpecialistModal({ service: serviceData, staff });
+            setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff });
+          } else if (staff && staff.length === 1) {
+            setSelectedSpecialistIds((prev) => ({ ...prev, [entryId]: String(staff[0].id) }))
           }
       }
     }
@@ -587,20 +656,42 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setSelectedTimeSlot(null)
   }
 
-  const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null }) => {
-    const { packageId, serviceId } = input
+  const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null; personIndex?: number }) => {
+    const { packageId, serviceId, personIndex } = input
+    if (numberOfPeople > 1 && !personIndex) {
+      setPersonPicker({
+        source: 'PACKAGE',
+        packageId,
+        serviceId,
+        serviceName: input.serviceName,
+      })
+      return
+    }
 
-    if (isPackageServiceSelected(packageId, serviceId)) {
-      setSelectedServices((prev) =>
-        prev.filter(
+    const targetPersonIndex = personIndex || 1
+
+    if (isPackageServiceSelected(packageId, serviceId, targetPersonIndex)) {
+      setSelectedServices((prev) => {
+        const idx = prev.findIndex(
           (entry) =>
-            !(
-              entry.source === 'PACKAGE' &&
-              String(entry.packageId) === String(packageId) &&
-              String(entry.service.id) === String(serviceId)
-            ),
-        ),
-      )
+            entry.source === 'PACKAGE' &&
+            String(entry.packageId) === String(packageId) &&
+            String(entry.service.id) === String(serviceId) &&
+            entry.personIndex === targetPersonIndex,
+        )
+        if (idx === -1) return prev
+        const next = [...prev]
+        const removed = next[idx]
+        if (removed) {
+          setSelectedSpecialistIds((map) => {
+            const copy = { ...map }
+            delete copy[removed.entryId]
+            return copy
+          })
+        }
+        next.splice(idx, 1)
+        return next
+      })
       const usageKey = packageUsageKey(packageId, serviceId)
       setPackageUsageByKey((prev) => ({
         ...prev,
@@ -648,21 +739,54 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       requiresSpecialist: matched.service.requiresSpecialist,
     }
 
+    const entryId = buildEntryId(serviceId)
     setSelectedServices((prev) => [
       ...prev,
       {
-        entryId: buildEntryId(serviceId),
+        entryId,
         service: serviceData,
         source: 'PACKAGE',
         packageId,
+        personIndex: targetPersonIndex,
       },
     ])
     setPackageUsageByKey((prev) => ({
       ...prev,
       [usageKey]: (prev[usageKey] || 0) + 1,
     }))
+    if (matched.service.requiresSpecialist) {
+      const staff = await getStaffForService(String(matched.service.id))
+      if (staff && staff.length > 1) {
+        setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff })
+      } else if (staff && staff.length === 1) {
+        setSelectedSpecialistIds((prev) => ({ ...prev, [entryId]: String(staff[0].id) }))
+      }
+    }
     setSelectedDate(null)
     setSelectedTimeSlot(null)
+  }
+
+  const handlePickPersonForPending = async (personIndex: number) => {
+    if (!personPicker) return
+    const pending = personPicker
+    setPersonPicker(null)
+
+    if (pending.source === 'PACKAGE') {
+      await handleAddFromPackage({
+        packageId: String(pending.packageId || ''),
+        serviceId: pending.serviceId,
+        serviceName: pending.serviceName || null,
+        personIndex,
+      })
+      return
+    }
+
+    const matched = flatServiceCatalog.find((row) => String(row.service.id) === String(pending.serviceId))
+    if (!matched) {
+      alert(text.dashboard.serviceFilterMismatch)
+      return
+    }
+    await handleServiceToggle(matched.service, matched.categoryName, personIndex)
   }
 
   const handleConfirmAppointment = async () => {
@@ -679,8 +803,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const res = await createAppointment(salonId, customerId, {
             services: selectedServices.map(entry => ({
                 serviceId: entry.service.id,
-                employeeId: selectedSpecialistIds[entry.service.id],
-                duration: entry.service.duration
+                employeeId: selectedSpecialistIds[entry.entryId],
+                duration: entry.service.duration,
+                personIndex: entry.personIndex,
             })),
             packageSelections: selectedServices
               .filter((entry) => entry.source === 'PACKAGE' && Boolean(entry.packageId))
@@ -867,6 +992,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         selections.push({
           entryId: buildEntryId(matched.service.id),
           source: 'MANUAL',
+          personIndex: 1,
           service: {
             id: matched.service.id,
             name: `${matched.categoryName} - ${matched.service.name}`,
@@ -1418,19 +1544,48 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           </div>
         )}
 
+      {personPicker ? (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">{language === 'tr' ? 'Kisi Sec' : 'Select Person'}</h3>
+              <button type="button" onClick={() => setPersonPicker(null)} className="text-muted-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {language === 'tr' ? 'Hizmetin eklenecegi kisiyi secin:' : 'Choose the person for:'} {personPicker.serviceName || `#${personPicker.serviceId}`}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {Array.from({ length: numberOfPeople }, (_, index) => (
+                <Button
+                  key={`person-picker-${index + 1}`}
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => void handlePickPersonForPending(index + 1)}
+                >
+                  {personLabel(index + 1)}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Specialist Selection Modal */}
       {specialistModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-foreground">{specialistModal.service.name}</h3>
+              <h3 className="text-lg font-bold text-foreground">{specialistModal.service.name} • {personLabel(specialistModal.personIndex)}</h3>
               <button onClick={() => setSpecialistModal(null)} className="text-muted-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-2">
               {specialistModal.staff.map((staff) => (
                 <label key={staff.id} className="flex items-center justify-between p-3 rounded-lg border-2 border-muted cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <input type="radio" name="specialist" checked={selectedSpecialistIds[specialistModal.service.id] === staff.id} onChange={() => setSelectedSpecialistIds(prev => ({ ...prev, [specialistModal.service.id]: staff.id }))} className="w-5 h-5 accent-primary" />
+                    <input type="radio" name="specialist" checked={selectedSpecialistIds[specialistModal.entryId] === staff.id} onChange={() => setSelectedSpecialistIds(prev => ({ ...prev, [specialistModal.entryId]: staff.id }))} className="w-5 h-5 accent-primary" />
                     <span className="text-sm font-medium text-foreground">{staff.name}</span>
                   </div>
                   <div className="text-right">
@@ -1725,7 +1880,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     {selectedServices.map((entry) => (
                         <p key={entry.entryId} className="text-sm font-medium flex justify-between">
                             <span>
-                              {entry.service.name}
+                              {entry.service.name} · {personLabel(entry.personIndex)}
                               {entry.source === 'PACKAGE' ? (
                                 <span className="ml-2 text-[10px] text-primary font-bold">{text.dashboard.fromPackageLabel}</span>
                               ) : null}

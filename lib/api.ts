@@ -138,7 +138,7 @@ export async function createAppointment(
   salonId: string,
   customerId: string,
   data: {
-    services: Array<{ serviceId: string; employeeId?: string; duration?: string }>
+    services: Array<{ serviceId: string; employeeId?: string; duration?: string; personIndex?: number }>
     packageSelections?: Array<{ serviceId: string; customerPackageId: string }>
     date: string
     time: string
@@ -165,6 +165,7 @@ export async function createAppointment(
           services: data.services.map(s => ({
               serviceId: s.serviceId,
               staffId: s.employeeId,
+              personIndex: Number.isInteger(s.personIndex) ? s.personIndex : 1,
               duration: s.duration?.match(/\d+/)?.[0] || "30",
               staffPreference: s.employeeId
                 ? { mode: 'SPECIFIC', preferredStaffId: Number(s.employeeId) }
@@ -217,15 +218,22 @@ export async function checkAvailability(
   salonId: string,
   serviceId: string,
   date: string,
-  numberOfPeople: number
+  numberOfPeople: number,
+  serviceGroups?: number[][]
 ): Promise<{ available: boolean; slots?: string[] }> {
   try {
     const url = `${API_BASE_URL}/availability/slots`
     const peopleCount = Math.max(1, Number(numberOfPeople) || 1)
-    const groups = Array.from({ length: peopleCount }, (_, index) => ({
-      personId: `p${index + 1}`,
-      services: [parseInt(serviceId)],
-    }))
+    const groups = Array.from({ length: peopleCount }, (_, index) => {
+      const candidate = serviceGroups?.[index]
+      const normalized = Array.isArray(candidate) && candidate.length > 0
+        ? candidate.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+        : [parseInt(serviceId)]
+      return {
+        personId: `p${index + 1}`,
+        services: normalized.length ? normalized : [parseInt(serviceId)],
+      }
+    })
     const data = await fetchFromAPI<any>(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
