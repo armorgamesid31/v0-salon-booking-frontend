@@ -95,6 +95,16 @@ type PersonPickerState = {
   packageId?: string
   serviceName?: string | null
   categoryName?: string
+  serviceData: ImportedServiceItem
+  requiresSpecialist: boolean
+}
+
+type SpecialistBatchModalState = {
+  entries: Array<{ entryId: string; personIndex: number }>
+  serviceName: string
+  staff: Employee[]
+  cursor: number
+  choices: Record<string, { mode: 'ANY' | 'SPECIFIC'; staffIds: string[] }>
 }
 
 const getMagicToken = (params: URLSearchParams): string | null => {
@@ -236,7 +246,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [specialistModal, setSpecialistModal] = useState<{entryId: string, personIndex: number, service: ImportedServiceItem, staff: Employee[]} | null>(null)
   const [personPicker, setPersonPicker] = useState<PersonPickerState | null>(null)
+  const [personPickerSelections, setPersonPickerSelections] = useState<number[]>([])
+  const [specialistBatchModal, setSpecialistBatchModal] = useState<SpecialistBatchModalState | null>(null)
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
+  const [selectedSpecialistOptionIds, setSelectedSpecialistOptionIds] = useState<Record<string, string[]>>({})
   const [packageUsageByKey, setPackageUsageByKey] = useState<Record<string, number>>({})
   const [selectedServices, setSelectedServices] = useState<SelectedServiceEntry[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -508,6 +521,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           setSelectedServices([])
           setPackageUsageByKey({})
           setSelectedSpecialistIds({})
+          setSelectedSpecialistOptionIds({})
           setSelectedDate(null)
           setSelectedTimeSlot(null)
       }
@@ -555,6 +569,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         }
         return next
       })
+      setSelectedSpecialistOptionIds((prevMap) => {
+        const next: Record<string, string[]> = {}
+        for (const [entryId, ids] of Object.entries(prevMap)) {
+          if (validEntryIds.has(entryId)) {
+            next[entryId] = ids
+          }
+        }
+        return next
+      })
       return filtered
     })
   }, [numberOfPeople])
@@ -591,17 +614,6 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     language === 'tr' ? `Kisi ${personIndex}` : `Person ${personIndex}`
 
   const handleServiceToggle = async (service: any, categoryName: string, personIndex?: number) => {
-    if (numberOfPeople > 1 && !personIndex) {
-      setPersonPicker({
-        source: 'MANUAL',
-        serviceId: String(service.id),
-        serviceName: service.name,
-        categoryName,
-      })
-      return
-    }
-
-    const targetPersonIndex = personIndex || 1
     const serviceData: ImportedServiceItem = {
       id: service.id,
       name: `${categoryName} - ${service.name}`,
@@ -610,6 +622,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       duration: service.duration,
       requiresSpecialist: service.requiresSpecialist
     }
+    if (numberOfPeople > 1 && !personIndex) {
+      setPersonPicker({
+        source: 'MANUAL',
+        serviceId: String(service.id),
+        serviceName: service.name,
+        categoryName,
+        serviceData,
+        requiresSpecialist: Boolean(service.requiresSpecialist),
+      })
+      setPersonPickerSelections([])
+      return
+    }
+
+    const targetPersonIndex = personIndex || 1
 
     const manualCount = countSelectedService(service.id, 'MANUAL', targetPersonIndex)
     if (manualCount > 0) {
@@ -622,6 +648,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const removed = next[index]
         if (removed) {
           setSelectedSpecialistIds((map) => {
+            const copy = { ...map }
+            delete copy[removed.entryId]
+            return copy
+          })
+          setSelectedSpecialistOptionIds((map) => {
             const copy = { ...map }
             delete copy[removed.entryId]
             return copy
@@ -649,6 +680,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff });
           } else if (staff && staff.length === 1) {
             setSelectedSpecialistIds((prev) => ({ ...prev, [entryId]: String(staff[0].id) }))
+            setSelectedSpecialistOptionIds((prev) => ({ ...prev, [entryId]: [String(staff[0].id)] }))
           }
       }
     }
@@ -658,19 +690,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null; personIndex?: number }) => {
     const { packageId, serviceId, personIndex } = input
-    if (numberOfPeople > 1 && !personIndex) {
-      setPersonPicker({
-        source: 'PACKAGE',
-        packageId,
-        serviceId,
-        serviceName: input.serviceName,
-      })
-      return
-    }
-
     const targetPersonIndex = personIndex || 1
 
-    if (isPackageServiceSelected(packageId, serviceId, targetPersonIndex)) {
+    if (personIndex && isPackageServiceSelected(packageId, serviceId, targetPersonIndex)) {
       setSelectedServices((prev) => {
         const idx = prev.findIndex(
           (entry) =>
@@ -684,6 +706,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const removed = next[idx]
         if (removed) {
           setSelectedSpecialistIds((map) => {
+            const copy = { ...map }
+            delete copy[removed.entryId]
+            return copy
+          })
+          setSelectedSpecialistOptionIds((map) => {
             const copy = { ...map }
             delete copy[removed.entryId]
             return copy
@@ -739,6 +766,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       requiresSpecialist: matched.service.requiresSpecialist,
     }
 
+    if (numberOfPeople > 1 && !personIndex) {
+      setPersonPicker({
+        source: 'PACKAGE',
+        packageId,
+        serviceId,
+        serviceName: input.serviceName,
+        categoryName: matched.categoryName,
+        serviceData,
+        requiresSpecialist: Boolean(matched.service.requiresSpecialist),
+      })
+      setPersonPickerSelections([])
+      return
+    }
+
     const entryId = buildEntryId(serviceId)
     setSelectedServices((prev) => [
       ...prev,
@@ -760,33 +801,213 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff })
       } else if (staff && staff.length === 1) {
         setSelectedSpecialistIds((prev) => ({ ...prev, [entryId]: String(staff[0].id) }))
+        setSelectedSpecialistOptionIds((prev) => ({ ...prev, [entryId]: [String(staff[0].id)] }))
       }
     }
     setSelectedDate(null)
     setSelectedTimeSlot(null)
   }
 
-  const handlePickPersonForPending = async (personIndex: number) => {
-    if (!personPicker) return
-    const pending = personPicker
-    setPersonPicker(null)
+  const togglePersonInPicker = (personIndex: number) => {
+    setPersonPickerSelections((prev) =>
+      prev.includes(personIndex) ? prev.filter((id) => id !== personIndex) : [...prev, personIndex].sort((a, b) => a - b),
+    )
+  }
 
+  const applyPendingSelection = async () => {
+    if (!personPicker || personPickerSelections.length === 0) return
+    const pending = personPicker
+
+    const selectedPersonIds = [...personPickerSelections].sort((a, b) => a - b)
+    let remainingForPackage = 0
     if (pending.source === 'PACKAGE') {
-      await handleAddFromPackage({
-        packageId: String(pending.packageId || ''),
-        serviceId: pending.serviceId,
-        serviceName: pending.serviceName || null,
-        personIndex,
-      })
+      const usageKey = packageUsageKey(String(pending.packageId || ''), pending.serviceId)
+      const pkg = activePackages.find((p) => String(p.id) === String(pending.packageId || ''))
+      const balance = pkg?.serviceBalances.find((b) => String(b.serviceId) === String(pending.serviceId))
+      remainingForPackage = balance
+        ? Math.max(0, Number(balance.remainingQuota) - (packageUsageByKey[usageKey] || 0))
+        : 0
+    }
+
+    const toAdd: Array<{ entryId: string; personIndex: number }> = []
+    const toRemove: SelectedServiceEntry[] = []
+
+    for (const personIndex of selectedPersonIds) {
+      const existing = selectedServices.find(
+        (entry) =>
+          entry.personIndex === personIndex &&
+          entry.source === pending.source &&
+          String(entry.service.id) === String(pending.serviceId) &&
+          (pending.source === 'PACKAGE' ? String(entry.packageId) === String(pending.packageId || '') : true),
+      )
+
+      if (existing) {
+        toRemove.push(existing)
+        if (pending.source === 'PACKAGE') {
+          remainingForPackage += 1
+        }
+        continue
+      }
+
+      if (pending.source === 'PACKAGE' && remainingForPackage <= 0) {
+        continue
+      }
+
+      const entryId = buildEntryId(pending.serviceId)
+      toAdd.push({ entryId, personIndex })
+      if (pending.source === 'PACKAGE') {
+        remainingForPackage -= 1
+      }
+    }
+
+    if (!toAdd.length && !toRemove.length) {
+      alert(text.dashboard.noQuotaLeftForPackageService)
       return
     }
 
-    const matched = flatServiceCatalog.find((row) => String(row.service.id) === String(pending.serviceId))
-    if (!matched) {
+    const removeIds = new Set(toRemove.map((entry) => entry.entryId))
+    setSelectedServices((prev) => {
+      const kept = prev.filter((entry) => !removeIds.has(entry.entryId))
+      const additions: SelectedServiceEntry[] = toAdd.map((row) => ({
+        entryId: row.entryId,
+        source: pending.source,
+        packageId: pending.source === 'PACKAGE' ? String(pending.packageId || '') : undefined,
+        personIndex: row.personIndex,
+        service: pending.serviceData,
+      }))
+      return [...kept, ...additions]
+    })
+
+    if (pending.source === 'PACKAGE') {
+      const usageKey = packageUsageKey(String(pending.packageId || ''), pending.serviceId)
+      setPackageUsageByKey((prev) => ({
+        ...prev,
+        [usageKey]: Math.max(0, (prev[usageKey] || 0) + toAdd.length - toRemove.length),
+      }))
+    }
+
+    if (removeIds.size > 0) {
+      setSelectedSpecialistIds((prev) => {
+        const next = { ...prev }
+        for (const id of removeIds) {
+          delete next[id]
+        }
+        return next
+      })
+      setSelectedSpecialistOptionIds((prev) => {
+        const next = { ...prev }
+        for (const id of removeIds) {
+          delete next[id]
+        }
+        return next
+      })
+    }
+
+    setSelectedDate(null)
+    setSelectedTimeSlot(null)
+    setPersonPicker(null)
+    setPersonPickerSelections([])
+
+    if (!pending.requiresSpecialist || toAdd.length === 0) {
+      return
+    }
+
+    const staff = await getStaffForService(pending.serviceId)
+    if (!staff || !staff.length) {
       alert(text.dashboard.serviceFilterMismatch)
       return
     }
-    await handleServiceToggle(matched.service, matched.categoryName, personIndex)
+
+    const choices: Record<string, { mode: 'ANY' | 'SPECIFIC'; staffIds: string[] }> = {}
+    for (const entry of toAdd) {
+      choices[entry.entryId] = { mode: 'ANY', staffIds: [] }
+    }
+    setSpecialistBatchModal({
+      entries: toAdd,
+      serviceName: pending.serviceData.name,
+      staff,
+      cursor: 0,
+      choices,
+    })
+  }
+
+  const toggleSpecialistChoiceForCurrent = (type: 'ANY' | 'STAFF', staffId?: string) => {
+    setSpecialistBatchModal((prev) => {
+      if (!prev) return prev
+      const current = prev.entries[prev.cursor]
+      if (!current) return prev
+      const existing = prev.choices[current.entryId] || { mode: 'ANY' as const, staffIds: [] }
+
+      if (type === 'ANY') {
+        return {
+          ...prev,
+          choices: {
+            ...prev.choices,
+            [current.entryId]: { mode: 'ANY', staffIds: [] },
+          },
+        }
+      }
+
+      if (!staffId) return prev
+      const currentSet = new Set(existing.staffIds)
+      if (currentSet.has(staffId)) {
+        currentSet.delete(staffId)
+      } else {
+        currentSet.add(staffId)
+      }
+      const nextIds = Array.from(currentSet)
+      return {
+        ...prev,
+        choices: {
+          ...prev.choices,
+          [current.entryId]: nextIds.length ? { mode: 'SPECIFIC', staffIds: nextIds } : { mode: 'ANY', staffIds: [] },
+        },
+      }
+    })
+  }
+
+  const goToNextSpecialistPerson = () => {
+    setSpecialistBatchModal((prev) => {
+      if (!prev) return prev
+      if (prev.cursor >= prev.entries.length - 1) return prev
+      return { ...prev, cursor: prev.cursor + 1 }
+    })
+  }
+
+  const goToPreviousSpecialistPerson = () => {
+    setSpecialistBatchModal((prev) => {
+      if (!prev) return prev
+      if (prev.cursor <= 0) return prev
+      return { ...prev, cursor: prev.cursor - 1 }
+    })
+  }
+
+  const commitSpecialistBatchSelection = () => {
+    if (!specialistBatchModal) return
+    const nextIds: Record<string, string> = {}
+    const nextOptions: Record<string, string[]> = {}
+    const clearIds: string[] = []
+
+    for (const entry of specialistBatchModal.entries) {
+      const choice = specialistBatchModal.choices[entry.entryId] || { mode: 'ANY' as const, staffIds: [] }
+      if (choice.mode === 'SPECIFIC' && choice.staffIds.length) {
+        nextIds[entry.entryId] = choice.staffIds[0]
+        nextOptions[entry.entryId] = [...choice.staffIds]
+      } else {
+        clearIds.push(entry.entryId)
+        nextOptions[entry.entryId] = []
+      }
+    }
+
+    setSelectedSpecialistIds((prev) => {
+      const next = { ...prev, ...nextIds }
+      for (const id of clearIds) {
+        delete next[id]
+      }
+      return next
+    })
+    setSelectedSpecialistOptionIds((prev) => ({ ...prev, ...nextOptions }))
+    setSpecialistBatchModal(null)
   }
 
   const handleConfirmAppointment = async () => {
@@ -803,7 +1024,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const res = await createAppointment(salonId, customerId, {
             services: selectedServices.map(entry => ({
                 serviceId: entry.service.id,
-                employeeId: selectedSpecialistIds[entry.entryId],
+                employeeId: (selectedSpecialistOptionIds[entry.entryId] || []).length === 1
+                  ? selectedSpecialistOptionIds[entry.entryId][0]
+                  : undefined,
+                staffOptionIds: selectedSpecialistOptionIds[entry.entryId] || (selectedSpecialistIds[entry.entryId] ? [selectedSpecialistIds[entry.entryId]] : []),
                 duration: entry.service.duration,
                 personIndex: entry.personIndex,
             })),
@@ -832,6 +1056,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             setShowSuccessModal(true);
             setSelectedServices([]);
             setPackageUsageByKey({});
+            setSelectedSpecialistIds({})
+            setSelectedSpecialistOptionIds({})
             setSelectedDate(null);
             setSelectedTimeSlot(null);
             if (stableMagicToken) {
@@ -1013,6 +1239,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setSelectedServices(selections)
     setPackageUsageByKey({})
     setSelectedSpecialistIds({})
+    setSelectedSpecialistOptionIds({})
     setSelectedDate(null)
     setSelectedTimeSlot(null)
     const bookingArea = document.querySelector('[data-scroll-target="date-time"]')
@@ -1558,16 +1785,102 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             </p>
             <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: numberOfPeople }, (_, index) => (
-                <Button
+                <button
                   key={`person-picker-${index + 1}`}
                   type="button"
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => void handlePickPersonForPending(index + 1)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                    personPickerSelections.includes(index + 1)
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background text-foreground'
+                  }`}
+                  onClick={() => togglePersonInPicker(index + 1)}
                 >
                   {personLabel(index + 1)}
-                </Button>
+                </button>
               ))}
+            </div>
+            <Button
+              type="button"
+              disabled={!personPickerSelections.length}
+              onClick={() => void applyPendingSelection()}
+              className="w-full rounded-full bg-primary text-primary-foreground"
+            >
+              {personPicker.requiresSpecialist
+                ? language === 'tr'
+                  ? 'Uzman Secimine Devam Et'
+                  : 'Continue to Specialist Selection'
+                : text.add}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {specialistBatchModal ? (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-[55] animate-in fade-in">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">{specialistBatchModal.serviceName}</h3>
+              <button type="button" onClick={() => setSpecialistBatchModal(null)} className="text-muted-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {(language === 'tr' ? 'Kisi bazli uzman tercihi' : 'Specialist preference by person')} • {personLabel(specialistBatchModal.entries[specialistBatchModal.cursor]?.personIndex || 1)}
+            </p>
+            <div className="space-y-2">
+              {(() => {
+                const currentEntry = specialistBatchModal.entries[specialistBatchModal.cursor]
+                if (!currentEntry) return null
+                const currentChoice = specialistBatchModal.choices[currentEntry.entryId] || { mode: 'ANY' as const, staffIds: [] }
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => toggleSpecialistChoiceForCurrent('ANY')}
+                      className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold ${
+                        currentChoice.mode === 'ANY' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground'
+                      }`}
+                    >
+                      <span>{language === 'tr' ? 'Fark Etmez' : 'Any Specialist'}</span>
+                    </button>
+                    {specialistBatchModal.staff.map((staff) => (
+                      <button
+                        key={`${currentEntry.entryId}-${staff.id}`}
+                        type="button"
+                        onClick={() => toggleSpecialistChoiceForCurrent('STAFF', String(staff.id))}
+                        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                          currentChoice.mode === 'SPECIFIC' && currentChoice.staffIds.includes(String(staff.id))
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-background text-foreground'
+                        }`}
+                      >
+                        <span>{staff.name}</span>
+                        {currentChoice.mode === 'SPECIFIC' && currentChoice.staffIds.includes(String(staff.id)) ? <Check className="h-4 w-4" /> : null}
+                      </button>
+                    ))}
+                  </>
+                )
+              })()}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={specialistBatchModal.cursor === 0}
+                onClick={goToPreviousSpecialistPerson}
+                className="flex-1 rounded-full"
+              >
+                {language === 'tr' ? 'Geri' : 'Back'}
+              </Button>
+              {specialistBatchModal.cursor < specialistBatchModal.entries.length - 1 ? (
+                <Button type="button" onClick={goToNextSpecialistPerson} className="flex-1 rounded-full bg-primary text-primary-foreground">
+                  {language === 'tr' ? 'Sonraki Kisi' : 'Next Person'}
+                </Button>
+              ) : (
+                <Button type="button" onClick={commitSpecialistBatchSelection} className="flex-1 rounded-full bg-primary text-primary-foreground">
+                  {language === 'tr' ? 'Ekle' : 'Add'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1582,17 +1895,63 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               <button onClick={() => setSpecialistModal(null)} className="text-muted-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSpecialistIds((prev) => {
+                    const next = { ...prev }
+                    delete next[specialistModal.entryId]
+                    return next
+                  })
+                  setSelectedSpecialistOptionIds((prev) => ({ ...prev, [specialistModal.entryId]: [] }))
+                }}
+                className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${
+                  !selectedSpecialistOptionIds[specialistModal.entryId]?.length ? 'border-primary bg-primary/10' : 'border-muted'
+                }`}
+              >
+                <span className="text-sm font-medium text-foreground">{language === 'tr' ? 'Fark Etmez' : 'Any Specialist'}</span>
+              </button>
               {specialistModal.staff.map((staff) => (
-                <label key={staff.id} className="flex items-center justify-between p-3 rounded-lg border-2 border-muted cursor-pointer">
+                <button
+                  key={staff.id}
+                  type="button"
+                  onClick={() => {
+                    const sid = String(staff.id)
+                    setSelectedSpecialistOptionIds((prev) => {
+                      const existing = prev[specialistModal.entryId] || []
+                      const set = new Set(existing)
+                      if (set.has(sid)) {
+                        set.delete(sid)
+                      } else {
+                        set.add(sid)
+                      }
+                      const ids = Array.from(set)
+                      setSelectedSpecialistIds((map) => {
+                        const next = { ...map }
+                        if (ids.length) {
+                          next[specialistModal.entryId] = ids[0]
+                        } else {
+                          delete next[specialistModal.entryId]
+                        }
+                        return next
+                      })
+                      return { ...prev, [specialistModal.entryId]: ids }
+                    })
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${
+                    (selectedSpecialistOptionIds[specialistModal.entryId] || []).includes(String(staff.id))
+                      ? 'border-primary bg-primary/10'
+                      : 'border-muted'
+                  }`}
+                >
                   <div className="flex items-center gap-3">
-                    <input type="radio" name="specialist" checked={selectedSpecialistIds[specialistModal.entryId] === staff.id} onChange={() => setSelectedSpecialistIds(prev => ({ ...prev, [specialistModal.entryId]: staff.id }))} className="w-5 h-5 accent-primary" />
                     <span className="text-sm font-medium text-foreground">{staff.name}</span>
                   </div>
                   <div className="text-right">
                       {staff.overridePrice && <p className="text-xs font-bold text-secondary">{staff.overridePrice}₺</p>}
                       {staff.overrideDuration && <p className="text-[10px] text-muted-foreground">{staff.overrideDuration} dk</p>}
                   </div>
-                </label>
+                </button>
               ))}
             </div>
             <Button onClick={() => setSpecialistModal(null)} className="w-full bg-primary text-primary-foreground rounded-full py-3">{text.confirmSelection}</Button>

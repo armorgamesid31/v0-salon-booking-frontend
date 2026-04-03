@@ -138,7 +138,7 @@ export async function createAppointment(
   salonId: string,
   customerId: string,
   data: {
-    services: Array<{ serviceId: string; employeeId?: string; duration?: string; personIndex?: number }>
+    services: Array<{ serviceId: string; employeeId?: string; staffOptionIds?: string[]; duration?: string; personIndex?: number }>
     packageSelections?: Array<{ serviceId: string; customerPackageId: string }>
     date: string
     time: string
@@ -165,6 +165,9 @@ export async function createAppointment(
           services: data.services.map(s => ({
               serviceId: s.serviceId,
               staffId: s.employeeId,
+              staffOptionIds: Array.isArray(s.staffOptionIds)
+                ? s.staffOptionIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+                : [],
               personIndex: Number.isInteger(s.personIndex) ? s.personIndex : 1,
               duration: s.duration?.match(/\d+/)?.[0] || "30",
               staffPreference: s.employeeId
