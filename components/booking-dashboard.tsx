@@ -623,6 +623,30 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       requiresSpecialist: service.requiresSpecialist
     }
     if (numberOfPeople > 1 && !personIndex) {
+      const selectedManualEntries = selectedServices.filter(
+        (entry) => entry.source === 'MANUAL' && String(entry.service.id) === String(service.id),
+      )
+      if (selectedManualEntries.length > 0) {
+        const removeIds = new Set(selectedManualEntries.map((entry) => entry.entryId))
+        setSelectedServices((prev) => prev.filter((entry) => !removeIds.has(entry.entryId)))
+        setSelectedSpecialistIds((map) => {
+          const copy = { ...map }
+          for (const id of removeIds) {
+            delete copy[id]
+          }
+          return copy
+        })
+        setSelectedSpecialistOptionIds((map) => {
+          const copy = { ...map }
+          for (const id of removeIds) {
+            delete copy[id]
+          }
+          return copy
+        })
+        setSelectedDate(null)
+        setSelectedTimeSlot(null)
+        return
+      }
       setPersonPicker({
         source: 'MANUAL',
         serviceId: String(service.id),
@@ -674,14 +698,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       ])
       // If specialist is required, only show modal if there's more than one choice.
       // If only one staff member exists, they will be auto-assigned.
-      if (service.requiresSpecialist) {
-          const staff = await getStaffForService(service.id.toString());
-          if (staff && staff.length > 1) {
-            setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff });
-          } else if (staff && staff.length === 1) {
-            setSelectedSpecialistIds((prev) => ({ ...prev, [entryId]: String(staff[0].id) }))
-            setSelectedSpecialistOptionIds((prev) => ({ ...prev, [entryId]: [String(staff[0].id)] }))
-          }
+      const staff = await getStaffForService(service.id.toString());
+      if (service.requiresSpecialist || staff.length > 1) {
+        if (staff && staff.length > 1) {
+          setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff });
+        } else if (staff && staff.length === 1) {
+          setSelectedSpecialistIds((prev) => ({ ...prev, [entryId]: String(staff[0].id) }))
+          setSelectedSpecialistOptionIds((prev) => ({ ...prev, [entryId]: [String(staff[0].id)] }))
+        }
       }
     }
     setSelectedDate(null)
@@ -691,6 +715,41 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null; personIndex?: number }) => {
     const { packageId, serviceId, personIndex } = input
     const targetPersonIndex = personIndex || 1
+
+    if (numberOfPeople > 1 && !personIndex) {
+      const selectedPackageEntries = selectedServices.filter(
+        (entry) =>
+          entry.source === 'PACKAGE' &&
+          String(entry.packageId) === String(packageId) &&
+          String(entry.service.id) === String(serviceId),
+      )
+      if (selectedPackageEntries.length > 0) {
+        const removeIds = new Set(selectedPackageEntries.map((entry) => entry.entryId))
+        setSelectedServices((prev) => prev.filter((entry) => !removeIds.has(entry.entryId)))
+        setSelectedSpecialistIds((map) => {
+          const copy = { ...map }
+          for (const id of removeIds) {
+            delete copy[id]
+          }
+          return copy
+        })
+        setSelectedSpecialistOptionIds((map) => {
+          const copy = { ...map }
+          for (const id of removeIds) {
+            delete copy[id]
+          }
+          return copy
+        })
+        const usageKey = packageUsageKey(packageId, serviceId)
+        setPackageUsageByKey((prev) => ({
+          ...prev,
+          [usageKey]: Math.max(0, (prev[usageKey] || 0) - selectedPackageEntries.length),
+        }))
+        setSelectedDate(null)
+        setSelectedTimeSlot(null)
+        return
+      }
+    }
 
     if (personIndex && isPackageServiceSelected(packageId, serviceId, targetPersonIndex)) {
       setSelectedServices((prev) => {
@@ -795,8 +854,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       ...prev,
       [usageKey]: (prev[usageKey] || 0) + 1,
     }))
-    if (matched.service.requiresSpecialist) {
-      const staff = await getStaffForService(String(matched.service.id))
+    const staff = await getStaffForService(String(matched.service.id))
+    if (matched.service.requiresSpecialist || staff.length > 1) {
       if (staff && staff.length > 1) {
         setSpecialistModal({ entryId, personIndex: targetPersonIndex, service: serviceData, staff })
       } else if (staff && staff.length === 1) {
@@ -908,15 +967,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setPersonPicker(null)
     setPersonPickerSelections([])
 
-    if (!pending.requiresSpecialist || toAdd.length === 0) {
+    if (toAdd.length === 0) {
       return
     }
 
     const staff = await getStaffForService(pending.serviceId)
-    if (!staff || !staff.length) {
-      alert(text.dashboard.serviceFilterMismatch)
-      return
-    }
+    const shouldAskSpecialist = Boolean(pending.requiresSpecialist || pending.serviceData.requiresSpecialist || staff.length > 1)
+    if (!shouldAskSpecialist) return
+    if (!staff || !staff.length) return
 
     const choices: Record<string, { mode: 'ANY' | 'SPECIFIC'; staffIds: string[] }> = {}
     for (const entry of toAdd) {
