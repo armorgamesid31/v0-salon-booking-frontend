@@ -105,7 +105,19 @@ export interface BookingContext {
   identityLinked?: boolean
   identitySessionId?: string | null
   appointments?: Appointment[]
-  activePackages?: any[]
+  activePackages?: ActiveCustomerPackage[]
+}
+
+export interface ActiveCustomerPackage {
+  id: string
+  name: string
+  expiresAt?: string | null
+  serviceBalances: Array<{
+    serviceId: string
+    serviceName?: string | null
+    initialQuota: number
+    remainingQuota: number
+  }>
 }
 
 export interface HomepageWorkingHours {

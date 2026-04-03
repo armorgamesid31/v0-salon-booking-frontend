@@ -129,6 +129,7 @@ export async function createAppointment(
   customerId: string,
   data: {
     services: Array<{ serviceId: string; employeeId?: string; duration?: string }>
+    packageSelections?: Array<{ serviceId: string; customerPackageId: string }>
     date: string
     time: string
     numberOfPeople: number
@@ -155,6 +156,10 @@ export async function createAppointment(
               serviceId: s.serviceId,
               staffId: s.employeeId,
               duration: s.duration?.match(/\d+/)?.[0] || "30"
+          })),
+          packageSelections: (data.packageSelections || []).map((row) => ({
+            serviceId: row.serviceId,
+            customerPackageId: row.customerPackageId,
           })),
           startTime: start.toISOString(),
           customerName: data.customerInfo.name,
@@ -250,7 +255,17 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       identityLinked: Boolean(data.identityLinked),
       identitySessionId: data.identitySessionId || null,
       appointments: data.appointments || [],
-      activePackages: [],
+      activePackages: (data.activePackages || []).map((pkg: any) => ({
+        id: String(pkg.id),
+        name: pkg.name,
+        expiresAt: pkg.expiresAt || null,
+        serviceBalances: (pkg.serviceBalances || []).map((balance: any) => ({
+          serviceId: String(balance.serviceId),
+          serviceName: balance.serviceName || null,
+          initialQuota: Number(balance.initialQuota || 0),
+          remainingQuota: Number(balance.remainingQuota || 0),
+        })),
+      })),
     }
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 410)) {
