@@ -106,6 +106,30 @@ export interface BookingContext {
   identitySessionId?: string | null
   appointments?: BookingContextAppointment[]
   activePackages?: ActiveCustomerPackage[]
+  campaigns?: Array<{
+    id: string
+    name: string
+    type: string
+    deliveryMode: 'AUTO' | 'MANUAL'
+    startsAt?: string | null
+    endsAt?: string | null
+    priority?: number
+  }>
+  campaignWallet?: Array<{
+    campaignId: string
+    availableAmount: number
+  }>
+  campaignEnrollments?: Array<{
+    campaignId: string
+    status: string
+    enrolledAt?: string | null
+  }>
+  campaignShareLinks?: Array<{
+    campaignId: string
+    token: string
+    status: string
+    expiresAt?: string | null
+  }>
 }
 
 export interface BookingContextAppointment {
@@ -116,6 +140,9 @@ export interface BookingContextAppointment {
   serviceId?: string | null
   serviceName?: string | null
   servicePrice?: number | null
+  listPrice?: number | null
+  discountTotal?: number | null
+  finalPrice?: number | null
   staffName?: string | null
   canUpdate?: boolean
   canCancel?: boolean

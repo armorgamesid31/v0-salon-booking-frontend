@@ -140,12 +140,13 @@ export async function createAppointment(
   data: {
     services: Array<{ serviceId: string; employeeId?: string; staffOptionIds?: string[]; duration?: string; personIndex?: number }>
     packageSelections?: Array<{ serviceId: string; customerPackageId: string }>
+    referralShareToken?: string
     date: string
     time: string
     numberOfPeople: number
     customerInfo: { name: string; phone: string; email?: string }
   }
-): Promise<ApiResponse<Appointment>> {
+): Promise<ApiResponse<Appointment & { pricingBreakdown?: any; appliedCampaigns?: any[] }>> {
     try {
       const url = `${API_BASE_URL}/api/bookings`
       
@@ -178,6 +179,7 @@ export async function createAppointment(
             serviceId: row.serviceId,
             customerPackageId: row.customerPackageId,
           })),
+          referralShareToken: data.referralShareToken || null,
           startTime: start.toISOString(),
           customerName: data.customerInfo.name,
           customerPhone: data.customerInfo.phone,
@@ -275,6 +277,9 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
           : null,
       serviceName: item.serviceName || null,
       servicePrice: typeof item.servicePrice === 'number' ? Number(item.servicePrice) : null,
+      listPrice: typeof item.listPrice === 'number' ? Number(item.listPrice) : null,
+      discountTotal: typeof item.discountTotal === 'number' ? Number(item.discountTotal) : null,
+      finalPrice: typeof item.finalPrice === 'number' ? Number(item.finalPrice) : null,
       staffName: item.staffName || null,
       canUpdate: Boolean(item.canUpdate),
       canCancel: Boolean(item.canCancel),
@@ -316,6 +321,30 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
           remainingQuota: Number(balance.remainingQuota || 0),
         })),
       })),
+      campaigns: (data.campaigns || []).map((item: any) => ({
+        id: String(item.id),
+        name: String(item.name || ''),
+        type: String(item.type || ''),
+        deliveryMode: String(item.deliveryMode || 'MANUAL').toUpperCase() === 'AUTO' ? 'AUTO' : 'MANUAL',
+        startsAt: item.startsAt || null,
+        endsAt: item.endsAt || null,
+        priority: Number(item.priority || 100),
+      })),
+      campaignWallet: (data.campaignWallet || []).map((item: any) => ({
+        campaignId: String(item.campaignId),
+        availableAmount: Number(item.availableAmount || 0),
+      })),
+      campaignEnrollments: (data.campaignEnrollments || []).map((item: any) => ({
+        campaignId: String(item.campaignId),
+        status: String(item.status || ''),
+        enrolledAt: item.enrolledAt || null,
+      })),
+      campaignShareLinks: (data.campaignShareLinks || []).map((item: any) => ({
+        campaignId: String(item.campaignId),
+        token: String(item.token || ''),
+        status: String(item.status || ''),
+        expiresAt: item.expiresAt || null,
+      })),
     }
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 410)) {
@@ -324,6 +353,68 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
     console.error('getBookingContextByToken error:', error)
     return null
   }
+}
+
+export async function previewBookingPricing(input: {
+  customerId?: string | null
+  startTime: string
+  services: Array<{ serviceId: string }>
+  packageSelections?: Array<{ serviceId: string; customerPackageId: string }>
+}) {
+  const url = `${API_BASE_URL}/api/bookings/pricing-preview`
+  return fetchFromAPI<{
+    currency: 'TRY'
+    subtotal: number
+    discountTotal: number
+    finalTotal: number
+    lines: Array<{
+      serviceId: number
+      listPrice: number
+      discountTotal: number
+      finalPrice: number
+      packageCovered: boolean
+      appliedCampaigns: Array<{
+        campaignId: number
+        campaignType: string
+        campaignName: string
+        amount: number
+      }>
+    }>
+    appliedCampaigns: Array<{
+      campaignId: number
+      campaignType: string
+      campaignName: string
+      amount: number
+    }>
+  }>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export async function enrollReferralCampaign(input: { token: string; campaignId: string }) {
+  const url = `${API_BASE_URL}/api/bookings/referral/enroll`
+  return fetchFromAPI<{ enrollment: { campaignId: number; shareToken: string } }>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      token: input.token,
+      campaignId: Number(input.campaignId),
+    }),
+  })
+}
+
+export async function getReferralShareLink(input: { token: string; campaignId: string }) {
+  const url = `${API_BASE_URL}/api/bookings/referral/share-link`
+  return fetchFromAPI<{ share: { campaignId: number; token: string } }>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      token: input.token,
+      campaignId: Number(input.campaignId),
+    }),
+  })
 }
 
 export type ReschedulePreviewCandidate = {

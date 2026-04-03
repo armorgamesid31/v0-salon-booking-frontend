@@ -23,6 +23,7 @@ import {
   Hand,
   Lightbulb,
   MessageCircle,
+  Megaphone,
   ClipboardList,
   CalendarCheck2,
   RefreshCcw,
@@ -39,6 +40,9 @@ import {
   getStaffForService,
   checkAvailability,
   createAppointment,
+  enrollReferralCampaign,
+  getReferralShareLink,
+  previewBookingPricing,
   previewBookingReschedule,
   commitBookingReschedule,
   cancelBookingByToken,
@@ -265,6 +269,18 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [salonData, setSalonData] = useState<any>(null)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
   const [activePackages, setActivePackages] = useState<ActiveCustomerPackage[]>([])
+  const [activeCampaigns, setActiveCampaigns] = useState<Array<{
+    id: string
+    name: string
+    type: string
+    deliveryMode: 'AUTO' | 'MANUAL'
+    startsAt?: string | null
+    endsAt?: string | null
+    priority?: number
+  }>>([])
+  const [campaignWallet, setCampaignWallet] = useState<Array<{ campaignId: string; availableAmount: number }>>([])
+  const [campaignEnrollments, setCampaignEnrollments] = useState<Array<{ campaignId: string; status: string }>>([])
+  const [campaignShareLinks, setCampaignShareLinks] = useState<Array<{ campaignId: string; token: string; status: string }>>([])
   const [recentAppointments, setRecentAppointments] = useState<BookingContextAppointment[]>([])
   const [rescheduleModal, setRescheduleModal] = useState<RescheduleModalState | null>(null)
   const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
@@ -291,8 +307,16 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
   const [logoError, setLogoError] = useState(false)
   const [packagesOpen, setPackagesOpen] = useState(false)
+  const [campaignsOpen, setCampaignsOpen] = useState(false)
   const [appointmentsOpen, setAppointmentsOpen] = useState(false)
   const [expandedAppointmentGroupKey, setExpandedAppointmentGroupKey] = useState<string | null>(null)
+  const [pricingPreview, setPricingPreview] = useState<null | {
+    subtotal: number
+    discountTotal: number
+    finalTotal: number
+    appliedCampaigns: Array<{ campaignId: number; campaignName: string; amount: number }>
+  }>(null)
+  const [campaignActionBusyId, setCampaignActionBusyId] = useState<string | null>(null)
 
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
@@ -409,13 +433,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [isKnownCustomer, customerName, text, language])
 
   // Calculate current price based on overrides
-  const totalPrice = selectedServices.reduce((sum, entry) => {
+  const fallbackTotalPrice = selectedServices.reduce((sum, entry) => {
     if (entry.source === 'PACKAGE') {
       return sum
     }
     const service = entry.service
     return sum + (service.salePrice || service.originalPrice || 0)
   }, 0);
+  const totalPrice = typeof pricingPreview?.finalTotal === 'number' ? pricingPreview.finalTotal : fallbackTotalPrice
 
   const flatServiceCatalog = useMemo(() => {
     return availableServices.flatMap((category) =>
@@ -458,6 +483,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setOriginPhone(context.originPhone || null)
     setOriginInstagramId(context.originInstagramId || null)
     setActivePackages(context.activePackages || [])
+    setActiveCampaigns(context.campaigns || [])
+    setCampaignWallet(context.campaignWallet || [])
+    setCampaignEnrollments((context.campaignEnrollments || []).map((item) => ({ campaignId: item.campaignId, status: item.status })))
+    setCampaignShareLinks((context.campaignShareLinks || []).map((item) => ({ campaignId: item.campaignId, token: item.token, status: item.status })))
     setRecentAppointments(context.appointments || [])
     if (context.isKnownCustomer && context.customerId) {
       setCustomerId(context.customerId)
@@ -504,6 +533,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         setCustomerId(null)
         setCustomerName('')
         setActivePackages([])
+        setActiveCampaigns([])
+        setCampaignWallet([])
+        setCampaignEnrollments([])
+        setCampaignShareLinks([])
         setRecentAppointments([])
         void loadSalonAndServices(fallbackSalonId, selectedGender)
       })
@@ -514,6 +547,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       setCustomerId(null)
       setCustomerName('')
       setActivePackages([])
+      setActiveCampaigns([])
+      setCampaignWallet([])
+      setCampaignEnrollments([])
+      setCampaignShareLinks([])
       setRecentAppointments([])
       void loadSalonAndServices(sId, selectedGender)
     }
@@ -586,6 +623,120 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       return filtered
     })
   }, [numberOfPeople])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const run = async () => {
+      if (!salonId || !selectedServices.length) {
+        if (!cancelled) setPricingPreview(null)
+        return
+      }
+
+      try {
+        const dateIso =
+          selectedDate && selectedTimeSlot
+            ? (() => {
+                const d = new Date()
+                d.setMonth(d.getMonth())
+                d.setDate(Number(selectedDate))
+                const [h, m] = selectedTimeSlot.split(':').map((n) => Number(n))
+                d.setHours(h || 0, m || 0, 0, 0)
+                return d.toISOString()
+              })()
+            : new Date().toISOString()
+
+        const pricing = await previewBookingPricing({
+          customerId,
+          startTime: dateIso,
+          services: selectedServices.map((entry) => ({ serviceId: entry.service.id })),
+          packageSelections: selectedServices
+            .filter((entry) => entry.source === 'PACKAGE' && Boolean(entry.packageId))
+            .map((entry) => ({
+              serviceId: entry.service.id,
+              customerPackageId: String(entry.packageId),
+            })),
+        })
+        if (!cancelled) {
+          setPricingPreview({
+            subtotal: pricing.subtotal,
+            discountTotal: pricing.discountTotal,
+            finalTotal: pricing.finalTotal,
+            appliedCampaigns: pricing.appliedCampaigns || [],
+          })
+        }
+      } catch {
+        if (!cancelled) setPricingPreview(null)
+      }
+    }
+
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [salonId, customerId, selectedServices, selectedDate, selectedTimeSlot])
+
+  const handleCampaignJoin = async (campaignId: string) => {
+    if (!stableMagicToken) {
+      alert('Magic token is required.')
+      return
+    }
+    setCampaignActionBusyId(`join:${campaignId}`)
+    try {
+      const result = await enrollReferralCampaign({
+        token: stableMagicToken,
+        campaignId,
+      })
+      setCampaignEnrollments((prev) => {
+        const others = prev.filter((item) => String(item.campaignId) !== String(campaignId))
+        return [...others, { campaignId: String(campaignId), status: 'ENROLLED' }]
+      })
+      setCampaignShareLinks((prev) => {
+        const others = prev.filter((item) => String(item.campaignId) !== String(campaignId))
+        return [...others, { campaignId: String(campaignId), token: result.enrollment.shareToken, status: 'ACTIVE' }]
+      })
+    } catch (error: any) {
+      alert(error?.message || 'Campaign join failed.')
+    } finally {
+      setCampaignActionBusyId(null)
+    }
+  }
+
+  const handleCampaignShare = async (campaignId: string) => {
+    if (!stableMagicToken) {
+      alert('Magic token is required.')
+      return
+    }
+    setCampaignActionBusyId(`share:${campaignId}`)
+    try {
+      const existing = campaignShareLinks.find((item) => String(item.campaignId) === String(campaignId))
+      const shareToken =
+        existing?.token ||
+        (
+          await getReferralShareLink({
+            token: stableMagicToken,
+            campaignId,
+          })
+        ).share.token
+      const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(shareToken)}` : shareToken
+      if (navigator?.share) {
+        await navigator.share({
+          title: 'Referral campaign',
+          text: 'Join with my referral link',
+          url: shareUrl,
+        })
+      } else if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+        alert('Share link copied.')
+      } else {
+        alert(shareUrl)
+      }
+    } catch (error: any) {
+      alert(error?.message || 'Campaign share failed.')
+    } finally {
+      setCampaignActionBusyId(null)
+    }
+  }
 
   const calculateTotalDuration = () => {
     return selectedServices.reduce((sum, entry) => {
@@ -1102,6 +1253,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 serviceId: entry.service.id,
                 customerPackageId: String(entry.packageId),
               })),
+            referralShareToken: searchParams.get('ref') || undefined,
             date: dateStr,
             time: selectedTimeSlot,
             numberOfPeople,
@@ -1471,6 +1623,84 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-background p-4 space-y-3">
                   <button
                     type="button"
+                    onClick={() => setCampaignsOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-start gap-2 text-left">
+                      <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
+                        <Megaphone className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Campaigns</p>
+                      </div>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5">
+                      <span className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-[11px] font-semibold text-primary">
+                        {activeCampaigns.length}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-primary transition-transform ${campaignsOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  {campaignsOpen && activeCampaigns.length ? (
+                    <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                      {activeCampaigns.map((campaign) => {
+                        const enrollment = campaignEnrollments.find((item) => String(item.campaignId) === String(campaign.id))
+                        const share = campaignShareLinks.find((item) => String(item.campaignId) === String(campaign.id))
+                        const wallet = campaignWallet.find((item) => String(item.campaignId) === String(campaign.id))
+                        const isReferral = String(campaign.type).toUpperCase() === 'REFERRAL'
+                        return (
+                          <div key={campaign.id} className="rounded-xl border border-primary/20 bg-background/80 p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-foreground">{campaign.name}</p>
+                              <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                {campaign.type}
+                              </span>
+                            </div>
+                            {wallet && wallet.availableAmount > 0 ? (
+                              <p className="text-[11px] text-emerald-700 font-semibold">Wallet: {wallet.availableAmount.toFixed(0)}₺</p>
+                            ) : null}
+                            {isReferral ? (
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant={enrollment ? 'outline' : 'default'}
+                                  disabled={campaignActionBusyId === `join:${campaign.id}`}
+                                  onClick={() => void handleCampaignJoin(campaign.id)}
+                                >
+                                  {enrollment ? 'Joined' : 'Join'}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={campaignActionBusyId === `share:${campaign.id}`}
+                                  onClick={() => void handleCampaignShare(campaign.id)}
+                                >
+                                  Share
+                                </Button>
+                                {share?.token ? (
+                                  <span className="text-[10px] text-muted-foreground truncate">#{share.token.slice(0, 12)}</span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : campaignsOpen ? (
+                    <div className="rounded-lg border border-dashed border-primary/25 bg-background/70 px-3 py-3 text-xs text-muted-foreground">
+                      No active campaign.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {isKnownCustomer ? (
+                <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-background p-4 space-y-3">
+                  <button
+                    type="button"
                     onClick={() => setPackagesOpen((prev) => !prev)}
                     className="w-full flex items-center justify-between gap-2"
                   >
@@ -1614,7 +1844,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         const serviceNames = Array.from(new Set(group.items.map((item) => item.serviceName).filter(Boolean)))
                         const staffNames = Array.from(new Set(group.items.map((item) => item.staffName).filter(Boolean)))
                         const statusPills = statuses.map((status) => appointmentStatusMeta(status, text.dashboard))
-                        const groupTotal = group.items.reduce((sum, item) => sum + (item.servicePrice || 0), 0)
+                        const groupTotal = group.items.reduce(
+                          (sum, item) => sum + (item.finalPrice ?? item.servicePrice ?? 0),
+                          0,
+                        )
                         return (
                         <div key={group.key} className="rounded-xl border border-border bg-background p-3 text-xs space-y-2">
                           <button
@@ -1833,6 +2066,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 <div className="flex flex-col gap-0.5">
                   <p className="text-2xl font-bold text-foreground leading-none">{totalPrice}₺</p>
                   <p className="text-xs text-muted-foreground">{calculateTotalDuration()} dk</p>
+                  {pricingPreview ? (
+                    <div className="text-[11px] text-muted-foreground">
+                      {pricingPreview.discountTotal > 0 ? (
+                        <span>Discount: -{pricingPreview.discountTotal.toFixed(0)}₺</span>
+                      ) : (
+                        <span>No campaign discount</span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 <Button onClick={() => {
                     if (!selectedDate || !selectedTimeSlot) {
