@@ -282,6 +282,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     saving: boolean
     error: string | null
   } | null>(null)
+  const [cancelConfirmModal, setCancelConfirmModal] = useState<{
+    appointmentIds: number[]
+    loading: boolean
+    error: string | null
+  } | null>(null)
   const [isBooking, setIsBooking] = useState(false)
   const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
   const [logoError, setLogoError] = useState(false)
@@ -989,10 +994,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     })
   }
 
-  const toggleSpecialistChoiceForCurrent = (type: 'ANY' | 'STAFF', staffId?: string) => {
+  const toggleSpecialistChoiceForCurrent = (type: 'ANY' | 'STAFF', staffId?: string, targetEntryId?: string) => {
     setSpecialistBatchModal((prev) => {
       if (!prev) return prev
-      const current = prev.entries[prev.cursor]
+      const current = targetEntryId
+        ? prev.entries.find((entry) => entry.entryId === targetEntryId)
+        : prev.entries[prev.cursor]
       if (!current) return prev
       const existing = prev.choices[current.entryId] || { mode: 'ANY' as const, staffIds: [] }
 
@@ -1313,16 +1320,27 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       .map((item) => Number(item.id))
       .filter((id) => Number.isInteger(id) && id > 0)
     if (!appointmentIds.length) return
-    if (!window.confirm(text.dashboard.cancelConfirm)) return
+    setCancelConfirmModal({
+      appointmentIds,
+      loading: false,
+      error: null,
+    })
+  }
 
+  const confirmCancelAppointments = async () => {
+    if (!stableMagicToken || !cancelConfirmModal) return
+    setCancelConfirmModal((prev) => (prev ? { ...prev, loading: true, error: null } : prev))
     try {
       await cancelBookingByToken({
         token: stableMagicToken,
-        appointmentIds,
+        appointmentIds: cancelConfirmModal.appointmentIds,
       })
+      setCancelConfirmModal(null)
       await reloadBookingContext()
     } catch (err: any) {
-      alert(err?.message || text.dashboard.cancellationFailed)
+      setCancelConfirmModal((prev) =>
+        prev ? { ...prev, loading: false, error: err?.message || text.dashboard.cancellationFailed } : prev,
+      )
     }
   }
 
@@ -1885,40 +1903,62 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             <p className="text-xs text-muted-foreground">
               {(language === 'tr' ? 'Kisi bazli uzman tercihi' : 'Specialist preference by person')} • {personLabel(specialistBatchModal.entries[specialistBatchModal.cursor]?.personIndex || 1)}
             </p>
-            <div className="space-y-2">
-              {(() => {
-                const currentEntry = specialistBatchModal.entries[specialistBatchModal.cursor]
-                if (!currentEntry) return null
-                const currentChoice = specialistBatchModal.choices[currentEntry.entryId] || { mode: 'ANY' as const, staffIds: [] }
-                return (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => toggleSpecialistChoiceForCurrent('ANY')}
-                      className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold ${
-                        currentChoice.mode === 'ANY' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground'
-                      }`}
-                    >
-                      <span>{language === 'tr' ? 'Fark Etmez' : 'Any Specialist'}</span>
-                    </button>
-                    {specialistBatchModal.staff.map((staff) => (
+            <div className="overflow-hidden rounded-xl border border-border/70 bg-muted/10">
+              <div
+                className="flex transition-transform duration-300 ease-out"
+                style={{ transform: `translateX(-${specialistBatchModal.cursor * 100}%)` }}
+              >
+                {specialistBatchModal.entries.map((entry) => {
+                  const choice = specialistBatchModal.choices[entry.entryId] || { mode: 'ANY' as const, staffIds: [] }
+                  return (
+                    <div key={entry.entryId} className="w-full shrink-0 p-3 space-y-2">
+                      <p className="text-[11px] font-semibold text-muted-foreground">
+                        {personLabel(entry.personIndex)}
+                      </p>
                       <button
-                        key={`${currentEntry.entryId}-${staff.id}`}
                         type="button"
-                        onClick={() => toggleSpecialistChoiceForCurrent('STAFF', String(staff.id))}
-                        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                          currentChoice.mode === 'SPECIFIC' && currentChoice.staffIds.includes(String(staff.id))
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-background text-foreground'
+                        onClick={() => {
+                          toggleSpecialistChoiceForCurrent('ANY', undefined, entry.entryId)
+                        }}
+                        className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold ${
+                          choice.mode === 'ANY' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground'
                         }`}
                       >
-                        <span>{staff.name}</span>
-                        {currentChoice.mode === 'SPECIFIC' && currentChoice.staffIds.includes(String(staff.id)) ? <Check className="h-4 w-4" /> : null}
+                        <span>{language === 'tr' ? 'Fark Etmez' : 'Any Specialist'}</span>
                       </button>
-                    ))}
-                  </>
-                )
-              })()}
+                      {specialistBatchModal.staff.map((staff) => (
+                        <button
+                          key={`${entry.entryId}-${staff.id}`}
+                          type="button"
+                          onClick={() => {
+                            toggleSpecialistChoiceForCurrent('STAFF', String(staff.id), entry.entryId)
+                          }}
+                          className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                            choice.mode === 'SPECIFIC' && choice.staffIds.includes(String(staff.id))
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border bg-background text-foreground'
+                          }`}
+                        >
+                          <span>{staff.name}</span>
+                          {choice.mode === 'SPECIFIC' && choice.staffIds.includes(String(staff.id)) ? <Check className="h-4 w-4" /> : null}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-1.5">
+              {specialistBatchModal.entries.map((entry, index) => (
+                <button
+                  key={`step-dot-${entry.entryId}`}
+                  type="button"
+                  onClick={() => setSpecialistBatchModal((prev) => (prev ? { ...prev, cursor: index } : prev))}
+                  className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                    specialistBatchModal.cursor === index ? 'bg-primary' : 'bg-muted'
+                  }`}
+                />
+              ))}
             </div>
             <div className="flex gap-2">
               <Button
@@ -2149,6 +2189,50 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 className="flex-1 rounded-full bg-primary text-primary-foreground"
               >
                 {rescheduleModal.loading ? text.dashboard.savingLabel : text.dashboard.confirmUpdateLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {cancelConfirmModal ? (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-[64] animate-in fade-in">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">{language === 'tr' ? 'Randevu Iptali' : 'Cancel Appointment'}</h3>
+              <button
+                type="button"
+                onClick={() => (cancelConfirmModal.loading ? undefined : setCancelConfirmModal(null))}
+                className="text-muted-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">{text.dashboard.cancelConfirm}</p>
+            {cancelConfirmModal.error ? (
+              <p className="rounded-md border border-red-300/40 bg-red-500/10 px-3 py-2 text-xs text-red-700">
+                {cancelConfirmModal.error}
+              </p>
+            ) : null}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={cancelConfirmModal.loading}
+                onClick={() => setCancelConfirmModal(null)}
+                className="flex-1 rounded-full"
+              >
+                {language === 'tr' ? 'Vazgec' : 'Keep Appointment'}
+              </Button>
+              <Button
+                type="button"
+                disabled={cancelConfirmModal.loading}
+                onClick={() => {
+                  void confirmCancelAppointments()
+                }}
+                className="flex-1 rounded-full bg-rose-600 text-white hover:bg-rose-700"
+              >
+                {cancelConfirmModal.loading ? (language === 'tr' ? 'Iptal ediliyor...' : 'Cancelling...') : text.dashboard.actionCancel}
               </Button>
             </div>
           </div>
