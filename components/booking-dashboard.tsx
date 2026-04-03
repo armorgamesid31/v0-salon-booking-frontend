@@ -187,6 +187,27 @@ const appointmentStatusMeta = (status: string) => {
 
 const packageUsageKey = (packageId: string, serviceId: string) => `${packageId}:${serviceId}`
 
+const canUpdateAppointment = (item: BookingContextAppointment) => {
+  const status = String(item.status || '').trim().toUpperCase()
+  const isFuture = new Date(item.startTime).getTime() > Date.now()
+  if (typeof item.canUpdate === 'boolean') return item.canUpdate
+  return isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+}
+
+const canCancelAppointment = (item: BookingContextAppointment) => {
+  const status = String(item.status || '').trim().toUpperCase()
+  const isFuture = new Date(item.startTime).getTime() > Date.now()
+  if (typeof item.canCancel === 'boolean') return item.canCancel
+  return isFuture && (status === 'BOOKED' || status === 'CONFIRMED' || status === 'UPDATED')
+}
+
+const canEvaluateAppointment = (item: BookingContextAppointment) => {
+  const status = String(item.status || '').trim().toUpperCase()
+  const isPast = new Date(item.endTime).getTime() <= Date.now()
+  if (typeof item.canEvaluate === 'boolean') return item.canEvaluate
+  return isPast && status === 'COMPLETED'
+}
+
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
@@ -656,9 +677,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return Array.from(map.entries()).map(([key, items]) => ({
       key,
       items,
-      canUpdate: items.every((item) => Boolean(item.canUpdate)),
-      canCancel: items.every((item) => Boolean(item.canCancel)),
-      canEvaluate: items.some((item) => Boolean(item.canEvaluate)),
+      updatableItems: items.filter((item) => canUpdateAppointment(item)),
+      cancelableItems: items.filter((item) => canCancelAppointment(item)),
+      evaluableItems: items.filter((item) => canEvaluateAppointment(item)),
     }))
   }, [recentAppointments])
 
@@ -1137,10 +1158,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   <RefreshCcw className="h-3.5 w-3.5" />
                                   Repeat
                                 </button>
-                                {group.canCancel ? (
+                                {group.cancelableItems.length ? (
                                   <button
                                     type="button"
-                                    onClick={() => void handleCancelGroup(group.items)}
+                                    onClick={() => void handleCancelGroup(group.cancelableItems)}
                                     className="inline-flex items-center justify-center gap-1 rounded-lg border border-rose-300/50 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-500/15"
                                   >
                                     <Ban className="h-3.5 w-3.5" />
@@ -1149,10 +1170,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                 ) : null}
                               </div>
 
-                              {group.canUpdate ? (
+                              {group.updatableItems.length ? (
                               <button
                                 type="button"
-                                onClick={() => openRescheduleModalForGroup(group.items)}
+                                onClick={() => openRescheduleModalForGroup(group.updatableItems)}
                                 className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
                               >
                                 <PencilLine className="h-3.5 w-3.5" />
@@ -1160,10 +1181,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                               </button>
                               ) : null}
 
-                              {group.canEvaluate ? (
+                              {group.evaluableItems.length ? (
                                 <button
                                   type="button"
-                                  onClick={() => openEvaluateModal(group.items)}
+                                  onClick={() => openEvaluateModal(group.evaluableItems)}
                                   className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/15"
                                 >
                                   <Star className="h-3.5 w-3.5" />
