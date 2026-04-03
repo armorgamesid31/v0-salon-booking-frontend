@@ -4,9 +4,47 @@ import React, { useState, useEffect, Suspense, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb, MessageCircle } from 'lucide-react'
+import {
+  ChevronDown,
+  Search,
+  Zap,
+  Sparkles,
+  Heart,
+  Scissors,
+  Droplet,
+  Flower,
+  Wand2,
+  Plus,
+  Calendar,
+  Clock,
+  X,
+  Check,
+  AlertCircle,
+  Hand,
+  Lightbulb,
+  MessageCircle,
+  Package2,
+  CalendarCheck2,
+  RefreshCcw,
+  Ban,
+  PencilLine,
+  Star,
+} from 'lucide-react'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee, ActiveCustomerPackage, BookingContextAppointment } from '@/lib/types'
-import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability, createAppointment, previewBookingReschedule, commitBookingReschedule, type ReschedulePreviewResponse } from '@/lib/api'
+import {
+  getBookingContextByToken,
+  registerCustomer,
+  getSalon,
+  getServices,
+  getStaffForService,
+  checkAvailability,
+  createAppointment,
+  previewBookingReschedule,
+  commitBookingReschedule,
+  cancelBookingByToken,
+  submitBookingFeedback,
+  type ReschedulePreviewResponse,
+} from '@/lib/api'
 import LanguageSelector from '@/components/language-selector'
 import { BOOKING_TEXT, DEFAULT_LANGUAGE, detectBrowserLanguage, LOCALE_MAP, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
 import { DUMMY_SALON } from '@/lib/constants'
@@ -140,6 +178,8 @@ const appointmentStatusMeta = (status: string) => {
   }
 }
 
+const packageUsageKey = (packageId: string, serviceId: string) => `${packageId}:${serviceId}`
+
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
@@ -151,6 +191,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
   const [selectedPackageByService, setSelectedPackageByService] = useState<Record<string, string>>({})
+  const [packageUsageByKey, setPackageUsageByKey] = useState<Record<string, number>>({})
   const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
@@ -175,6 +216,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState<{
+    appointmentId: number
+    rating: number
+    review: string
+    saving: boolean
+    error: string | null
+  } | null>(null)
   const [isBooking, setIsBooking] = useState(false)
   const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
   const [logoError, setLogoError] = useState(false)
@@ -293,6 +341,19 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return sum + (s.salePrice || s.originalPrice || 0);
   }, 0);
 
+  const flatServiceCatalog = useMemo(() => {
+    return availableServices.flatMap((category) =>
+      category.services.map((service) => ({
+        categoryName: category.name,
+        service,
+      })),
+    )
+  }, [availableServices])
+
+  useEffect(() => {
+    setPackageUsageByKey({})
+  }, [activePackages.length, customerId])
+
   const loadSalonAndServices = async (sId: string, gender: string) => {
     try {
       const [salon, services] = await Promise.all([
@@ -388,6 +449,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           getServices(salonId, selectedGender).then(setAvailableServices)
           setSelectedServices([])
           setSelectedPackageByService({})
+          setPackageUsageByKey({})
           setSelectedDate(null)
           setSelectedTimeSlot(null)
       }
@@ -432,6 +494,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     const isCurrentlySelected = selectedServices.some(s => s.id === service.id)
 
     if (isCurrentlySelected) {
+      const existingPackageId = selectedPackageByService[service.id]
       setSelectedServices(prev => prev.filter(s => s.id !== service.id))
       const newStaffIds = { ...selectedSpecialistIds };
       delete newStaffIds[service.id];
@@ -439,6 +502,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       const newPackageIds = { ...selectedPackageByService };
       delete newPackageIds[service.id];
       setSelectedPackageByService(newPackageIds);
+      if (existingPackageId) {
+        const usageKey = packageUsageKey(existingPackageId, String(service.id))
+        setPackageUsageByKey((prev) => ({
+          ...prev,
+          [usageKey]: Math.max(0, (prev[usageKey] || 0) - 1),
+        }))
+      }
     } else {
       setSelectedServices(prev => [...prev, serviceData])
       // If specialist is required, only show modal if there's more than one choice.
@@ -457,26 +527,38 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null }) => {
     const { packageId, serviceId } = input
     const wasSelected = selectedServices.some((s) => s.id === serviceId)
-    const flatServices = availableServices.flatMap((category) =>
-      category.services.map((service) => ({ service, categoryName: category.name })),
-    )
-    const matched = flatServices.find((row) => row.service.id === serviceId)
+    const matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
 
     if (!matched) {
       alert('Bu paket hizmeti bu cinsiyet filtresinde listelenmiyor.')
       return
     }
 
-    await handleServiceToggle(matched.service, matched.categoryName)
+    if (!wasSelected) {
+      await handleServiceToggle(matched.service, matched.categoryName)
+    }
+
+    const previousPackageId = selectedPackageByService[serviceId]
+    if (previousPackageId && previousPackageId !== packageId) {
+      const prevUsageKey = packageUsageKey(previousPackageId, serviceId)
+      setPackageUsageByKey((prev) => ({
+        ...prev,
+        [prevUsageKey]: Math.max(0, (prev[prevUsageKey] || 0) - 1),
+      }))
+    }
+
+    const usageKey = packageUsageKey(packageId, serviceId)
+    if (!wasSelected || previousPackageId !== packageId) {
+      setPackageUsageByKey((prev) => ({
+        ...prev,
+        [usageKey]: (prev[usageKey] || 0) + 1,
+      }))
+    }
 
     // If it is currently selected after toggle, mark selected package for this service.
     setSelectedPackageByService((prev) => {
       const next = { ...prev }
-      if (wasSelected) {
-        delete next[serviceId]
-      } else {
-        next[serviceId] = packageId
-      }
+      next[serviceId] = packageId
       return next
     })
   }
@@ -523,6 +605,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             setShowSuccessModal(true);
             setSelectedServices([]);
             setSelectedPackageByService({});
+            setPackageUsageByKey({});
             setSelectedDate(null);
             setSelectedTimeSlot(null);
             if (stableMagicToken) {
@@ -553,6 +636,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       key,
       items,
       canUpdate: items.every((item) => Boolean(item.canUpdate)),
+      canCancel: items.every((item) => Boolean(item.canCancel)),
+      canEvaluate: items.some((item) => Boolean(item.canEvaluate)),
     }))
   }, [recentAppointments])
 
@@ -661,6 +746,93 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
   }
 
+  const handleRepeatGroup = (groupItems: BookingContextAppointment[]) => {
+    const serviceIds = groupItems
+      .map((item) => String(item.serviceId || ''))
+      .filter((id) => id)
+    if (!serviceIds.length) {
+      alert('No service information found to repeat this appointment.')
+      return
+    }
+
+    const uniqueServiceIds = Array.from(new Set(serviceIds))
+    const selections: ImportedServiceItem[] = []
+    for (const serviceId of uniqueServiceIds) {
+      const matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
+      if (matched) {
+        selections.push({
+          id: matched.service.id,
+          name: `${matched.categoryName} - ${matched.service.name}`,
+          originalPrice: matched.service.originalPrice || matched.service.salePrice || 0,
+          salePrice: matched.service.salePrice,
+          duration: matched.service.duration,
+          requiresSpecialist: matched.service.requiresSpecialist,
+        })
+      }
+    }
+
+    if (!selections.length) {
+      alert('These services are not available in current filter. Try changing gender filter.')
+      return
+    }
+
+    setSelectedServices(selections)
+    setSelectedPackageByService({})
+    setSelectedSpecialistIds({})
+    setSelectedDate(null)
+    setSelectedTimeSlot(null)
+    const bookingArea = document.querySelector('[data-scroll-target="date-time"]')
+    bookingArea?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleCancelGroup = async (groupItems: BookingContextAppointment[]) => {
+    if (!stableMagicToken) return
+    const appointmentIds = groupItems
+      .map((item) => Number(item.id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+    if (!appointmentIds.length) return
+    if (!window.confirm('Cancel selected appointment(s)?')) return
+
+    try {
+      await cancelBookingByToken({
+        token: stableMagicToken,
+        appointmentIds,
+      })
+      await reloadBookingContext()
+    } catch (err: any) {
+      alert(err?.message || 'Cancellation failed.')
+    }
+  }
+
+  const openEvaluateModal = (groupItems: BookingContextAppointment[]) => {
+    const candidate = groupItems.find((item) => item.canEvaluate)
+    if (!candidate) return
+    setFeedbackModal({
+      appointmentId: Number(candidate.id),
+      rating: 5,
+      review: '',
+      saving: false,
+      error: null,
+    })
+  }
+
+  const submitEvaluate = async () => {
+    if (!feedbackModal || !stableMagicToken) return
+    setFeedbackModal((prev) => (prev ? { ...prev, saving: true, error: null } : prev))
+    try {
+      await submitBookingFeedback({
+        token: stableMagicToken,
+        appointmentId: feedbackModal.appointmentId,
+        rating: feedbackModal.rating,
+        review: feedbackModal.review,
+      })
+      setFeedbackModal(null)
+      await reloadBookingContext()
+    } catch (err: any) {
+      setFeedbackModal((prev) => (prev ? { ...prev, saving: false, error: err?.message || 'Feedback could not be saved.' } : prev))
+    }
+  }
+
   const dateOptions = Array.from({ length: 7 }).map((_, i) => {
       const d = new Date()
       d.setDate(d.getDate() + i)
@@ -754,9 +926,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               {isKnownCustomer ? (
                 <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-background p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div>
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
+                        <Package2 className="h-4 w-4" />
+                      </div>
+                      <div>
                       <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Membership Packages</p>
                       <p className="text-xs text-muted-foreground">Tap a service balance to add it directly to this booking.</p>
+                      </div>
                     </div>
                     <span className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-[11px] font-semibold text-primary">
                       {activePackages.length} active
@@ -787,12 +964,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
                           <div className="space-y-2">
                             {pkg.serviceBalances.map((balance) => {
-                              const ratio = balance.initialQuota > 0 ? balance.remainingQuota / balance.initialQuota : 0
+                              const usageKey = packageUsageKey(String(pkg.id), String(balance.serviceId))
+                              const dynamicRemaining = Math.max(0, balance.remainingQuota - (packageUsageByKey[usageKey] || 0))
+                              const ratio = balance.initialQuota > 0 ? dynamicRemaining / balance.initialQuota : 0
                               const ratioPercent = Math.max(0, Math.min(100, Math.round(ratio * 100)))
                               return (
                                 <button
                                   key={`${pkg.id}:${balance.serviceId}`}
                                   type="button"
+                                  disabled={dynamicRemaining <= 0}
                                   onClick={() =>
                                     void handleAddFromPackage({
                                       packageId: pkg.id,
@@ -800,20 +980,23 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                       serviceName: balance.serviceName || null,
                                     })
                                   }
-                                  className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/5"
+                                  className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/5 disabled:opacity-45 disabled:cursor-not-allowed"
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <p className="text-xs font-semibold text-foreground">
+                                    <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
+                                      <Sparkles className="h-3.5 w-3.5 text-primary/80" />
                                       {balance.serviceName || `Service #${balance.serviceId}`}
                                     </p>
                                     <p className="text-[11px] font-semibold text-primary">
-                                      {balance.remainingQuota}/{balance.initialQuota}
+                                      {dynamicRemaining}/{balance.initialQuota}
                                     </p>
                                   </div>
                                   <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
                                     <div className="h-full rounded-full bg-primary/70" style={{ width: `${ratioPercent}%` }} />
                                   </div>
-                                  <p className="mt-1 text-[10px] text-muted-foreground">Use this balance for the current booking</p>
+                                  <p className="mt-1 text-[10px] text-muted-foreground">
+                                    {dynamicRemaining > 0 ? 'Use this balance for the current booking' : 'No quota left'}
+                                  </p>
                                 </button>
                               )
                             })}
@@ -832,9 +1015,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               {isKnownCustomer ? (
                 <div className="rounded-2xl border border-border bg-card/70 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
+                        <CalendarCheck2 className="h-4 w-4" />
+                      </div>
+                      <div>
                       <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">My Appointments</p>
                       <p className="text-xs text-muted-foreground">Upcoming and recent visits in one timeline.</p>
+                      </div>
                     </div>
                     <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                       {customerAppointmentGroups.length} records
@@ -902,15 +1090,50 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             <p className="text-[10px] font-medium text-violet-600">Includes rescheduled record</p>
                           ) : null}
 
-                          {stableMagicToken && group.canUpdate ? (
-                            <div className="pt-1">
+                          {stableMagicToken ? (
+                            <div className="pt-1 space-y-1.5">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRepeatGroup(group.items)}
+                                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/40"
+                                >
+                                  <RefreshCcw className="h-3.5 w-3.5" />
+                                  Repeat
+                                </button>
+                                {group.canCancel ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleCancelGroup(group.items)}
+                                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-rose-300/50 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-500/15"
+                                  >
+                                    <Ban className="h-3.5 w-3.5" />
+                                    Cancel
+                                  </button>
+                                ) : null}
+                              </div>
+
+                              {group.canUpdate ? (
                               <button
                                 type="button"
                                 onClick={() => openRescheduleModalForGroup(group.items)}
-                                className="w-full rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
+                                className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
                               >
+                                <PencilLine className="h-3.5 w-3.5" />
                                 Update Appointment
                               </button>
+                              ) : null}
+
+                              {group.canEvaluate ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openEvaluateModal(group.items)}
+                                  className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/15"
+                                >
+                                  <Star className="h-3.5 w-3.5" />
+                                  Evaluate
+                                </button>
+                              ) : null}
                             </div>
                           ) : (
                             <div className="pt-1">
@@ -1190,6 +1413,85 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 className="flex-1 rounded-full bg-primary text-primary-foreground"
               >
                 {rescheduleModal.loading ? 'Saving...' : 'Confirm Update'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {feedbackModal ? (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-[65] animate-in fade-in">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Rate Your Appointment</h3>
+              <button
+                type="button"
+                onClick={() => (feedbackModal.saving ? undefined : setFeedbackModal(null))}
+                className="text-muted-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Share your experience to help the salon improve.
+            </p>
+
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={feedbackModal.saving}
+                  onClick={() =>
+                    setFeedbackModal((prev) => (prev ? { ...prev, rating: value } : prev))
+                  }
+                  className="rounded-lg border border-border bg-card p-2"
+                >
+                  <Star
+                    className={`h-5 w-5 ${
+                      value <= feedbackModal.rating ? 'fill-amber-400 text-amber-500' : 'text-muted-foreground'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={feedbackModal.review}
+              onChange={(event) =>
+                setFeedbackModal((prev) => (prev ? { ...prev, review: event.target.value } : prev))
+              }
+              placeholder="Optional comment"
+              rows={4}
+              className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
+            />
+
+            {feedbackModal.error ? (
+              <p className="rounded-md border border-red-300/40 bg-red-500/10 px-3 py-2 text-xs text-red-700">
+                {feedbackModal.error}
+              </p>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={feedbackModal.saving}
+                onClick={() => setFeedbackModal(null)}
+                className="flex-1 rounded-full"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                disabled={feedbackModal.saving}
+                onClick={() => {
+                  void submitEvaluate()
+                }}
+                className="flex-1 rounded-full bg-primary text-primary-foreground"
+              >
+                {feedbackModal.saving ? 'Saving...' : 'Submit Review'}
               </Button>
             </div>
           </div>

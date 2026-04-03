@@ -113,13 +113,19 @@ export interface BookingContextAppointment {
   startTime: string
   endTime: string
   status: string
+  serviceId?: string | null
   serviceName?: string | null
+  servicePrice?: number | null
   staffName?: string | null
   canUpdate?: boolean
+  canCancel?: boolean
+  canEvaluate?: boolean
   isFuture?: boolean
   groupKey?: string
   rescheduledFromAppointmentId?: string | null
   rescheduleBatchId?: string | null
+  customerRating?: number | null
+  customerReview?: string | null
 }
 
 export interface ActiveCustomerPackage {

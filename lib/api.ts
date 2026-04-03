@@ -258,9 +258,16 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       startTime: item.startTime,
       endTime: item.endTime,
       status: String(item.status || ''),
+      serviceId:
+        item.serviceId !== null && item.serviceId !== undefined
+          ? String(item.serviceId)
+          : null,
       serviceName: item.serviceName || null,
+      servicePrice: typeof item.servicePrice === 'number' ? Number(item.servicePrice) : null,
       staffName: item.staffName || null,
       canUpdate: Boolean(item.canUpdate),
+      canCancel: Boolean(item.canCancel),
+      canEvaluate: Boolean(item.canEvaluate),
       isFuture: Boolean(item.isFuture),
       groupKey: item.groupKey || '',
       rescheduledFromAppointmentId:
@@ -268,6 +275,8 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
           ? String(item.rescheduledFromAppointmentId)
           : null,
       rescheduleBatchId: item.rescheduleBatchId || null,
+      customerRating: typeof item.customerRating === 'number' ? Number(item.customerRating) : null,
+      customerReview: item.customerReview || null,
     }))
 
     return {
@@ -372,6 +381,46 @@ export async function commitBookingReschedule(input: {
 }): Promise<RescheduleCommitResponse> {
   const url = `${API_BASE_URL}/api/bookings/reschedule-commit`
   return fetchFromAPI<RescheduleCommitResponse>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export async function cancelBookingByToken(input: {
+  token: string
+  appointmentIds: number[]
+}): Promise<{ cancelledAppointmentIds: number[]; count: number }> {
+  const url = `${API_BASE_URL}/api/bookings/cancel-by-token`
+  return fetchFromAPI<{ cancelledAppointmentIds: number[]; count: number }>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export async function submitBookingFeedback(input: {
+  token: string
+  appointmentId: number
+  rating: number
+  review?: string
+}): Promise<{
+  item: {
+    id: number
+    customerRating: number | null
+    customerReview: string | null
+    customerReviewedAt: string | null
+  }
+}> {
+  const url = `${API_BASE_URL}/api/bookings/feedback`
+  return fetchFromAPI<{
+    item: {
+      id: number
+      customerRating: number | null
+      customerReview: string | null
+      customerReviewedAt: string | null
+    }
+  }>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
