@@ -1,6 +1,16 @@
 import { API_BASE_URL } from './constants'
 import { extractTenantSlug } from './tenant'
-import type { Salon, ServiceCategory, Employee, Package, Appointment, ApiResponse, BookingContext, SalonHomepageResponse } from './types'
+import type {
+  Salon,
+  ServiceCategory,
+  Employee,
+  Package,
+  Appointment,
+  ApiResponse,
+  BookingContext,
+  BookingContextAppointment,
+  SalonHomepageResponse,
+} from './types'
 
 /**
  * Multi-tenant SaaS API helpers
@@ -155,7 +165,10 @@ export async function createAppointment(
           services: data.services.map(s => ({
               serviceId: s.serviceId,
               staffId: s.employeeId,
-              duration: s.duration?.match(/\d+/)?.[0] || "30"
+              duration: s.duration?.match(/\d+/)?.[0] || "30",
+              staffPreference: s.employeeId
+                ? { mode: 'SPECIFIC', preferredStaffId: Number(s.employeeId) }
+                : { mode: 'ANY' },
           })),
           packageSelections: (data.packageSelections || []).map((row) => ({
             serviceId: row.serviceId,
@@ -240,6 +253,23 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
   try {
     const url = `${API_BASE_URL}/api/booking/context?token=${token}`
     const data = await fetchFromAPI<any>(url)
+    const appointments: BookingContextAppointment[] = (data.appointments || []).map((item: any) => ({
+      id: String(item.id),
+      startTime: item.startTime,
+      endTime: item.endTime,
+      status: String(item.status || ''),
+      serviceName: item.serviceName || null,
+      staffName: item.staffName || null,
+      canUpdate: Boolean(item.canUpdate),
+      isFuture: Boolean(item.isFuture),
+      groupKey: item.groupKey || '',
+      rescheduledFromAppointmentId:
+        item.rescheduledFromAppointmentId !== null && item.rescheduledFromAppointmentId !== undefined
+          ? String(item.rescheduledFromAppointmentId)
+          : null,
+      rescheduleBatchId: item.rescheduleBatchId || null,
+    }))
+
     return {
       customerId: data.customerId?.toString() || null,
       customerName: data.customerName,
@@ -254,7 +284,7 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       isKnownCustomer: data.isKnownCustomer,
       identityLinked: Boolean(data.identityLinked),
       identitySessionId: data.identitySessionId || null,
-      appointments: data.appointments || [],
+      appointments,
       activePackages: (data.activePackages || []).map((pkg: any) => ({
         id: String(pkg.id),
         name: pkg.name,
@@ -274,6 +304,78 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
     console.error('getBookingContextByToken error:', error)
     return null
   }
+}
+
+export type ReschedulePreviewCandidate = {
+  staffId: number
+  name: string
+  title?: string | null
+  available: boolean
+  reason?: string
+}
+
+export type ReschedulePreviewItem = {
+  appointmentId: number
+  serviceId: number
+  serviceName: string
+  currentStartTime: string
+  currentEndTime: string
+  newStartTime: string
+  newEndTime: string
+  preferenceMode: 'ANY' | 'SPECIFIC'
+  preferredStaffId: number | null
+  selectedStaffId: number | null
+  needsManualChoice: boolean
+  candidates: ReschedulePreviewCandidate[]
+  reason?: string
+}
+
+export type ReschedulePreviewResponse = {
+  items: ReschedulePreviewItem[]
+  requiresManualSelection: boolean
+  hasConflicts: boolean
+  conflicts: Array<{ appointmentId: number; reason: string }>
+}
+
+export type RescheduleCommitResponse = {
+  batchId: string
+  previousAppointmentIds: number[]
+  items: Array<{
+    id: number
+    startTime: string
+    endTime: string
+    staffId: number
+    serviceId: number
+  }>
+}
+
+export async function previewBookingReschedule(input: {
+  token: string
+  appointmentIds: number[]
+  newStartTime: string
+  assignments?: Array<{ appointmentId: number; staffId: number }>
+}): Promise<ReschedulePreviewResponse> {
+  const url = `${API_BASE_URL}/api/bookings/reschedule-preview`
+  return fetchFromAPI<ReschedulePreviewResponse>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export async function commitBookingReschedule(input: {
+  token: string
+  appointmentIds: number[]
+  newStartTime: string
+  assignments?: Array<{ appointmentId: number; staffId: number }>
+  idempotencyKey?: string
+}): Promise<RescheduleCommitResponse> {
+  const url = `${API_BASE_URL}/api/bookings/reschedule-commit`
+  return fetchFromAPI<RescheduleCommitResponse>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 }
 
 export async function getEmployees(salonId: string): Promise<Employee[]> {

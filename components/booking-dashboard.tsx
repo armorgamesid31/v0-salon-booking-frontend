@@ -5,8 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ChevronDown, Search, Zap, Sparkles, Heart, Scissors, Droplet, Flower, Wand2, Plus, Calendar, Clock, X, Check, AlertCircle, Hand, Lightbulb, MessageCircle } from 'lucide-react'
-import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee, ActiveCustomerPackage } from '@/lib/types'
-import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability, createAppointment } from '@/lib/api'
+import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee, ActiveCustomerPackage, BookingContextAppointment } from '@/lib/types'
+import { getBookingContextByToken, registerCustomer, getSalon, getServices, getStaffForService, checkAvailability, createAppointment, previewBookingReschedule, commitBookingReschedule, type ReschedulePreviewResponse } from '@/lib/api'
 import LanguageSelector from '@/components/language-selector'
 import { BOOKING_TEXT, DEFAULT_LANGUAGE, detectBrowserLanguage, LOCALE_MAP, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
 import { DUMMY_SALON } from '@/lib/constants'
@@ -31,6 +31,16 @@ const getIconComponent = (categoryKey: string) => {
 
 interface BookingDashboardProps {
   forcedLanguage?: string
+}
+
+type RescheduleModalState = {
+  appointmentIds: number[]
+  date: string
+  time: string
+  loading: boolean
+  preview: ReschedulePreviewResponse | null
+  assignments: Record<number, number>
+  error: string | null
 }
 
 const getMagicToken = (params: URLSearchParams): string | null => {
@@ -75,6 +85,23 @@ const parseTokenFromRawSearch = (rawSearch: string): string | null => {
   return null
 }
 
+const toInputDate = (iso: string): string => {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const toInputTime = (iso: string): string => {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
@@ -100,12 +127,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [salonData, setSalonData] = useState<any>(null)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
   const [activePackages, setActivePackages] = useState<ActiveCustomerPackage[]>([])
-  const [recentAppointments, setRecentAppointments] = useState<Array<{
-    id: string
-    startTime: string
-    endTime: string
-    status: string
-  }>>([])
+  const [recentAppointments, setRecentAppointments] = useState<BookingContextAppointment[]>([])
+  const [rescheduleModal, setRescheduleModal] = useState<RescheduleModalState | null>(null)
   const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
   const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE)
   const [runtimeContent, setRuntimeContent] = useState<RuntimeContentMap>({})
@@ -232,79 +255,92 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return sum + (s.salePrice || s.originalPrice || 0);
   }, 0);
 
+  const loadSalonAndServices = async (sId: string, gender: string) => {
+    try {
+      const [salon, services] = await Promise.all([
+        getSalon(sId),
+        getServices(sId, gender),
+      ])
+      setSalonData(salon)
+      setAvailableServices(services)
+    } catch (err) {
+      console.error('Critical load error:', err)
+    }
+  }
+
+  const applyBookingContext = async (context: Awaited<ReturnType<typeof getBookingContextByToken>>): Promise<void> => {
+    if (!context) return
+    if (!forcedLanguage && context.customerLanguage) {
+      const normalized = normalizeLanguage(context.customerLanguage)
+      setLanguage(normalized)
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('preferredLanguage', normalized)
+      }
+    }
+    setSalonId(context.salonId)
+    setIsKnownCustomer(context.isKnownCustomer)
+    setOriginChannel(context.originChannel || null)
+    setOriginPhone(context.originPhone || null)
+    setOriginInstagramId(context.originInstagramId || null)
+    setActivePackages(context.activePackages || [])
+    setRecentAppointments(context.appointments || [])
+    if (context.isKnownCustomer && context.customerId) {
+      setCustomerId(context.customerId)
+      setCustomerName(context.customerName || '')
+    } else {
+      setCustomerId(null)
+      setCustomerName('')
+    }
+    if (!context.isKnownCustomer) {
+      const normalizedGender = context.customerGender === 'male' ? 'male' : 'female'
+      setRegistrationForm((prev) => ({
+        ...prev,
+        fullName: context.customerName || prev.fullName,
+        phone: context.customerPhone || prev.phone,
+        gender: normalizedGender || prev.gender,
+      }))
+    }
+    const gender = context.customerGender === 'male' ? 'male' : 'female'
+    setSelectedGender(gender)
+    await loadSalonAndServices(context.salonId, gender)
+  }
+
+  const reloadBookingContext = async (): Promise<void> => {
+    if (!stableMagicToken) return
+    const context = await getBookingContextByToken(stableMagicToken)
+    if (context) {
+      await applyBookingContext(context)
+    }
+  }
+
   // Fetch initial salon and services data
   useEffect(() => {
     const token = stableMagicToken
-    
-    const loadSalonAndServices = async (sId: string, gender: string) => {
-        try {
-            const [salon, services] = await Promise.all([
-                getSalon(sId),
-                getServices(sId, gender)
-            ]);
-            setSalonData(salon);
-            setAvailableServices(services);
-        } catch (err) {
-            console.error("Critical load error:", err);
-        }
-    }
 
     if (token) {
       getBookingContextByToken(token).then((context) => {
         if (context) {
-          if (!forcedLanguage && context.customerLanguage) {
-            const normalized = normalizeLanguage(context.customerLanguage)
-            setLanguage(normalized)
-            if (typeof window !== 'undefined') {
-              window.localStorage.setItem('preferredLanguage', normalized)
-            }
-          }
-          setSalonId(context.salonId)
-          setIsKnownCustomer(context.isKnownCustomer)
-          setOriginChannel(context.originChannel || null)
-          setOriginPhone(context.originPhone || null)
-          setOriginInstagramId(context.originInstagramId || null)
-          setActivePackages(context.activePackages || [])
-          setRecentAppointments(context.appointments || [])
-          if (context.isKnownCustomer && context.customerId) {
-            setCustomerId(context.customerId)
-            setCustomerName(context.customerName || '')
-          } else {
-            setCustomerId(null)
-            setCustomerName('')
-          }
-          if (!context.isKnownCustomer) {
-            const normalizedGender = context.customerGender === 'male' ? 'male' : 'female'
-            setRegistrationForm((prev) => ({
-              ...prev,
-              fullName: context.customerName || prev.fullName,
-              phone: context.customerPhone || prev.phone,
-              gender: normalizedGender || prev.gender
-            }));
-          }
-          const gender = context.customerGender === 'male' ? 'male' : 'female';
-          setSelectedGender(gender);
-          loadSalonAndServices(context.salonId, gender);
-        } else {
-          const fallbackSalonId = searchParams.get('salonId') || '1';
-          setSalonId(fallbackSalonId);
-          setIsKnownCustomer(false);
-          setCustomerId(null);
-          setCustomerName('');
-          setActivePackages([]);
-          setRecentAppointments([]);
-          loadSalonAndServices(fallbackSalonId, selectedGender);
+          void applyBookingContext(context)
+          return
         }
+        const fallbackSalonId = searchParams.get('salonId') || '1'
+        setSalonId(fallbackSalonId)
+        setIsKnownCustomer(false)
+        setCustomerId(null)
+        setCustomerName('')
+        setActivePackages([])
+        setRecentAppointments([])
+        void loadSalonAndServices(fallbackSalonId, selectedGender)
       })
     } else {
-        const sId = searchParams.get('salonId') || '1';
-        setSalonId(sId)
-        setIsKnownCustomer(false);
-        setCustomerId(null);
-        setCustomerName('');
-        setActivePackages([]);
-        setRecentAppointments([]);
-        loadSalonAndServices(sId, selectedGender);
+      const sId = searchParams.get('salonId') || '1'
+      setSalonId(sId)
+      setIsKnownCustomer(false)
+      setCustomerId(null)
+      setCustomerName('')
+      setActivePackages([])
+      setRecentAppointments([])
+      void loadSalonAndServices(sId, selectedGender)
     }
   }, [searchParams, forcedLanguage, stableMagicToken])
 
@@ -451,6 +487,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             setSelectedPackageByService({});
             setSelectedDate(null);
             setSelectedTimeSlot(null);
+            if (stableMagicToken) {
+              await reloadBookingContext();
+            }
         } else {
             alert(res.error || text.bookingFailed);
         }
@@ -458,6 +497,129 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         alert(text.genericError);
     } finally {
         setIsBooking(false);
+    }
+  }
+
+  const customerAppointmentGroups = useMemo(() => {
+    const sorted = [...recentAppointments].sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+    )
+    const map = new Map<string, BookingContextAppointment[]>()
+    for (const item of sorted) {
+      const key = item.groupKey || `single:${item.id}`
+      const rows = map.get(key) || []
+      rows.push(item)
+      map.set(key, rows)
+    }
+    return Array.from(map.entries()).map(([key, items]) => ({
+      key,
+      items,
+      canUpdate: items.every((item) => Boolean(item.canUpdate)),
+    }))
+  }, [recentAppointments])
+
+  const openRescheduleModalForGroup = (groupItems: BookingContextAppointment[]) => {
+    if (!stableMagicToken || !groupItems.length) return
+    const sorted = [...groupItems].sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+    )
+    const first = sorted[0]
+    const appointmentIds = sorted
+      .map((item) => Number(item.id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+    if (!appointmentIds.length) return
+    setRescheduleModal({
+      appointmentIds,
+      date: toInputDate(first.startTime),
+      time: toInputTime(first.startTime),
+      loading: false,
+      preview: null,
+      assignments: {},
+      error: null,
+    })
+  }
+
+  const runReschedulePreview = async () => {
+    if (!rescheduleModal || !stableMagicToken) return
+    const base = new Date(`${rescheduleModal.date}T${rescheduleModal.time}:00`)
+    if (Number.isNaN(base.getTime())) {
+      setRescheduleModal((prev) => (prev ? { ...prev, error: 'Please select a valid date and time.' } : prev))
+      return
+    }
+    setRescheduleModal((prev) => (prev ? { ...prev, loading: true, error: null } : prev))
+    try {
+      const assignments = Object.entries(rescheduleModal.assignments)
+        .map(([appointmentId, staffId]) => ({
+          appointmentId: Number(appointmentId),
+          staffId: Number(staffId),
+        }))
+        .filter((row) => Number.isInteger(row.appointmentId) && row.appointmentId > 0 && Number.isInteger(row.staffId) && row.staffId > 0)
+
+      const preview = await previewBookingReschedule({
+        token: stableMagicToken,
+        appointmentIds: rescheduleModal.appointmentIds,
+        newStartTime: base.toISOString(),
+        assignments,
+      })
+
+      let error: string | null = null
+      if (preview.hasConflicts && preview.conflicts.length) {
+        error = preview.conflicts[0].reason || 'Selected slot is not available.'
+      }
+      setRescheduleModal((prev) => (prev ? { ...prev, preview, loading: false, error } : prev))
+    } catch (err: any) {
+      setRescheduleModal((prev) => (prev ? { ...prev, loading: false, error: err?.message || 'Preview could not be generated.' } : prev))
+    }
+  }
+
+  const commitRescheduleFromModal = async () => {
+    if (!rescheduleModal || !stableMagicToken) return
+    const base = new Date(`${rescheduleModal.date}T${rescheduleModal.time}:00`)
+    if (Number.isNaN(base.getTime())) {
+      setRescheduleModal((prev) => (prev ? { ...prev, error: 'Please select a valid date and time.' } : prev))
+      return
+    }
+
+    const preview = rescheduleModal.preview
+    if (!preview) {
+      await runReschedulePreview()
+      return
+    }
+    if (preview.hasConflicts) {
+      setRescheduleModal((prev) => (prev ? { ...prev, error: preview.conflicts[0]?.reason || 'There is a scheduling conflict.' } : prev))
+      return
+    }
+
+    const requiredManual = preview.items.filter((item) => item.needsManualChoice)
+    for (const item of requiredManual) {
+      if (!rescheduleModal.assignments[item.appointmentId]) {
+        setRescheduleModal((prev) =>
+          prev ? { ...prev, error: `Please pick an available specialist for ${item.serviceName}.` } : prev,
+        )
+        return
+      }
+    }
+
+    setRescheduleModal((prev) => (prev ? { ...prev, loading: true, error: null } : prev))
+    try {
+      const assignments = Object.entries(rescheduleModal.assignments)
+        .map(([appointmentId, staffId]) => ({
+          appointmentId: Number(appointmentId),
+          staffId: Number(staffId),
+        }))
+        .filter((row) => Number.isInteger(row.appointmentId) && row.appointmentId > 0 && Number.isInteger(row.staffId) && row.staffId > 0)
+
+      await commitBookingReschedule({
+        token: stableMagicToken,
+        appointmentIds: rescheduleModal.appointmentIds,
+        newStartTime: base.toISOString(),
+        assignments,
+        idempotencyKey: `cust-${Date.now()}`,
+      })
+      setRescheduleModal(null)
+      await reloadBookingContext()
+    } catch (err: any) {
+      setRescheduleModal((prev) => (prev ? { ...prev, loading: false, error: err?.message || 'Reschedule failed.' } : prev))
     }
   }
 
@@ -595,22 +757,44 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
               {isKnownCustomer ? (
                 <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
-                  <p className="text-xs font-bold uppercase text-foreground">Geçmiş Randevular</p>
-                  {recentAppointments.length ? (
+                  <p className="text-xs font-bold uppercase text-foreground">My Appointments</p>
+                  {customerAppointmentGroups.length ? (
                     <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                      {recentAppointments.map((apt) => (
-                        <div key={apt.id} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                      {[...customerAppointmentGroups].reverse().map((group) => {
+                        const first = group.items[0]
+                        const last = group.items[group.items.length - 1]
+                        const statuses = Array.from(new Set(group.items.map((item) => String(item.status || '').toUpperCase())))
+                        const serviceNames = Array.from(new Set(group.items.map((item) => item.serviceName).filter(Boolean)))
+                        const staffNames = Array.from(new Set(group.items.map((item) => item.staffName).filter(Boolean)))
+                        return (
+                        <div key={group.key} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold">
-                              {new Date(apt.startTime).toLocaleDateString('tr-TR')} {new Date(apt.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(first.startTime).toLocaleDateString('tr-TR')} {new Date(first.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              {' - '}
+                              {new Date(last.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            <span className="text-muted-foreground">{apt.status}</span>
+                            <span className="text-muted-foreground">{statuses.join(', ')}</span>
                           </div>
+                          {serviceNames.length ? <p className="mt-1 text-[11px] text-muted-foreground">{serviceNames.join(', ')}</p> : null}
+                          {staffNames.length ? <p className="text-[11px] text-muted-foreground">{staffNames.join(', ')}</p> : null}
+                          {stableMagicToken && group.canUpdate ? (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={() => openRescheduleModalForGroup(group.items)}
+                                className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
+                              >
+                                Update Appointment
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Geçmiş randevu bulunmuyor.</p>
+                    <p className="text-xs text-muted-foreground">No appointments yet.</p>
                   )}
                 </div>
               ) : null}
@@ -743,6 +927,144 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           </div>
         </div>
       )}
+
+      {rescheduleModal ? (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-[60] animate-in fade-in">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Update Appointment</h3>
+              <button
+                type="button"
+                onClick={() => (rescheduleModal.loading ? undefined : setRescheduleModal(null))}
+                className="text-muted-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Select a new start date and time. Back-to-back services will move together and keep their duration.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1 text-xs">
+                <span className="text-muted-foreground">Date</span>
+                <input
+                  type="date"
+                  value={rescheduleModal.date}
+                  onChange={(event) =>
+                    setRescheduleModal((prev) => (prev ? { ...prev, date: event.target.value } : prev))
+                  }
+                  className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="space-y-1 text-xs">
+                <span className="text-muted-foreground">Time</span>
+                <input
+                  type="time"
+                  value={rescheduleModal.time}
+                  onChange={(event) =>
+                    setRescheduleModal((prev) => (prev ? { ...prev, time: event.target.value } : prev))
+                  }
+                  className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void runReschedulePreview()}
+              disabled={rescheduleModal.loading}
+              className="w-full rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary disabled:opacity-60"
+            >
+              {rescheduleModal.loading ? 'Checking...' : 'Check Availability'}
+            </button>
+
+            {rescheduleModal.error ? (
+              <p className="rounded-md border border-red-300/40 bg-red-500/10 px-3 py-2 text-xs text-red-700">{rescheduleModal.error}</p>
+            ) : null}
+
+            {rescheduleModal.preview ? (
+              <div className="space-y-2">
+                {rescheduleModal.preview.items.map((item) => {
+                  const availableCandidates = item.candidates.filter((candidate) => candidate.available)
+                  const selectedCandidateId = rescheduleModal.assignments[item.appointmentId] || item.selectedStaffId || null
+                  return (
+                    <div key={item.appointmentId} className="rounded-lg border border-border bg-muted/10 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{item.serviceName}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(item.newStartTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          {' - '}
+                          {new Date(item.newEndTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+
+                      {item.needsManualChoice ? (
+                        <div className="space-y-1">
+                          <p className="text-[11px] text-muted-foreground">Preferred specialist is unavailable. Please choose one:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {availableCandidates.map((candidate) => (
+                              <button
+                                key={`${item.appointmentId}-${candidate.staffId}`}
+                                type="button"
+                                onClick={() =>
+                                  setRescheduleModal((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          assignments: {
+                                            ...prev.assignments,
+                                            [item.appointmentId]: candidate.staffId,
+                                          },
+                                        }
+                                      : prev,
+                                  )
+                                }
+                                className={`rounded-full border px-2 py-1 text-[11px] ${
+                                  selectedCandidateId === candidate.staffId
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border bg-background text-foreground'
+                                }`}
+                              >
+                                {candidate.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : selectedCandidateId ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Specialist: {item.candidates.find((candidate) => candidate.staffId === selectedCandidateId)?.name || `#${selectedCandidateId}`}
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={rescheduleModal.loading}
+                onClick={() => setRescheduleModal(null)}
+                className="flex-1 rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={rescheduleModal.loading}
+                onClick={() => void commitRescheduleFromModal()}
+                className="flex-1 rounded-full bg-primary text-primary-foreground"
+              >
+                {rescheduleModal.loading ? 'Saving...' : 'Confirm Update'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Registration Modal */}
       {showRegistrationModal && (

@@ -104,8 +104,22 @@ export interface BookingContext {
   isKnownCustomer: boolean
   identityLinked?: boolean
   identitySessionId?: string | null
-  appointments?: Appointment[]
+  appointments?: BookingContextAppointment[]
   activePackages?: ActiveCustomerPackage[]
+}
+
+export interface BookingContextAppointment {
+  id: string
+  startTime: string
+  endTime: string
+  status: string
+  serviceName?: string | null
+  staffName?: string | null
+  canUpdate?: boolean
+  isFuture?: boolean
+  groupKey?: string
+  rescheduledFromAppointmentId?: string | null
+  rescheduleBatchId?: string | null
 }
 
 export interface ActiveCustomerPackage {
