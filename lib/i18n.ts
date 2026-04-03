@@ -62,6 +62,65 @@ export const BOOKING_TEXT: Record<
     fillInfoError: string
     genericError: string
     bookingFailed: string
+    dashboard?: {
+      packagesTitle: string
+      appointmentsTitle: string
+      packageServiceCountLabel: (count: number) => string
+      packageExpiresLabel: (dateLabel: string) => string
+      packageNoExpiry: string
+      packageNoActive: string
+      packageQuotaHintUse: string
+      packageQuotaHintEmpty: string
+      packageAdd: string
+      packageRemove: string
+      packageOutOfQuota: string
+      appointmentsEmpty: string
+      specialistLabel: string
+      includesRescheduledRecord: string
+      actionRepeat: string
+      actionCancel: string
+      actionUpdate: string
+      actionEvaluate: string
+      secureLinkRequiredUpdate: string
+      secureLinkRequiredCancel: string
+      secureLinkRequiredFeedback: string
+      cancelConfirm: string
+      cancellationFailed: string
+      noServiceToRepeat: string
+      serviceFilterMismatch: string
+      packageServiceLoadFailed: string
+      noQuotaLeftForPackageService: string
+      selectValidDateTime: string
+      rescheduleSlotUnavailable: string
+      reschedulePreviewFailed: string
+      rescheduleConflict: string
+      rescheduleFailed: string
+      feedbackSaveFailed: string
+      packageBadge: string
+      manualBadge: string
+      statusBooked: string
+      statusConfirmed: string
+      statusUpdated: string
+      statusCompleted: string
+      statusCancelled: string
+      statusNoShow: string
+      statusDefault: string
+      totalLabel: string
+      paymentFreeLabel: string
+      fromPackageLabel: string
+      removeManual: string
+      minuteUnit: string
+      rescheduleTitle: string
+      rescheduleDescription: string
+      dateLabel: string
+      timeLabel: string
+      checkingLabel: string
+      checkAvailabilityLabel: string
+      chooseSpecialistPrompt: string
+      cancelButton: string
+      savingLabel: string
+      confirmUpdateLabel: string
+    }
   }
 > = {
   tr: {
@@ -95,6 +154,65 @@ export const BOOKING_TEXT: Record<
     fillInfoError: 'Lutfen bilgilerinizi doldurun.',
     genericError: 'Bir hata olustu.',
     bookingFailed: 'Randevu olusturulamadi.',
+    dashboard: {
+      packagesTitle: 'Paketlerim',
+      appointmentsTitle: 'Randevularim',
+      packageServiceCountLabel: (count) => `${count} hizmet`,
+      packageExpiresLabel: (dateLabel) => `Bitis: ${dateLabel}`,
+      packageNoExpiry: 'Bitis tarihi yok',
+      packageNoActive: 'Aktif paket bulunamadi.',
+      packageQuotaHintUse: 'Bu hak secili randevuya uygulanir',
+      packageQuotaHintEmpty: 'Hak kalmadi',
+      packageAdd: 'Ekle',
+      packageRemove: 'Cikar',
+      packageOutOfQuota: 'Hak yok',
+      appointmentsEmpty: 'Henüz randevu bulunmuyor.',
+      specialistLabel: 'Uzman',
+      includesRescheduledRecord: 'Bu kayitta ertelenen randevu gecmisi var',
+      actionRepeat: 'Tekrarla',
+      actionCancel: 'Iptal Et',
+      actionUpdate: 'Guncelle',
+      actionEvaluate: 'Degerlendir',
+      secureLinkRequiredUpdate: 'Randevu guncellemek icin guvenli baglanti gerekli.',
+      secureLinkRequiredCancel: 'Randevu iptal etmek icin guvenli baglanti gerekli.',
+      secureLinkRequiredFeedback: 'Degerlendirme gondermek icin guvenli baglanti gerekli.',
+      cancelConfirm: 'Secili randevulari iptal etmek istiyor musunuz?',
+      cancellationFailed: 'Iptal islemi basarisiz oldu.',
+      noServiceToRepeat: 'Tekrarlamak icin hizmet bilgisi bulunamadi.',
+      serviceFilterMismatch: 'Bu hizmetler mevcut filtrede gorunmuyor. Lutfen filtreyi degistirin.',
+      packageServiceLoadFailed: 'Paket hizmeti yuklenemedi. Sayfayi yenileyip tekrar deneyin.',
+      noQuotaLeftForPackageService: 'Bu paket hizmeti icin hak kalmadi.',
+      selectValidDateTime: 'Lutfen gecerli tarih ve saat secin.',
+      rescheduleSlotUnavailable: 'Secilen saat uygun degil.',
+      reschedulePreviewFailed: 'Onizleme olusturulamadi.',
+      rescheduleConflict: 'Takvim cakismasi var.',
+      rescheduleFailed: 'Randevu guncellenemedi.',
+      feedbackSaveFailed: 'Degerlendirme kaydedilemedi.',
+      packageBadge: 'paket',
+      manualBadge: 'manuel',
+      statusBooked: 'Rezerve',
+      statusConfirmed: 'Onaylandi',
+      statusUpdated: 'Guncellendi',
+      statusCompleted: 'Tamamlandi',
+      statusCancelled: 'Iptal',
+      statusNoShow: 'Gelmedi',
+      statusDefault: 'Rezerve',
+      totalLabel: 'Toplam',
+      paymentFreeLabel: 'Ucretsiz',
+      fromPackageLabel: 'Paketten',
+      removeManual: 'Manuel Cikar',
+      minuteUnit: 'dk',
+      rescheduleTitle: 'Randevuyu Guncelle',
+      rescheduleDescription: 'Yeni tarih ve saat secin. Ardisik hizmetler birlikte tasinir ve sure korunur.',
+      dateLabel: 'Tarih',
+      timeLabel: 'Saat',
+      checkingLabel: 'Kontrol ediliyor...',
+      checkAvailabilityLabel: 'Musaitlik Kontrol Et',
+      chooseSpecialistPrompt: 'Tercih edilen uzman musait degil. Lutfen uzman secin:',
+      cancelButton: 'Vazgec',
+      savingLabel: 'Kaydediliyor...',
+      confirmUpdateLabel: 'Guncellemeyi Onayla',
+    },
   },
   en: {
     welcomeDefault: 'Welcome! We are ready for your beauty appointment.',
@@ -127,6 +245,65 @@ export const BOOKING_TEXT: Record<
     fillInfoError: 'Please fill in your details.',
     genericError: 'An error occurred.',
     bookingFailed: 'Appointment could not be created.',
+    dashboard: {
+      packagesTitle: 'My Packages',
+      appointmentsTitle: 'My Appointments',
+      packageServiceCountLabel: (count) => `${count} services`,
+      packageExpiresLabel: (dateLabel) => `Expires: ${dateLabel}`,
+      packageNoExpiry: 'No expiry date',
+      packageNoActive: 'No active package found.',
+      packageQuotaHintUse: 'This balance will be used for current booking',
+      packageQuotaHintEmpty: 'No quota left',
+      packageAdd: 'Add',
+      packageRemove: 'Remove',
+      packageOutOfQuota: 'No quota',
+      appointmentsEmpty: 'No appointments found yet.',
+      specialistLabel: 'Specialist',
+      includesRescheduledRecord: 'Includes rescheduled record',
+      actionRepeat: 'Repeat',
+      actionCancel: 'Cancel',
+      actionUpdate: 'Update',
+      actionEvaluate: 'Evaluate',
+      secureLinkRequiredUpdate: 'Secure booking link is required to update this appointment.',
+      secureLinkRequiredCancel: 'Secure booking link is required to cancel this appointment.',
+      secureLinkRequiredFeedback: 'Secure booking link is required to submit feedback.',
+      cancelConfirm: 'Cancel selected appointment(s)?',
+      cancellationFailed: 'Cancellation failed.',
+      noServiceToRepeat: 'No service information found to repeat this appointment.',
+      serviceFilterMismatch: 'These services are not available in current filter. Try changing filter.',
+      packageServiceLoadFailed: 'Package service could not be loaded. Please refresh the page and try again.',
+      noQuotaLeftForPackageService: 'No quota left for this service in selected package.',
+      selectValidDateTime: 'Please select a valid date and time.',
+      rescheduleSlotUnavailable: 'Selected slot is not available.',
+      reschedulePreviewFailed: 'Preview could not be generated.',
+      rescheduleConflict: 'There is a scheduling conflict.',
+      rescheduleFailed: 'Reschedule failed.',
+      feedbackSaveFailed: 'Feedback could not be saved.',
+      packageBadge: 'package',
+      manualBadge: 'manual',
+      statusBooked: 'Booked',
+      statusConfirmed: 'Confirmed',
+      statusUpdated: 'Updated',
+      statusCompleted: 'Completed',
+      statusCancelled: 'Cancelled',
+      statusNoShow: 'No-show',
+      statusDefault: 'Booked',
+      totalLabel: 'Total',
+      paymentFreeLabel: 'Free',
+      fromPackageLabel: 'From package',
+      removeManual: 'Remove Manual',
+      minuteUnit: 'min',
+      rescheduleTitle: 'Update Appointment',
+      rescheduleDescription: 'Select a new date and time. Back-to-back services will move together and keep their duration.',
+      dateLabel: 'Date',
+      timeLabel: 'Time',
+      checkingLabel: 'Checking...',
+      checkAvailabilityLabel: 'Check Availability',
+      chooseSpecialistPrompt: 'Preferred specialist is unavailable. Please choose one:',
+      cancelButton: 'Cancel',
+      savingLabel: 'Saving...',
+      confirmUpdateLabel: 'Confirm Update',
+    },
   },
   es: {
     welcomeDefault: 'Bienvenido. Tu cita de belleza esta lista.',

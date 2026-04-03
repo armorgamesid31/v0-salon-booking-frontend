@@ -23,7 +23,7 @@ import {
   Hand,
   Lightbulb,
   MessageCircle,
-  Package2,
+  ClipboardList,
   CalendarCheck2,
   RefreshCcw,
   Ban,
@@ -147,40 +147,51 @@ const toInputTime = (iso: string): string => {
   return `${hours}:${minutes}`
 }
 
-const appointmentStatusMeta = (status: string) => {
+const appointmentStatusMeta = (
+  status: string,
+  labels: {
+    statusBooked: string
+    statusConfirmed: string
+    statusUpdated: string
+    statusCompleted: string
+    statusCancelled: string
+    statusNoShow: string
+    statusDefault: string
+  },
+) => {
   const normalized = String(status || '').trim().toUpperCase()
   if (normalized === 'COMPLETED') {
     return {
-      label: 'Completed',
+      label: labels.statusCompleted,
       className: 'border-emerald-400/35 bg-emerald-500/10 text-emerald-700',
     }
   }
   if (normalized === 'CANCELLED') {
     return {
-      label: 'Cancelled',
+      label: labels.statusCancelled,
       className: 'border-slate-400/35 bg-slate-500/10 text-slate-700',
     }
   }
   if (normalized === 'NO_SHOW') {
     return {
-      label: 'No-show',
+      label: labels.statusNoShow,
       className: 'border-amber-400/35 bg-amber-500/10 text-amber-700',
     }
   }
   if (normalized === 'CONFIRMED') {
     return {
-      label: 'Confirmed',
+      label: labels.statusConfirmed,
       className: 'border-sky-400/35 bg-sky-500/10 text-sky-700',
     }
   }
   if (normalized === 'UPDATED') {
     return {
-      label: 'Updated',
+      label: labels.statusUpdated,
       className: 'border-violet-400/35 bg-violet-500/10 text-violet-700',
     }
   }
   return {
-    label: 'Booked',
+    label: labels.statusBooked || labels.statusDefault,
     className: 'border-primary/35 bg-primary/10 text-primary',
   }
 }
@@ -253,6 +264,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [logoError, setLogoError] = useState(false)
   const [packagesOpen, setPackagesOpen] = useState(false)
   const [appointmentsOpen, setAppointmentsOpen] = useState(false)
+  const [expandedAppointmentGroupKey, setExpandedAppointmentGroupKey] = useState<string | null>(null)
 
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
@@ -263,6 +275,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   })
   const text = useMemo(() => {
     const fallback = BOOKING_TEXT[language]
+    const dashboardFallback = fallback.dashboard || BOOKING_TEXT.en.dashboard!
 
     return {
       ...fallback,
@@ -299,6 +312,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       fillInfoError: getRuntimeText(runtimeContent, 'errors.fillInfo', fallback.fillInfoError),
       genericError: getRuntimeText(runtimeContent, 'errors.generic', fallback.genericError),
       bookingFailed: getRuntimeText(runtimeContent, 'errors.bookingFailed', fallback.bookingFailed),
+      dashboard: {
+        ...dashboardFallback,
+        packagesTitle: getRuntimeText(runtimeContent, 'booking.packagesTitle', dashboardFallback.packagesTitle),
+        appointmentsTitle: getRuntimeText(runtimeContent, 'booking.appointmentsTitle', dashboardFallback.appointmentsTitle),
+        packageNoActive: getRuntimeText(runtimeContent, 'booking.packageNoActive', dashboardFallback.packageNoActive),
+        appointmentsEmpty: getRuntimeText(runtimeContent, 'booking.appointmentsEmpty', dashboardFallback.appointmentsEmpty),
+      },
     }
   }, [language, runtimeContent])
 
@@ -517,6 +537,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const buildEntryId = (serviceId: string) =>
     `${serviceId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`
 
+  const isPackageServiceSelected = (packageId: string, serviceId: string) => {
+    return selectedServices.some(
+      (entry) =>
+        entry.source === 'PACKAGE' &&
+        String(entry.packageId) === String(packageId) &&
+        String(entry.service.id) === String(serviceId),
+    )
+  }
+
   const handleServiceToggle = async (service: any, categoryName: string) => {
     const serviceData: ImportedServiceItem = {
       id: service.id,
@@ -560,6 +589,28 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null }) => {
     const { packageId, serviceId } = input
+
+    if (isPackageServiceSelected(packageId, serviceId)) {
+      setSelectedServices((prev) =>
+        prev.filter(
+          (entry) =>
+            !(
+              entry.source === 'PACKAGE' &&
+              String(entry.packageId) === String(packageId) &&
+              String(entry.service.id) === String(serviceId)
+            ),
+        ),
+      )
+      const usageKey = packageUsageKey(packageId, serviceId)
+      setPackageUsageByKey((prev) => ({
+        ...prev,
+        [usageKey]: Math.max(0, (prev[usageKey] || 0) - 1),
+      }))
+      setSelectedDate(null)
+      setSelectedTimeSlot(null)
+      return
+    }
+
     let matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
     if (!matched && salonId) {
       try {
@@ -573,7 +624,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       }
     }
     if (!matched) {
-      alert('Package service could not be loaded. Please refresh the page and try again.')
+      alert(text.dashboard.packageServiceLoadFailed)
       return
     }
 
@@ -584,7 +635,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       ? Math.max(0, balance.remainingQuota - (packageUsageByKey[usageKey] || 0))
       : 0
     if (dynamicRemaining <= 0) {
-      alert('No quota left for this service in selected package.')
+      alert(text.dashboard.noQuotaLeftForPackageService)
       return
     }
 
@@ -694,7 +745,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const openRescheduleModalForGroup = (groupItems: BookingContextAppointment[]) => {
     if (!groupItems.length) return
     if (!stableMagicToken) {
-      alert('Secure booking link is required to update this appointment.')
+      alert(text.dashboard.secureLinkRequiredUpdate)
       return
     }
     const sorted = [...groupItems].sort(
@@ -720,7 +771,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     if (!rescheduleModal || !stableMagicToken) return
     const base = new Date(`${rescheduleModal.date}T${rescheduleModal.time}:00`)
     if (Number.isNaN(base.getTime())) {
-      setRescheduleModal((prev) => (prev ? { ...prev, error: 'Please select a valid date and time.' } : prev))
+      setRescheduleModal((prev) => (prev ? { ...prev, error: text.dashboard.selectValidDateTime } : prev))
       return
     }
     setRescheduleModal((prev) => (prev ? { ...prev, loading: true, error: null } : prev))
@@ -741,11 +792,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
       let error: string | null = null
       if (preview.hasConflicts && preview.conflicts.length) {
-        error = preview.conflicts[0].reason || 'Selected slot is not available.'
+        error = preview.conflicts[0].reason || text.dashboard.rescheduleSlotUnavailable
       }
       setRescheduleModal((prev) => (prev ? { ...prev, preview, loading: false, error } : prev))
     } catch (err: any) {
-      setRescheduleModal((prev) => (prev ? { ...prev, loading: false, error: err?.message || 'Preview could not be generated.' } : prev))
+      setRescheduleModal((prev) => (prev ? { ...prev, loading: false, error: err?.message || text.dashboard.reschedulePreviewFailed } : prev))
     }
   }
 
@@ -753,7 +804,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     if (!rescheduleModal || !stableMagicToken) return
     const base = new Date(`${rescheduleModal.date}T${rescheduleModal.time}:00`)
     if (Number.isNaN(base.getTime())) {
-      setRescheduleModal((prev) => (prev ? { ...prev, error: 'Please select a valid date and time.' } : prev))
+      setRescheduleModal((prev) => (prev ? { ...prev, error: text.dashboard.selectValidDateTime } : prev))
       return
     }
 
@@ -763,7 +814,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       return
     }
     if (preview.hasConflicts) {
-      setRescheduleModal((prev) => (prev ? { ...prev, error: preview.conflicts[0]?.reason || 'There is a scheduling conflict.' } : prev))
+      setRescheduleModal((prev) => (prev ? { ...prev, error: preview.conflicts[0]?.reason || text.dashboard.rescheduleConflict } : prev))
       return
     }
 
@@ -771,7 +822,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     for (const item of requiredManual) {
       if (!rescheduleModal.assignments[item.appointmentId]) {
         setRescheduleModal((prev) =>
-          prev ? { ...prev, error: `Please pick an available specialist for ${item.serviceName}.` } : prev,
+          prev ? { ...prev, error: `${text.dashboard.chooseSpecialistPrompt} (${item.serviceName})` } : prev,
         )
         return
       }
@@ -796,7 +847,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       setRescheduleModal(null)
       await reloadBookingContext()
     } catch (err: any) {
-      setRescheduleModal((prev) => (prev ? { ...prev, loading: false, error: err?.message || 'Reschedule failed.' } : prev))
+      setRescheduleModal((prev) => (prev ? { ...prev, loading: false, error: err?.message || text.dashboard.rescheduleFailed } : prev))
     }
   }
 
@@ -805,7 +856,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       .map((item) => String(item.serviceId || ''))
       .filter((id) => id)
     if (!serviceIds.length) {
-      alert('No service information found to repeat this appointment.')
+      alert(text.dashboard.noServiceToRepeat)
       return
     }
 
@@ -829,7 +880,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
 
     if (!selections.length) {
-      alert('These services are not available in current filter. Try changing gender filter.')
+      alert(text.dashboard.serviceFilterMismatch)
       return
     }
 
@@ -844,14 +895,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const handleCancelGroup = async (groupItems: BookingContextAppointment[]) => {
     if (!stableMagicToken) {
-      alert('Secure booking link is required to cancel this appointment.')
+      alert(text.dashboard.secureLinkRequiredCancel)
       return
     }
     const appointmentIds = groupItems
       .map((item) => Number(item.id))
       .filter((id) => Number.isInteger(id) && id > 0)
     if (!appointmentIds.length) return
-    if (!window.confirm('Cancel selected appointment(s)?')) return
+    if (!window.confirm(text.dashboard.cancelConfirm)) return
 
     try {
       await cancelBookingByToken({
@@ -860,13 +911,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       })
       await reloadBookingContext()
     } catch (err: any) {
-      alert(err?.message || 'Cancellation failed.')
+      alert(err?.message || text.dashboard.cancellationFailed)
     }
   }
 
   const openEvaluateModal = (groupItems: BookingContextAppointment[]) => {
     if (!stableMagicToken) {
-      alert('Secure booking link is required to submit feedback.')
+      alert(text.dashboard.secureLinkRequiredFeedback)
       return
     }
     const candidate = groupItems.find((item) => canEvaluateAppointment(item))
@@ -893,7 +944,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       setFeedbackModal(null)
       await reloadBookingContext()
     } catch (err: any) {
-      setFeedbackModal((prev) => (prev ? { ...prev, saving: false, error: err?.message || 'Feedback could not be saved.' } : prev))
+      setFeedbackModal((prev) => (prev ? { ...prev, saving: false, error: err?.message || text.dashboard.feedbackSaveFailed } : prev))
     }
   }
 
@@ -996,10 +1047,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   >
                     <div className="flex items-start gap-2 text-left">
                       <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
-                        <Package2 className="h-4 w-4" />
+                        <ClipboardList className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Membership Packages</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">{text.dashboard.packagesTitle}</p>
                       </div>
                     </div>
                     <div className="inline-flex items-center gap-1.5">
@@ -1019,16 +1070,16 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                               <p className="text-sm font-semibold text-foreground">{pkg.name}</p>
                               <p className="text-[11px] text-muted-foreground">
                                 {pkg.expiresAt
-                                  ? `Expires ${new Date(pkg.expiresAt).toLocaleDateString('en-GB', {
+                                  ? text.dashboard.packageExpiresLabel(new Date(pkg.expiresAt).toLocaleDateString(LOCALE_MAP[language], {
                                       day: '2-digit',
                                       month: 'short',
                                       year: 'numeric',
-                                    })}`
-                                  : 'No expiry date'}
+                                    }))
+                                  : text.dashboard.packageNoExpiry}
                               </p>
                             </div>
                             <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                              {pkg.serviceBalances.length} services
+                              {text.dashboard.packageServiceCountLabel(pkg.serviceBalances.length)}
                             </span>
                           </div>
 
@@ -1038,36 +1089,47 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                               const dynamicRemaining = Math.max(0, balance.remainingQuota - (packageUsageByKey[usageKey] || 0))
                               const ratio = balance.initialQuota > 0 ? dynamicRemaining / balance.initialQuota : 0
                               const ratioPercent = Math.max(0, Math.min(100, Math.round(ratio * 100)))
+                              const selected = isPackageServiceSelected(String(pkg.id), String(balance.serviceId))
+                              const disabled = !selected && dynamicRemaining <= 0
                               return (
-                                <button
+                                <div
                                   key={`${pkg.id}:${balance.serviceId}`}
-                                  type="button"
-                                  disabled={dynamicRemaining <= 0}
-                                  onClick={() =>
-                                    void handleAddFromPackage({
-                                      packageId: pkg.id,
-                                      serviceId: balance.serviceId,
-                                      serviceName: balance.serviceName || null,
-                                    })
-                                  }
-                                  className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/5 disabled:opacity-45 disabled:cursor-not-allowed"
+                                  className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/5"
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
                                       <Sparkles className="h-3.5 w-3.5 text-primary/80" />
-                                      {balance.serviceName || `Service #${balance.serviceId}`}
+                                      {balance.serviceName || `#${balance.serviceId}`}
                                     </p>
-                                    <p className="text-[11px] font-semibold text-primary">
-                                      {dynamicRemaining}/{balance.initialQuota}
-                                    </p>
+                                    <div className="inline-flex items-center gap-2">
+                                      <p className="text-[11px] font-semibold text-primary">
+                                        {dynamicRemaining}/{balance.initialQuota}
+                                      </p>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        disabled={disabled}
+                                        onClick={() =>
+                                          void handleAddFromPackage({
+                                            packageId: pkg.id,
+                                            serviceId: balance.serviceId,
+                                            serviceName: balance.serviceName || null,
+                                          })
+                                        }
+                                        className="h-7 rounded-full px-3 text-[10px] font-semibold"
+                                        variant={selected ? 'default' : 'outline'}
+                                      >
+                                        {selected ? text.dashboard.packageRemove : text.dashboard.packageAdd}
+                                      </Button>
+                                    </div>
                                   </div>
                                   <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
                                     <div className="h-full rounded-full bg-primary/70" style={{ width: `${ratioPercent}%` }} />
                                   </div>
                                   <p className="mt-1 text-[10px] text-muted-foreground">
-                                    {dynamicRemaining > 0 ? 'Use this balance for the current booking' : 'No quota left'}
+                                    {dynamicRemaining > 0 ? text.dashboard.packageQuotaHintUse : text.dashboard.packageQuotaHintEmpty}
                                   </p>
-                                </button>
+                                </div>
                               )
                             })}
                           </div>
@@ -1076,7 +1138,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     </div>
                   ) : packagesOpen ? (
                     <div className="rounded-lg border border-dashed border-primary/25 bg-background/70 px-3 py-3 text-xs text-muted-foreground">
-                      No active package found for this customer.
+                      {text.dashboard.packageNoActive}
                     </div>
                   ) : null}
                 </div>
@@ -1086,7 +1148,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 <div className="rounded-2xl border border-border bg-card/70 p-4 space-y-3">
                   <button
                     type="button"
-                    onClick={() => setAppointmentsOpen((prev) => !prev)}
+                    onClick={() =>
+                      setAppointmentsOpen((prev) => {
+                        const next = !prev
+                        if (!next) {
+                          setExpandedAppointmentGroupKey(null)
+                        }
+                        return next
+                      })
+                    }
                     className="w-full flex items-center justify-between"
                   >
                     <div className="flex items-start gap-2 text-left">
@@ -1094,7 +1164,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         <CalendarCheck2 className="h-4 w-4" />
                       </div>
                       <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">My Appointments</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">{text.dashboard.appointmentsTitle}</p>
                       </div>
                     </div>
                     <div className="inline-flex items-center gap-1.5">
@@ -1110,28 +1180,38 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       {[...customerAppointmentGroups].reverse().map((group) => {
                         const first = group.items[0]
                         const last = group.items[group.items.length - 1]
+                        const isExpanded = expandedAppointmentGroupKey === group.key
                         const statuses = Array.from(new Set(group.items.map((item) => String(item.status || '').toUpperCase())))
                         const serviceNames = Array.from(new Set(group.items.map((item) => item.serviceName).filter(Boolean)))
                         const staffNames = Array.from(new Set(group.items.map((item) => item.staffName).filter(Boolean)))
-                        const statusPills = statuses.map((status) => appointmentStatusMeta(status))
+                        const statusPills = statuses.map((status) => appointmentStatusMeta(status, text.dashboard))
+                        const groupTotal = group.items.reduce((sum, item) => sum + (item.servicePrice || 0), 0)
                         return (
                         <div key={group.key} className="rounded-xl border border-border bg-background p-3 text-xs space-y-2">
-                          <div className="flex items-start justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedAppointmentGroupKey((prev) => (prev === group.key ? null : group.key))}
+                            className="w-full flex items-start justify-between gap-2 text-left"
+                          >
                             <div>
                               <p className="font-semibold text-foreground">
-                                {new Date(first.startTime).toLocaleDateString('en-GB', {
+                                {new Date(first.startTime).toLocaleDateString(LOCALE_MAP[language], {
                                   day: '2-digit',
                                   month: 'short',
                                   year: 'numeric',
                                 })}
                               </p>
                               <p className="text-[11px] text-muted-foreground">
-                                {new Date(first.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(first.startTime).toLocaleTimeString(LOCALE_MAP[language], { hour: '2-digit', minute: '2-digit' })}
                                 {' - '}
-                                {new Date(last.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(last.endTime).toLocaleTimeString(LOCALE_MAP[language], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              <p className="text-[11px] font-semibold text-foreground mt-0.5">
+                                {text.dashboard.totalLabel}: {groupTotal > 0 ? `${groupTotal}₺` : text.dashboard.paymentFreeLabel}
                               </p>
                             </div>
-                            <div className="flex flex-wrap justify-end gap-1">
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex flex-wrap justify-end gap-1">
                               {statusPills.map((pill, index) => (
                                 <span
                                   key={`${group.key}:status:${index}`}
@@ -1140,10 +1220,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   {pill.label}
                                 </span>
                               ))}
+                              </div>
+                              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                             </div>
-                          </div>
+                          </button>
 
-                          {serviceNames.length ? (
+                          {isExpanded && serviceNames.length ? (
                             <div className="flex flex-wrap gap-1">
                               {serviceNames.map((serviceName) => (
                                 <span
@@ -1156,16 +1238,17 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             </div>
                           ) : null}
 
-                          {staffNames.length ? (
+                          {isExpanded && staffNames.length ? (
                             <p className="text-[11px] text-muted-foreground">
-                              Specialist: {staffNames.join(', ')}
+                              {text.dashboard.specialistLabel}: {staffNames.join(', ')}
                             </p>
                           ) : null}
 
-                          {group.items.some((item) => item.rescheduledFromAppointmentId) ? (
-                            <p className="text-[10px] font-medium text-violet-600">Includes rescheduled record</p>
+                          {isExpanded && group.items.some((item) => item.rescheduledFromAppointmentId) ? (
+                            <p className="text-[10px] font-medium text-violet-600">{text.dashboard.includesRescheduledRecord}</p>
                           ) : null}
 
+                          {isExpanded ? (
                           <div className="pt-1 space-y-1.5">
                             <div className="grid grid-cols-2 gap-1.5">
                               <button
@@ -1174,7 +1257,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                 className="inline-flex items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/40"
                               >
                                 <RefreshCcw className="h-3.5 w-3.5" />
-                                Repeat
+                                {text.dashboard.actionRepeat}
                               </button>
                               {group.cancelableItems.length ? (
                                 <button
@@ -1183,7 +1266,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   className="inline-flex items-center justify-center gap-1 rounded-lg border border-rose-300/50 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-500/15"
                                 >
                                   <Ban className="h-3.5 w-3.5" />
-                                  Cancel
+                                  {text.dashboard.actionCancel}
                                 </button>
                               ) : null}
                             </div>
@@ -1195,7 +1278,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                               className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
                             >
                               <PencilLine className="h-3.5 w-3.5" />
-                              Update Appointment
+                              {text.dashboard.actionUpdate}
                             </button>
                             ) : null}
 
@@ -1206,17 +1289,18 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                 className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-amber-300/50 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/15"
                               >
                                 <Star className="h-3.5 w-3.5" />
-                                Evaluate
+                                {text.dashboard.actionEvaluate}
                               </button>
                             ) : null}
                           </div>
+                          ) : null}
                         </div>
                         )
                       })}
                     </div>
                   ) : appointmentsOpen ? (
                     <div className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
-                      No appointments found yet.
+                      {text.dashboard.appointmentsEmpty}
                     </div>
                   ) : null}
                 </div>
@@ -1253,12 +1337,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   {isSelected && <Check className="w-4 h-4 text-primary" />}
                                   {packageCount > 0 ? (
                                     <span className="text-[10px] rounded-full bg-primary/15 text-primary px-2 py-0.5">
-                                      package x{packageCount}
+                                      {text.dashboard.packageBadge} x{packageCount}
                                     </span>
                                   ) : null}
                                   {totalCount > packageCount ? (
                                     <span className="text-[10px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                                      manual x{totalCount - packageCount}
+                                      {text.dashboard.manualBadge} x{totalCount - packageCount}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1267,7 +1351,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                               <div className="text-right">
                                 {displayPrice && displayPrice > 0 && <p className="text-sm font-bold text-secondary">{displayPrice}₺</p>}
                                 <Button size="sm" onClick={() => handleServiceToggle(service, category.name)} variant={isSelected ? 'default' : 'outline'} className="mt-2 rounded-full text-xs font-semibold">
-                                  {isSelected ? `Remove Manual` : text.add}
+                                  {isSelected ? text.dashboard.removeManual : text.add}
                                 </Button>
                               </div>
                             </div>
@@ -1365,7 +1449,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         <div className="fixed inset-0 bg-black/50 flex items-end z-[60] animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">Update Appointment</h3>
+              <h3 className="text-lg font-bold text-foreground">{text.dashboard.rescheduleTitle}</h3>
               <button
                 type="button"
                 onClick={() => (rescheduleModal.loading ? undefined : setRescheduleModal(null))}
@@ -1376,12 +1460,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Select a new start date and time. Back-to-back services will move together and keep their duration.
+              {text.dashboard.rescheduleDescription}
             </p>
 
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1 text-xs">
-                <span className="text-muted-foreground">Date</span>
+                <span className="text-muted-foreground">{text.dashboard.dateLabel}</span>
                 <input
                   type="date"
                   value={rescheduleModal.date}
@@ -1392,7 +1476,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 />
               </label>
               <label className="space-y-1 text-xs">
-                <span className="text-muted-foreground">Time</span>
+                <span className="text-muted-foreground">{text.dashboard.timeLabel}</span>
                 <input
                   type="time"
                   value={rescheduleModal.time}
@@ -1410,7 +1494,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               disabled={rescheduleModal.loading}
               className="w-full rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary disabled:opacity-60"
             >
-              {rescheduleModal.loading ? 'Checking...' : 'Check Availability'}
+              {rescheduleModal.loading ? text.dashboard.checkingLabel : text.dashboard.checkAvailabilityLabel}
             </button>
 
             {rescheduleModal.error ? (
@@ -1427,15 +1511,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold">{item.serviceName}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          {new Date(item.newStartTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(item.newStartTime).toLocaleTimeString(LOCALE_MAP[language], { hour: '2-digit', minute: '2-digit' })}
                           {' - '}
-                          {new Date(item.newEndTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(item.newEndTime).toLocaleTimeString(LOCALE_MAP[language], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
 
                       {item.needsManualChoice ? (
                         <div className="space-y-1">
-                          <p className="text-[11px] text-muted-foreground">Preferred specialist is unavailable. Please choose one:</p>
+                          <p className="text-[11px] text-muted-foreground">{text.dashboard.chooseSpecialistPrompt}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {availableCandidates.map((candidate) => (
                               <button
@@ -1467,7 +1551,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         </div>
                       ) : selectedCandidateId ? (
                         <p className="text-[11px] text-muted-foreground">
-                          Specialist: {item.candidates.find((candidate) => candidate.staffId === selectedCandidateId)?.name || `#${selectedCandidateId}`}
+                          {text.dashboard.specialistLabel}: {item.candidates.find((candidate) => candidate.staffId === selectedCandidateId)?.name || `#${selectedCandidateId}`}
                         </p>
                       ) : null}
                     </div>
@@ -1484,7 +1568,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={() => setRescheduleModal(null)}
                 className="flex-1 rounded-full"
               >
-                Cancel
+                {text.dashboard.cancelButton}
               </Button>
               <Button
                 type="button"
@@ -1492,7 +1576,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={() => void commitRescheduleFromModal()}
                 className="flex-1 rounded-full bg-primary text-primary-foreground"
               >
-                {rescheduleModal.loading ? 'Saving...' : 'Confirm Update'}
+                {rescheduleModal.loading ? text.dashboard.savingLabel : text.dashboard.confirmUpdateLabel}
               </Button>
             </div>
           </div>
@@ -1628,11 +1712,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 space-y-4">
                 <div>
                     <p className="text-xs text-muted-foreground uppercase font-bold">{text.dateAndTime}</p>
-                    <p className="text-base font-bold">{selectedDate} Mart - {selectedTimeSlot}</p>
+                    <p className="text-base font-bold">
+                      {selectedDate ? new Date(new Date().getFullYear(), new Date().getMonth(), Number(selectedDate)).toLocaleDateString(LOCALE_MAP[language], { day: '2-digit', month: 'short' }) : '-'} - {selectedTimeSlot}
+                    </p>
                 </div>
                 <div>
                     <p className="text-xs text-muted-foreground uppercase font-bold">{text.details}</p>
-                    <p className="text-sm font-medium">{calculateTotalDuration()} min • {numberOfPeople} {text.people}</p>
+                    <p className="text-sm font-medium">{calculateTotalDuration()} {text.dashboard.minuteUnit} • {numberOfPeople} {text.people}</p>
                 </div>
                 <div className="pt-2 border-t border-primary/10">
                     <p className="text-xs text-muted-foreground uppercase font-bold mb-1">{text.services}</p>
@@ -1641,10 +1727,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             <span>
                               {entry.service.name}
                               {entry.source === 'PACKAGE' ? (
-                                <span className="ml-2 text-[10px] text-primary font-bold">paketten</span>
+                                <span className="ml-2 text-[10px] text-primary font-bold">{text.dashboard.fromPackageLabel}</span>
                               ) : null}
                             </span>
-                            <span>{entry.source === 'PACKAGE' ? '0₺' : `${entry.service.salePrice || entry.service.originalPrice}₺`}</span>
+                            <span>{entry.source === 'PACKAGE' ? text.dashboard.paymentFreeLabel : `${entry.service.salePrice || entry.service.originalPrice}₺`}</span>
                         </p>
                     ))}
                 </div>
