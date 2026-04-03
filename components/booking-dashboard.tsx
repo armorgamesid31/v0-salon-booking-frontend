@@ -81,6 +81,13 @@ type RescheduleModalState = {
   error: string | null
 }
 
+type SelectedServiceEntry = {
+  entryId: string
+  service: ImportedServiceItem
+  source: 'MANUAL' | 'PACKAGE'
+  packageId?: string
+}
+
 const getMagicToken = (params: URLSearchParams): string | null => {
   const direct = params.get('token')
   if (direct) return direct
@@ -190,9 +197,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [specialistModal, setSpecialistModal] = useState<{service: ImportedServiceItem, staff: Employee[]} | null>(null)
   const [selectedSpecialistIds, setSelectedSpecialistIds] = useState<Record<string, string>>({})
-  const [selectedPackageByService, setSelectedPackageByService] = useState<Record<string, string>>({})
   const [packageUsageByKey, setPackageUsageByKey] = useState<Record<string, number>>({})
-  const [selectedServices, setSelectedServices] = useState<ImportedServiceItem[]>([])
+  const [selectedServices, setSelectedServices] = useState<SelectedServiceEntry[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [selectedGender, setSelectedGender] = useState<'female' | 'male'>('female')
@@ -226,6 +232,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [isBooking, setIsBooking] = useState(false)
   const [lastAppointmentDetails, setLastAppointmentDetails] = useState<any>(null)
   const [logoError, setLogoError] = useState(false)
+  const [packagesOpen, setPackagesOpen] = useState(true)
+  const [appointmentsOpen, setAppointmentsOpen] = useState(true)
 
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
@@ -334,11 +342,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [isKnownCustomer, customerName, text, language])
 
   // Calculate current price based on overrides
-  const totalPrice = selectedServices.reduce((sum, s) => {
-    if (selectedPackageByService[s.id]) {
-      return sum;
+  const totalPrice = selectedServices.reduce((sum, entry) => {
+    if (entry.source === 'PACKAGE') {
+      return sum
     }
-    return sum + (s.salePrice || s.originalPrice || 0);
+    const service = entry.service
+    return sum + (service.salePrice || service.originalPrice || 0)
   }, 0);
 
   const flatServiceCatalog = useMemo(() => {
@@ -448,7 +457,6 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       if (salonId) {
           getServices(salonId, selectedGender).then(setAvailableServices)
           setSelectedServices([])
-          setSelectedPackageByService({})
           setPackageUsageByKey({})
           setSelectedDate(null)
           setSelectedTimeSlot(null)
@@ -464,7 +472,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const day = String(selectedDate).padStart(2, '0')
         const dateStr = `${year}-${month}-${day}`
 
-        checkAvailability(salonId, selectedServices[0].id, dateStr, numberOfPeople)
+        checkAvailability(salonId, selectedServices[0].service.id, dateStr, numberOfPeople)
             .then(res => {
                 if (res.available && res.slots) {
                     setAvailableSlots(res.slots.map(s => ({ time: s, available: true })))
@@ -476,10 +484,19 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [selectedDate, selectedServices, numberOfPeople, salonId])
 
   const calculateTotalDuration = () => {
-    return selectedServices.reduce((sum, service) => {
-        return sum + (parseInt(service.duration) || 0);
+    return selectedServices.reduce((sum, entry) => {
+        return sum + (parseInt(entry.service.duration) || 0);
     }, 0);
   }
+
+  const countSelectedService = (serviceId: string, source?: 'MANUAL' | 'PACKAGE') => {
+    return selectedServices.filter(
+      (entry) => entry.service.id === serviceId && (!source || entry.source === source),
+    ).length
+  }
+
+  const buildEntryId = (serviceId: string) =>
+    `${serviceId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`
 
   const handleServiceToggle = async (service: any, categoryName: string) => {
     const serviceData: ImportedServiceItem = {
@@ -491,26 +508,24 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       requiresSpecialist: service.requiresSpecialist
     }
 
-    const isCurrentlySelected = selectedServices.some(s => s.id === service.id)
-
-    if (isCurrentlySelected) {
-      const existingPackageId = selectedPackageByService[service.id]
-      setSelectedServices(prev => prev.filter(s => s.id !== service.id))
-      const newStaffIds = { ...selectedSpecialistIds };
-      delete newStaffIds[service.id];
-      setSelectedSpecialistIds(newStaffIds);
-      const newPackageIds = { ...selectedPackageByService };
-      delete newPackageIds[service.id];
-      setSelectedPackageByService(newPackageIds);
-      if (existingPackageId) {
-        const usageKey = packageUsageKey(existingPackageId, String(service.id))
-        setPackageUsageByKey((prev) => ({
-          ...prev,
-          [usageKey]: Math.max(0, (prev[usageKey] || 0) - 1),
-        }))
-      }
+    const manualCount = countSelectedService(service.id, 'MANUAL')
+    if (manualCount > 0) {
+      setSelectedServices((prev) => {
+        const index = prev.findIndex((entry) => entry.service.id === service.id && entry.source === 'MANUAL')
+        if (index === -1) return prev
+        const next = [...prev]
+        next.splice(index, 1)
+        return next
+      })
     } else {
-      setSelectedServices(prev => [...prev, serviceData])
+      setSelectedServices((prev) => [
+        ...prev,
+        {
+          entryId: buildEntryId(service.id),
+          service: serviceData,
+          source: 'MANUAL',
+        },
+      ])
       // If specialist is required, only show modal if there's more than one choice.
       // If only one staff member exists, they will be auto-assigned.
       if (service.requiresSpecialist) {
@@ -526,7 +541,6 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const handleAddFromPackage = async (input: { packageId: string; serviceId: string; serviceName?: string | null }) => {
     const { packageId, serviceId } = input
-    const wasSelected = selectedServices.some((s) => s.id === serviceId)
     const matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
 
     if (!matched) {
@@ -534,33 +548,41 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       return
     }
 
-    if (!wasSelected) {
-      await handleServiceToggle(matched.service, matched.categoryName)
-    }
-
-    const previousPackageId = selectedPackageByService[serviceId]
-    if (previousPackageId && previousPackageId !== packageId) {
-      const prevUsageKey = packageUsageKey(previousPackageId, serviceId)
-      setPackageUsageByKey((prev) => ({
-        ...prev,
-        [prevUsageKey]: Math.max(0, (prev[prevUsageKey] || 0) - 1),
-      }))
-    }
-
     const usageKey = packageUsageKey(packageId, serviceId)
-    if (!wasSelected || previousPackageId !== packageId) {
-      setPackageUsageByKey((prev) => ({
-        ...prev,
-        [usageKey]: (prev[usageKey] || 0) + 1,
-      }))
+    const pkg = activePackages.find((p) => p.id === packageId)
+    const balance = pkg?.serviceBalances.find((b) => b.serviceId === serviceId)
+    const dynamicRemaining = balance
+      ? Math.max(0, balance.remainingQuota - (packageUsageByKey[usageKey] || 0))
+      : 0
+    if (dynamicRemaining <= 0) {
+      alert('No quota left for this service in selected package.')
+      return
     }
 
-    // If it is currently selected after toggle, mark selected package for this service.
-    setSelectedPackageByService((prev) => {
-      const next = { ...prev }
-      next[serviceId] = packageId
-      return next
-    })
+    const serviceData: ImportedServiceItem = {
+      id: matched.service.id,
+      name: `${matched.categoryName} - ${matched.service.name}`,
+      originalPrice: matched.service.originalPrice || matched.service.salePrice || 0,
+      salePrice: matched.service.salePrice,
+      duration: matched.service.duration,
+      requiresSpecialist: matched.service.requiresSpecialist,
+    }
+
+    setSelectedServices((prev) => [
+      ...prev,
+      {
+        entryId: buildEntryId(serviceId),
+        service: serviceData,
+        source: 'PACKAGE',
+        packageId,
+      },
+    ])
+    setPackageUsageByKey((prev) => ({
+      ...prev,
+      [usageKey]: (prev[usageKey] || 0) + 1,
+    }))
+    setSelectedDate(null)
+    setSelectedTimeSlot(null)
   }
 
   const handleConfirmAppointment = async () => {
@@ -575,16 +597,16 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const dateStr = `${year}-${month}-${day}`
 
         const res = await createAppointment(salonId, customerId, {
-            services: selectedServices.map(s => ({
-                serviceId: s.id,
-                employeeId: selectedSpecialistIds[s.id],
-                duration: s.duration
+            services: selectedServices.map(entry => ({
+                serviceId: entry.service.id,
+                employeeId: selectedSpecialistIds[entry.service.id],
+                duration: entry.service.duration
             })),
             packageSelections: selectedServices
-              .filter((s) => Boolean(selectedPackageByService[s.id]))
-              .map((s) => ({
-                serviceId: s.id,
-                customerPackageId: selectedPackageByService[s.id],
+              .filter((entry) => entry.source === 'PACKAGE' && Boolean(entry.packageId))
+              .map((entry) => ({
+                serviceId: entry.service.id,
+                customerPackageId: String(entry.packageId),
               })),
             date: dateStr,
             time: selectedTimeSlot,
@@ -604,7 +626,6 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             setShowConfirmationModal(false);
             setShowSuccessModal(true);
             setSelectedServices([]);
-            setSelectedPackageByService({});
             setPackageUsageByKey({});
             setSelectedDate(null);
             setSelectedTimeSlot(null);
@@ -755,18 +776,21 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       return
     }
 
-    const uniqueServiceIds = Array.from(new Set(serviceIds))
-    const selections: ImportedServiceItem[] = []
-    for (const serviceId of uniqueServiceIds) {
+    const selections: SelectedServiceEntry[] = []
+    for (const serviceId of serviceIds) {
       const matched = flatServiceCatalog.find((row) => row.service.id === serviceId)
       if (matched) {
         selections.push({
-          id: matched.service.id,
-          name: `${matched.categoryName} - ${matched.service.name}`,
-          originalPrice: matched.service.originalPrice || matched.service.salePrice || 0,
-          salePrice: matched.service.salePrice,
-          duration: matched.service.duration,
-          requiresSpecialist: matched.service.requiresSpecialist,
+          entryId: buildEntryId(matched.service.id),
+          source: 'MANUAL',
+          service: {
+            id: matched.service.id,
+            name: `${matched.categoryName} - ${matched.service.name}`,
+            originalPrice: matched.service.originalPrice || matched.service.salePrice || 0,
+            salePrice: matched.service.salePrice,
+            duration: matched.service.duration,
+            requiresSpecialist: matched.service.requiresSpecialist,
+          },
         })
       }
     }
@@ -777,7 +801,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
 
     setSelectedServices(selections)
-    setSelectedPackageByService({})
+    setPackageUsageByKey({})
     setSelectedSpecialistIds({})
     setSelectedDate(null)
     setSelectedTimeSlot(null)
@@ -925,22 +949,28 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
               {isKnownCustomer ? (
                 <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-background p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPackagesOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-start gap-2 text-left">
                       <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
                         <Package2 className="h-4 w-4" />
                       </div>
                       <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Membership Packages</p>
-                      <p className="text-xs text-muted-foreground">Tap a service balance to add it directly to this booking.</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Membership Packages</p>
                       </div>
                     </div>
-                    <span className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-[11px] font-semibold text-primary">
-                      {activePackages.length} active
-                    </span>
-                  </div>
+                    <div className="inline-flex items-center gap-1.5">
+                      <span className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-[11px] font-semibold text-primary">
+                        {activePackages.length}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-primary transition-transform ${packagesOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
 
-                  {activePackages.length ? (
+                  {packagesOpen && activePackages.length ? (
                     <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                       {activePackages.map((pkg) => (
                         <div key={pkg.id} className="rounded-xl border border-primary/20 bg-background/80 p-3 space-y-2.5">
@@ -1004,32 +1034,38 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         </div>
                       ))}
                     </div>
-                  ) : (
+                  ) : packagesOpen ? (
                     <div className="rounded-lg border border-dashed border-primary/25 bg-background/70 px-3 py-3 text-xs text-muted-foreground">
                       No active package found for this customer.
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : null}
 
               {isKnownCustomer ? (
                 <div className="rounded-2xl border border-border bg-card/70 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAppointmentsOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <div className="flex items-start gap-2 text-left">
                       <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
                         <CalendarCheck2 className="h-4 w-4" />
                       </div>
                       <div>
                       <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">My Appointments</p>
-                      <p className="text-xs text-muted-foreground">Upcoming and recent visits in one timeline.</p>
                       </div>
                     </div>
-                    <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
-                      {customerAppointmentGroups.length} records
-                    </span>
-                  </div>
+                    <div className="inline-flex items-center gap-1.5">
+                      <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                        {customerAppointmentGroups.length}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${appointmentsOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
 
-                  {customerAppointmentGroups.length ? (
+                  {appointmentsOpen && customerAppointmentGroups.length ? (
                     <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                       {[...customerAppointmentGroups].reverse().map((group) => {
                         const first = group.items[0]
@@ -1144,11 +1180,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         )
                       })}
                     </div>
-                  ) : (
+                  ) : appointmentsOpen ? (
                     <div className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
                       No appointments found yet.
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : null}
           </div>
@@ -1169,8 +1205,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 {expandedCategory === category.id && (
                   <CardContent className="pt-4 pb-4 px-4 border-t border-border space-y-3">
                     {category.services.map((service) => {
-                      const isSelected = selectedServices.some(s => s.id === service.id);
-                      const selectedFromPackage = selectedPackageByService[service.id];
+                      const totalCount = countSelectedService(service.id)
+                      const packageCount = countSelectedService(service.id, 'PACKAGE')
+                      const isSelected = totalCount > 0
                       const displayPrice = service.salePrice || service.originalPrice;
                       return (
                         <div key={service.id} className="w-full text-left">
@@ -1180,15 +1217,24 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                 <div className="flex items-center gap-2">
                                   <p className="font-medium text-foreground text-sm">{service.name}</p>
                                   {isSelected && <Check className="w-4 h-4 text-primary" />}
-                                  {selectedFromPackage ? (
-                                    <span className="text-[10px] rounded-full bg-primary/15 text-primary px-2 py-0.5">paket</span>
+                                  {packageCount > 0 ? (
+                                    <span className="text-[10px] rounded-full bg-primary/15 text-primary px-2 py-0.5">
+                                      package x{packageCount}
+                                    </span>
+                                  ) : null}
+                                  {totalCount > packageCount ? (
+                                    <span className="text-[10px] rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                      manual x{totalCount - packageCount}
+                                    </span>
                                   ) : null}
                                 </div>
                                 <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><Clock className="w-3 h-3" />{service.duration}</span>
                               </div>
                               <div className="text-right">
                                 {displayPrice && displayPrice > 0 && <p className="text-sm font-bold text-secondary">{displayPrice}₺</p>}
-                                <Button size="sm" onClick={() => handleServiceToggle(service, category.name)} variant={isSelected ? 'default' : 'outline'} className="mt-2 rounded-full text-xs font-semibold">{isSelected ? text.added : text.add}</Button>
+                                <Button size="sm" onClick={() => handleServiceToggle(service, category.name)} variant={isSelected ? 'default' : 'outline'} className="mt-2 rounded-full text-xs font-semibold">
+                                  {isSelected ? `Remove Manual` : text.add}
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -1556,15 +1602,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 </div>
                 <div className="pt-2 border-t border-primary/10">
                     <p className="text-xs text-muted-foreground uppercase font-bold mb-1">{text.services}</p>
-                    {selectedServices.map(s => (
-                        <p key={s.id} className="text-sm font-medium flex justify-between">
+                    {selectedServices.map((entry) => (
+                        <p key={entry.entryId} className="text-sm font-medium flex justify-between">
                             <span>
-                              {s.name}
-                              {selectedPackageByService[s.id] ? (
+                              {entry.service.name}
+                              {entry.source === 'PACKAGE' ? (
                                 <span className="ml-2 text-[10px] text-primary font-bold">paketten</span>
                               ) : null}
                             </span>
-                            <span>{s.salePrice || s.originalPrice}₺</span>
+                            <span>{entry.source === 'PACKAGE' ? '0₺' : `${entry.service.salePrice || entry.service.originalPrice}₺`}</span>
                         </p>
                     ))}
                 </div>
@@ -1590,7 +1636,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       <p className="text-sm text-muted-foreground">{text.successInfo}</p>
                       <div className="bg-muted/30 p-4 rounded-2xl text-sm space-y-1">
                           <p className="font-bold">{lastAppointmentDetails?.date} • {lastAppointmentDetails?.time}</p>
-                          <p className="text-xs opacity-70">{lastAppointmentDetails?.services.map((s: any) => s.name).join(', ')}</p>
+                          <p className="text-xs opacity-70">{lastAppointmentDetails?.services.map((entry: any) => entry.service?.name || '').join(', ')}</p>
                       </div>
                       <Button onClick={() => setShowSuccessModal(false)} className="w-full rounded-full py-3 bg-primary text-primary-foreground font-bold">{text.successButton}</Button>
                   </CardContent>
