@@ -102,6 +102,44 @@ const toInputTime = (iso: string): string => {
   return `${hours}:${minutes}`
 }
 
+const appointmentStatusMeta = (status: string) => {
+  const normalized = String(status || '').trim().toUpperCase()
+  if (normalized === 'COMPLETED') {
+    return {
+      label: 'Completed',
+      className: 'border-emerald-400/35 bg-emerald-500/10 text-emerald-700',
+    }
+  }
+  if (normalized === 'CANCELLED') {
+    return {
+      label: 'Cancelled',
+      className: 'border-slate-400/35 bg-slate-500/10 text-slate-700',
+    }
+  }
+  if (normalized === 'NO_SHOW') {
+    return {
+      label: 'No-show',
+      className: 'border-amber-400/35 bg-amber-500/10 text-amber-700',
+    }
+  }
+  if (normalized === 'CONFIRMED') {
+    return {
+      label: 'Confirmed',
+      className: 'border-sky-400/35 bg-sky-500/10 text-sky-700',
+    }
+  }
+  if (normalized === 'UPDATED') {
+    return {
+      label: 'Updated',
+      className: 'border-violet-400/35 bg-violet-500/10 text-violet-700',
+    }
+  }
+  return {
+    label: 'Booked',
+    className: 'border-primary/35 bg-primary/10 text-primary',
+  }
+}
+
 const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const searchParams = useSearchParams()
   const searchParamsString = searchParams.toString()
@@ -714,87 +752,179 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               </div>
 
               {isKnownCustomer ? (
-                <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2">
-                  <p className="text-xs font-bold uppercase text-primary">Paket Haklarım</p>
+                <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-background p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Membership Packages</p>
+                      <p className="text-xs text-muted-foreground">Tap a service balance to add it directly to this booking.</p>
+                    </div>
+                    <span className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-[11px] font-semibold text-primary">
+                      {activePackages.length} active
+                    </span>
+                  </div>
+
                   {activePackages.length ? (
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                       {activePackages.map((pkg) => (
-                        <div key={pkg.id} className="rounded-lg border border-primary/20 bg-background/70 p-2">
-                          <p className="text-xs font-semibold">
-                            {pkg.name}
-                            {pkg.expiresAt ? (
-                              <span className="text-[10px] text-muted-foreground ml-2">
-                                ({new Date(pkg.expiresAt).toLocaleDateString('tr-TR')})
-                              </span>
-                            ) : null}
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {pkg.serviceBalances.map((balance) => (
-                              <button
-                                key={`${pkg.id}:${balance.serviceId}`}
-                                type="button"
-                                onClick={() =>
-                                  void handleAddFromPackage({
-                                    packageId: pkg.id,
-                                    serviceId: balance.serviceId,
-                                    serviceName: balance.serviceName || null,
-                                  })
-                                }
-                                className="rounded-full border border-primary/30 bg-background px-2 py-1 text-[10px] hover:bg-primary/10"
-                              >
-                                {(balance.serviceName || `#${balance.serviceId}`)} {balance.remainingQuota}/{balance.initialQuota}
-                              </button>
-                            ))}
+                        <div key={pkg.id} className="rounded-xl border border-primary/20 bg-background/80 p-3 space-y-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{pkg.name}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {pkg.expiresAt
+                                  ? `Expires ${new Date(pkg.expiresAt).toLocaleDateString('en-GB', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}`
+                                  : 'No expiry date'}
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                              {pkg.serviceBalances.length} services
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {pkg.serviceBalances.map((balance) => {
+                              const ratio = balance.initialQuota > 0 ? balance.remainingQuota / balance.initialQuota : 0
+                              const ratioPercent = Math.max(0, Math.min(100, Math.round(ratio * 100)))
+                              return (
+                                <button
+                                  key={`${pkg.id}:${balance.serviceId}`}
+                                  type="button"
+                                  onClick={() =>
+                                    void handleAddFromPackage({
+                                      packageId: pkg.id,
+                                      serviceId: balance.serviceId,
+                                      serviceName: balance.serviceName || null,
+                                    })
+                                  }
+                                  className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-primary/5"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-xs font-semibold text-foreground">
+                                      {balance.serviceName || `Service #${balance.serviceId}`}
+                                    </p>
+                                    <p className="text-[11px] font-semibold text-primary">
+                                      {balance.remainingQuota}/{balance.initialQuota}
+                                    </p>
+                                  </div>
+                                  <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full rounded-full bg-primary/70" style={{ width: `${ratioPercent}%` }} />
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-muted-foreground">Use this balance for the current booking</p>
+                                </button>
+                              )
+                            })}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Aktif paket bulunmuyor.</p>
+                    <div className="rounded-lg border border-dashed border-primary/25 bg-background/70 px-3 py-3 text-xs text-muted-foreground">
+                      No active package found for this customer.
+                    </div>
                   )}
                 </div>
               ) : null}
 
               {isKnownCustomer ? (
-                <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
-                  <p className="text-xs font-bold uppercase text-foreground">My Appointments</p>
+                <div className="rounded-2xl border border-border bg-card/70 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">My Appointments</p>
+                      <p className="text-xs text-muted-foreground">Upcoming and recent visits in one timeline.</p>
+                    </div>
+                    <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                      {customerAppointmentGroups.length} records
+                    </span>
+                  </div>
+
                   {customerAppointmentGroups.length ? (
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                       {[...customerAppointmentGroups].reverse().map((group) => {
                         const first = group.items[0]
                         const last = group.items[group.items.length - 1]
                         const statuses = Array.from(new Set(group.items.map((item) => String(item.status || '').toUpperCase())))
                         const serviceNames = Array.from(new Set(group.items.map((item) => item.serviceName).filter(Boolean)))
                         const staffNames = Array.from(new Set(group.items.map((item) => item.staffName).filter(Boolean)))
+                        const statusPills = statuses.map((status) => appointmentStatusMeta(status))
                         return (
-                        <div key={group.key} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-semibold">
-                              {new Date(first.startTime).toLocaleDateString('tr-TR')} {new Date(first.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                              {' - '}
-                              {new Date(last.endTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <span className="text-muted-foreground">{statuses.join(', ')}</span>
+                        <div key={group.key} className="rounded-xl border border-border bg-background p-3 text-xs space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold text-foreground">
+                                {new Date(first.startTime).toLocaleDateString('en-GB', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {new Date(first.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                {' - '}
+                                {new Date(last.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {statusPills.map((pill, index) => (
+                                <span
+                                  key={`${group.key}:status:${index}`}
+                                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${pill.className}`}
+                                >
+                                  {pill.label}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          {serviceNames.length ? <p className="mt-1 text-[11px] text-muted-foreground">{serviceNames.join(', ')}</p> : null}
-                          {staffNames.length ? <p className="text-[11px] text-muted-foreground">{staffNames.join(', ')}</p> : null}
+
+                          {serviceNames.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {serviceNames.map((serviceName) => (
+                                <span
+                                  key={`${group.key}:service:${serviceName}`}
+                                  className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-foreground"
+                                >
+                                  {serviceName}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+
+                          {staffNames.length ? (
+                            <p className="text-[11px] text-muted-foreground">
+                              Specialist: {staffNames.join(', ')}
+                            </p>
+                          ) : null}
+
+                          {group.items.some((item) => item.rescheduledFromAppointmentId) ? (
+                            <p className="text-[10px] font-medium text-violet-600">Includes rescheduled record</p>
+                          ) : null}
+
                           {stableMagicToken && group.canUpdate ? (
-                            <div className="mt-2">
+                            <div className="pt-1">
                               <button
                                 type="button"
                                 onClick={() => openRescheduleModalForGroup(group.items)}
-                                className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
+                                className="w-full rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
                               >
                                 Update Appointment
                               </button>
                             </div>
-                          ) : null}
+                          ) : (
+                            <div className="pt-1">
+                              <p className="text-[10px] text-muted-foreground">Updates are available for future booked/confirmed visits.</p>
+                            </div>
+                          )}
                         </div>
                         )
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">No appointments yet.</p>
+                    <div className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
+                      No appointments found yet.
+                    </div>
                   )}
                 </div>
               ) : null}
