@@ -100,6 +100,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [salonData, setSalonData] = useState<any>(null)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
   const [activePackages, setActivePackages] = useState<ActiveCustomerPackage[]>([])
+  const [recentAppointments, setRecentAppointments] = useState<Array<{
+    id: string
+    startTime: string
+    endTime: string
+    status: string
+  }>>([])
   const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
   const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE)
   const [runtimeContent, setRuntimeContent] = useState<RuntimeContentMap>({})
@@ -259,9 +265,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           setOriginPhone(context.originPhone || null)
           setOriginInstagramId(context.originInstagramId || null)
           setActivePackages(context.activePackages || [])
+          setRecentAppointments(context.appointments || [])
           if (context.isKnownCustomer && context.customerId) {
             setCustomerId(context.customerId)
             setCustomerName(context.customerName || '')
+          } else {
+            setCustomerId(null)
+            setCustomerName('')
           }
           if (!context.isKnownCustomer) {
             const normalizedGender = context.customerGender === 'male' ? 'male' : 'female'
@@ -278,14 +288,22 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         } else {
           const fallbackSalonId = searchParams.get('salonId') || '1';
           setSalonId(fallbackSalonId);
+          setIsKnownCustomer(false);
+          setCustomerId(null);
+          setCustomerName('');
           setActivePackages([]);
+          setRecentAppointments([]);
           loadSalonAndServices(fallbackSalonId, selectedGender);
         }
       })
     } else {
         const sId = searchParams.get('salonId') || '1';
         setSalonId(sId)
+        setIsKnownCustomer(false);
+        setCustomerId(null);
+        setCustomerName('');
         setActivePackages([]);
+        setRecentAppointments([]);
         loadSalonAndServices(sId, selectedGender);
     }
   }, [searchParams, forcedLanguage, stableMagicToken])
@@ -533,41 +551,67 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 <input type="text" placeholder={text.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl bg-muted/30 text-foreground placeholder-muted-foreground focus:outline-none focus:bg-muted/50 transition-colors" />
               </div>
 
-              {isKnownCustomer && activePackages.length > 0 ? (
+              {isKnownCustomer ? (
                 <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2">
                   <p className="text-xs font-bold uppercase text-primary">Paket Haklarım</p>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {activePackages.map((pkg) => (
-                      <div key={pkg.id} className="rounded-lg border border-primary/20 bg-background/70 p-2">
-                        <p className="text-xs font-semibold">
-                          {pkg.name}
-                          {pkg.expiresAt ? (
-                            <span className="text-[10px] text-muted-foreground ml-2">
-                              ({new Date(pkg.expiresAt).toLocaleDateString('tr-TR')})
-                            </span>
-                          ) : null}
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {pkg.serviceBalances.map((balance) => (
-                            <button
-                              key={`${pkg.id}:${balance.serviceId}`}
-                              type="button"
-                              onClick={() =>
-                                void handleAddFromPackage({
-                                  packageId: pkg.id,
-                                  serviceId: balance.serviceId,
-                                  serviceName: balance.serviceName || null,
-                                })
-                              }
-                              className="rounded-full border border-primary/30 bg-background px-2 py-1 text-[10px] hover:bg-primary/10"
-                            >
-                              {(balance.serviceName || `#${balance.serviceId}`)} {balance.remainingQuota}/{balance.initialQuota}
-                            </button>
-                          ))}
+                  {activePackages.length ? (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {activePackages.map((pkg) => (
+                        <div key={pkg.id} className="rounded-lg border border-primary/20 bg-background/70 p-2">
+                          <p className="text-xs font-semibold">
+                            {pkg.name}
+                            {pkg.expiresAt ? (
+                              <span className="text-[10px] text-muted-foreground ml-2">
+                                ({new Date(pkg.expiresAt).toLocaleDateString('tr-TR')})
+                              </span>
+                            ) : null}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {pkg.serviceBalances.map((balance) => (
+                              <button
+                                key={`${pkg.id}:${balance.serviceId}`}
+                                type="button"
+                                onClick={() =>
+                                  void handleAddFromPackage({
+                                    packageId: pkg.id,
+                                    serviceId: balance.serviceId,
+                                    serviceName: balance.serviceName || null,
+                                  })
+                                }
+                                className="rounded-full border border-primary/30 bg-background px-2 py-1 text-[10px] hover:bg-primary/10"
+                              >
+                                {(balance.serviceName || `#${balance.serviceId}`)} {balance.remainingQuota}/{balance.initialQuota}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Aktif paket bulunmuyor.</p>
+                  )}
+                </div>
+              ) : null}
+
+              {isKnownCustomer ? (
+                <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+                  <p className="text-xs font-bold uppercase text-foreground">Geçmiş Randevular</p>
+                  {recentAppointments.length ? (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {recentAppointments.map((apt) => (
+                        <div key={apt.id} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold">
+                              {new Date(apt.startTime).toLocaleDateString('tr-TR')} {new Date(apt.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span className="text-muted-foreground">{apt.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Geçmiş randevu bulunmuyor.</p>
+                  )}
                 </div>
               ) : null}
           </div>
