@@ -41,6 +41,10 @@ import {
   getAvailableDates,
   checkAvailability,
   createAppointment,
+  createWaitlistRequest,
+  getWaitlistOffer,
+  acceptWaitlistOffer,
+  rejectWaitlistOffer,
   enrollReferralCampaign,
   getReferralShareLink,
   previewBookingPricing,
@@ -52,6 +56,7 @@ import {
   type AvailabilityDisplaySlot,
   type AvailabilityServiceSelection,
   type ReschedulePreviewResponse,
+  type WaitlistOfferDetails,
 } from '@/lib/api'
 import LanguageSelector from '@/components/language-selector'
 import { BOOKING_TEXT, DEFAULT_LANGUAGE, detectBrowserLanguage, LOCALE_MAP, normalizeLanguage, type LanguageCode } from '@/lib/i18n'
@@ -103,6 +108,18 @@ type DateOption = {
   label: string
   fullDate: string
   status: 'loading' | 'available' | 'full'
+}
+
+type WaitlistModalState = {
+  open: boolean
+  submitting: boolean
+  successMessage: string | null
+  error: string | null
+  timeWindowStart: string
+  timeWindowEnd: string
+  notes: string
+  customerName: string
+  customerPhone: string
 }
 
 type SelectedServiceEntry = {
@@ -344,6 +361,23 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [dateOptions, setDateOptions] = useState<DateOption[]>([])
   const [availabilityLockToken, setAvailabilityLockToken] = useState<string | null>(null)
   const [selectedDisplaySlot, setSelectedDisplaySlot] = useState<AvailabilityDisplaySlot | null>(null)
+  const [waitlistModal, setWaitlistModal] = useState<WaitlistModalState>({
+    open: false,
+    submitting: false,
+    successMessage: null,
+    error: null,
+    timeWindowStart: '10:00',
+    timeWindowEnd: '18:00',
+    notes: '',
+    customerName: '',
+    customerPhone: '',
+  })
+  const [waitlistOfferToken, setWaitlistOfferToken] = useState<string | null>(null)
+  const [waitlistOffer, setWaitlistOffer] = useState<WaitlistOfferDetails | null>(null)
+  const [waitlistOfferLoading, setWaitlistOfferLoading] = useState(false)
+  const [waitlistOfferError, setWaitlistOfferError] = useState<string | null>(null)
+  const [waitlistOfferActionLoading, setWaitlistOfferActionLoading] = useState(false)
+  const [waitlistOfferActionMessage, setWaitlistOfferActionMessage] = useState<string | null>(null)
   const [pricingPreview, setPricingPreview] = useState<null | {
     subtotal: number
     discountTotal: number
@@ -413,6 +447,18 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return dateOptions.find((option) => option.fullDate === selectedDate)?.status || null
   }, [dateOptions, selectedDate])
 
+  const waitlistDefaultStart = useMemo(() => {
+    if (selectedDisplaySlot?.startTime) return selectedDisplaySlot.startTime
+    if (availableSlots[0]?.startTime) return availableSlots[0].startTime
+    return '10:00'
+  }, [availableSlots, selectedDisplaySlot])
+
+  const waitlistDefaultEnd = useMemo(() => {
+    if (selectedDisplaySlot?.endTime) return selectedDisplaySlot.endTime
+    if (availableSlots[availableSlots.length - 1]?.endTime) return availableSlots[availableSlots.length - 1].endTime
+    return '18:00'
+  }, [availableSlots, selectedDisplaySlot])
+
   useEffect(() => {
     const fromSearchParams = getMagicToken(searchParams)
     const fromRawSearch = typeof window !== 'undefined' ? parseTokenFromRawSearch(window.location.search) : null
@@ -428,6 +474,30 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [searchParamsString, searchParams])
 
   useEffect(() => {
+    const tokenFromQuery = searchParams.get('waitlistOffer')
+    setWaitlistOfferToken(tokenFromQuery && looksLikeToken(tokenFromQuery) ? tokenFromQuery : null)
+  }, [searchParams])
+
+  useEffect(() => {
+    setWaitlistModal((prev) => ({
+      ...prev,
+      customerName: customerName || registrationForm.fullName,
+      customerPhone: registrationForm.phone,
+    }))
+  }, [customerName, registrationForm.fullName, registrationForm.phone])
+
+  useEffect(() => {
+    if (!waitlistModal.open) return
+    setWaitlistModal((prev) => ({
+      ...prev,
+      timeWindowStart: waitlistDefaultStart,
+      timeWindowEnd: waitlistDefaultEnd,
+      error: null,
+      successMessage: null,
+    }))
+  }, [waitlistDefaultEnd, waitlistDefaultStart, waitlistModal.open])
+
+  useEffect(() => {
     if (forcedLanguage) {
       setLanguage(normalizeLanguage(forcedLanguage))
       return
@@ -438,6 +508,36 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     const lang = normalizeLanguage(queryLang || savedLang || detectBrowserLanguage())
     setLanguage(lang)
   }, [searchParams, forcedLanguage])
+
+  useEffect(() => {
+    let active = true
+    if (!waitlistOfferToken) {
+      setWaitlistOffer(null)
+      setWaitlistOfferError(null)
+      setWaitlistOfferActionMessage(null)
+      return
+    }
+
+    setWaitlistOfferLoading(true)
+    setWaitlistOfferError(null)
+    void getWaitlistOffer(waitlistOfferToken)
+      .then((offer) => {
+        if (!active) return
+        setWaitlistOffer(offer)
+      })
+      .catch((error: any) => {
+        if (!active) return
+        setWaitlistOffer(null)
+        setWaitlistOfferError(error?.message || 'Failed to load waitlist offer.')
+      })
+      .finally(() => {
+        if (active) setWaitlistOfferLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [waitlistOfferToken])
 
   useEffect(() => {
     let active = true
@@ -1362,6 +1462,90 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setSpecialistBatchModal(null)
   }
 
+  const openWaitlistModal = () => {
+    setWaitlistModal((prev) => ({
+      ...prev,
+      open: true,
+      submitting: false,
+      successMessage: null,
+      error: null,
+      timeWindowStart: waitlistDefaultStart,
+      timeWindowEnd: waitlistDefaultEnd,
+      customerName: customerName || registrationForm.fullName,
+      customerPhone: registrationForm.phone,
+    }))
+  }
+
+  const submitWaitlistRequest = async () => {
+    if (!selectedDate || !selectedServiceGroups.length) return
+
+    const customerNameValue = (waitlistModal.customerName || '').trim()
+    const customerPhoneValue = (waitlistModal.customerPhone || '').trim()
+    if (!customerNameValue || !customerPhoneValue) {
+      setWaitlistModal((prev) => ({ ...prev, error: 'Name and phone are required for the waitlist.' }))
+      return
+    }
+    if (waitlistModal.timeWindowStart >= waitlistModal.timeWindowEnd) {
+      setWaitlistModal((prev) => ({ ...prev, error: 'Please choose a valid time window.' }))
+      return
+    }
+
+    setWaitlistModal((prev) => ({ ...prev, submitting: true, error: null, successMessage: null }))
+    try {
+      const response = await createWaitlistRequest({
+        date: selectedDate,
+        timeWindowStart: waitlistModal.timeWindowStart,
+        timeWindowEnd: waitlistModal.timeWindowEnd,
+        groups: selectedServiceGroups.map((services, index) => ({
+          personId: `p${index + 1}`,
+          services,
+        })),
+        customerId,
+        customerName: customerNameValue,
+        customerPhone: customerPhoneValue,
+        notes: waitlistModal.notes.trim() || null,
+      })
+
+      setWaitlistModal((prev) => ({
+        ...prev,
+        submitting: false,
+        successMessage:
+          response.item.latestOffer?.status === 'SENT'
+            ? 'A matching slot opened immediately and an offer was sent.'
+            : 'You joined the waitlist successfully. We will contact you if a slot opens.',
+      }))
+    } catch (error: any) {
+      setWaitlistModal((prev) => ({
+        ...prev,
+        submitting: false,
+        error: error?.message || 'Waitlist request could not be created.',
+      }))
+    }
+  }
+
+  const handleWaitlistOfferDecision = async (decision: 'accept' | 'reject') => {
+    if (!waitlistOfferToken) return
+    setWaitlistOfferActionLoading(true)
+    setWaitlistOfferActionMessage(null)
+    try {
+      if (decision === 'accept') {
+        await acceptWaitlistOffer(waitlistOfferToken)
+        setWaitlistOfferActionMessage('Offer accepted. Your appointment has been created.')
+        const refreshed = await getWaitlistOffer(waitlistOfferToken).catch(() => null)
+        if (refreshed) setWaitlistOffer(refreshed)
+      } else {
+        await rejectWaitlistOffer(waitlistOfferToken)
+        setWaitlistOfferActionMessage('Offer rejected. We will continue with the next person on the list.')
+        const refreshed = await getWaitlistOffer(waitlistOfferToken).catch(() => null)
+        if (refreshed) setWaitlistOffer(refreshed)
+      }
+    } catch (error: any) {
+      setWaitlistOfferActionMessage(error?.message || 'This offer could not be processed.')
+    } finally {
+      setWaitlistOfferActionLoading(false)
+    }
+  }
+
   const handleConfirmAppointment = async () => {
     if (!customerId || !selectedDate || !selectedTimeSlot || !selectedDisplaySlot || !availabilityLockToken || selectedServices.length === 0) return;
     
@@ -1788,6 +1972,56 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
           <div className="mt-3 flex justify-end">
             <LanguageSelector value={language} onChange={handleLanguageChange} />
           </div>
+
+          {waitlistOfferToken ? (
+            <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Waitlist Offer</p>
+                  {waitlistOfferLoading ? (
+                    <p className="mt-1 text-sm text-muted-foreground">Loading your offer...</p>
+                  ) : waitlistOfferError ? (
+                    <p className="mt-1 text-sm text-red-600">{waitlistOfferError}</p>
+                  ) : waitlistOffer ? (
+                    <>
+                      <p className="mt-1 text-sm text-foreground">
+                        {waitlistOffer.slotDate} • {waitlistOffer.slotStartTime} - {waitlistOffer.slotEndTime}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        This offer stays active until {new Date(waitlistOffer.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          disabled={waitlistOfferActionLoading || !['PENDING', 'SENT'].includes(waitlistOffer.status)}
+                          onClick={() => void handleWaitlistOfferDecision('accept')}
+                        >
+                          {waitlistOfferActionLoading ? 'Processing...' : 'Accept Offer'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={waitlistOfferActionLoading || !['PENDING', 'SENT'].includes(waitlistOffer.status)}
+                          onClick={() => void handleWaitlistOfferDecision('reject')}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">Current status: {waitlistOffer.status}</p>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">No active offer found for this link.</p>
+                  )}
+                  {waitlistOfferActionMessage ? (
+                    <p className="mt-2 text-sm text-emerald-700">{waitlistOfferActionMessage}</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -2271,6 +2505,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             ? 'No free slot on this day yet. This day can later be used for the waitlist.'
                             : text.noAppointment}
                       </p>
+                      {selectedDateStatus === 'full' ? (
+                        <div className="mt-4">
+                          <Button type="button" variant="outline" onClick={openWaitlistModal}>
+                            Join Waitlist For This Day
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                 ) : (
                     <div className="grid grid-cols-4 gap-2">
@@ -2695,6 +2936,122 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 className="flex-1 rounded-full bg-primary text-primary-foreground"
               >
                 {rescheduleModal.loading ? text.dashboard.savingLabel : text.dashboard.confirmUpdateLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {waitlistModal.open ? (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-[64] animate-in fade-in">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Join Waitlist</h3>
+              <button
+                type="button"
+                onClick={() => (waitlistModal.submitting ? undefined : setWaitlistModal((prev) => ({ ...prev, open: false })))}
+                className="text-muted-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              We will keep this specific day and time window on file. If a slot opens, we will send you an offer valid for 15 minutes.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">Day</span>
+                <input value={selectedDate || ''} disabled className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm" />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">People</span>
+                <input value={String(numberOfPeople)} disabled className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm" />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">From</span>
+                <input
+                  type="time"
+                  value={waitlistModal.timeWindowStart}
+                  onChange={(event) => setWaitlistModal((prev) => ({ ...prev, timeWindowStart: event.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-muted-foreground">To</span>
+                <input
+                  type="time"
+                  value={waitlistModal.timeWindowEnd}
+                  onChange={(event) => setWaitlistModal((prev) => ({ ...prev, timeWindowEnd: event.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-border bg-muted/10 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selected services</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedServices.map((entry) => (
+                  <span key={entry.entryId} className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium">
+                    {entry.service.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-sm space-y-1">
+                <span className="text-muted-foreground">Full name</span>
+                <input
+                  value={waitlistModal.customerName}
+                  onChange={(event) => setWaitlistModal((prev) => ({ ...prev, customerName: event.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="block text-sm space-y-1">
+                <span className="text-muted-foreground">Phone</span>
+                <input
+                  type="tel"
+                  value={waitlistModal.customerPhone}
+                  onChange={(event) => setWaitlistModal((prev) => ({ ...prev, customerPhone: event.target.value }))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="block text-sm space-y-1">
+                <span className="text-muted-foreground">Note (optional)</span>
+                <textarea
+                  value={waitlistModal.notes}
+                  onChange={(event) => setWaitlistModal((prev) => ({ ...prev, notes: event.target.value }))}
+                  className="w-full min-h-[88px] rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  placeholder="For example: after 17:00 is easier for me."
+                />
+              </label>
+            </div>
+
+            {waitlistModal.error ? (
+              <p className="rounded-md border border-red-300/40 bg-red-500/10 px-3 py-2 text-xs text-red-700">{waitlistModal.error}</p>
+            ) : null}
+            {waitlistModal.successMessage ? (
+              <p className="rounded-md border border-emerald-300/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700">{waitlistModal.successMessage}</p>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={waitlistModal.submitting}
+                onClick={() => setWaitlistModal((prev) => ({ ...prev, open: false }))}
+                className="flex-1 rounded-full"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                disabled={waitlistModal.submitting}
+                onClick={() => void submitWaitlistRequest()}
+                className="flex-1 rounded-full bg-primary text-primary-foreground"
+              >
+                {waitlistModal.submitting ? 'Saving...' : 'Join Waitlist'}
               </Button>
             </div>
           </div>

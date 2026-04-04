@@ -175,6 +175,49 @@ export type AvailabilitySlotsResult = {
   lockToken?: { id: string; expiresAt: string } | null
 }
 
+export type WaitlistItem = {
+  id: number
+  customerId: number | null
+  customerName: string
+  customerPhone: string
+  source: 'CUSTOMER' | 'ADMIN'
+  status: 'PENDING' | 'OFFERED' | 'ACCEPTED' | 'CANCELLED' | 'EXPIRED'
+  date: string
+  timeWindowStart: string
+  timeWindowEnd: string
+  notes: string | null
+  createdAt: string
+  latestOffer: null | {
+    id: number
+    status: 'PENDING' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'FAILED' | 'CANCELLED'
+    channel: 'WHATSAPP' | 'WEB_LINK'
+    slotDate: string
+    slotStartTime: string
+    slotEndTime: string
+    expiresAt: string
+    offerUrl: string | null
+  }
+  groups: AvailabilityGroupInput[]
+}
+
+export type WaitlistOfferDetails = {
+  offerId: number
+  token: string
+  status: 'PENDING' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'FAILED' | 'CANCELLED'
+  expiresAt: string
+  slotDate: string
+  slotStartTime: string
+  slotEndTime: string
+  customerName: string
+  customerPhone: string
+  services: Array<{
+    serviceId: number
+    start: string
+    end: string
+    staffId: number
+  }>
+}
+
 export type BookingAlternatives = {
   date: string | null
   availableDates: string[]
@@ -353,6 +396,58 @@ export async function checkAvailability(
     console.error('checkAvailability error:', error)
     return { available: false, date, displaySlots: [], lockToken: null }
   }
+}
+
+export async function createWaitlistRequest(input: {
+  date: string
+  timeWindowStart: string
+  timeWindowEnd: string
+  groups: AvailabilityGroupInput[]
+  customerId?: string | null
+  customerName: string
+  customerPhone: string
+  notes?: string | null
+}): Promise<{ item: WaitlistItem }> {
+  return fetchFromAPI(`${API_BASE_URL}/api/waitlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: input.date,
+      timeWindowStart: input.timeWindowStart,
+      timeWindowEnd: input.timeWindowEnd,
+      groups: input.groups,
+      customerId: input.customerId ? Number(input.customerId) : null,
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      notes: input.notes || null,
+    }),
+  })
+}
+
+export async function getWaitlistOffer(token: string): Promise<WaitlistOfferDetails> {
+  return fetchFromAPI(`${API_BASE_URL}/api/waitlist/offers/${encodeURIComponent(token)}`)
+}
+
+export async function acceptWaitlistOffer(token: string): Promise<{
+  appointments: Array<{
+    id: number
+    startTime: string
+    endTime: string
+    staffId: number
+    serviceId: number
+  }>
+}> {
+  return fetchFromAPI(`${API_BASE_URL}/api/waitlist/offers/${encodeURIComponent(token)}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+export async function rejectWaitlistOffer(token: string): Promise<{ ok: true }> {
+  return fetchFromAPI(`${API_BASE_URL}/api/waitlist/offers/${encodeURIComponent(token)}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 export async function getBookingContextByToken(token: string): Promise<BookingContext | null> {
