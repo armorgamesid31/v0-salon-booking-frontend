@@ -338,6 +338,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [registrationExpanded, setRegistrationExpanded] = useState(false)
+  const [registrationError, setRegistrationError] = useState<string | null>(null)
+  const [registrationSubmitting, setRegistrationSubmitting] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [feedbackModal, setFeedbackModal] = useState<{
@@ -448,6 +451,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     if (!selectedDate) return null
     return dateOptions.find((option) => option.fullDate === selectedDate)?.status || null
   }, [dateOptions, selectedDate])
+
+  const registrationPhoneDigits = useMemo(() => (registrationForm.phone || '').replace(/\D/g, ''), [registrationForm.phone])
+  const registrationCanContinue = useMemo(() => {
+    return registrationForm.fullName.trim().length >= 2 && registrationPhoneDigits.length >= 10
+  }, [registrationForm.fullName, registrationPhoneDigits])
 
   const waitlistDefaultStart = useMemo(() => {
     if (selectedDisplaySlot?.startTime) return selectedDisplaySlot.startTime
@@ -3213,22 +3221,108 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       {/* Registration Modal */}
       {showRegistrationModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end z-50 animate-in fade-in">
-          <div className="bg-card w-full rounded-t-3xl p-4 space-y-3 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
-              <h2 className="text-xl font-bold">{text.completeProfile}</h2>
-              <button onClick={() => setShowRegistrationModal(false)} className="text-muted-foreground"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="space-y-2.5">
-              <input type="text" value={registrationForm.fullName} onChange={(e) => setRegistrationForm(p => ({ ...p, fullName: e.target.value }))} placeholder={text.fullName} className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
-              <input type="tel" value={registrationForm.phone} onChange={(e) => setRegistrationForm(p => ({ ...p, phone: e.target.value }))} placeholder={text.phone} className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
-              <div className="flex gap-2">
-                  <Button onClick={() => setRegistrationForm(p => ({ ...p, gender: "female" }))} variant={"female" === registrationForm.gender ? "default" : "outline"} className="flex-1">👩</Button>
-                  <Button onClick={() => setRegistrationForm(p => ({ ...p, gender: "male" }))} variant={"male" === registrationForm.gender ? "default" : "outline"} className="flex-1">👨</Button>
+          <div className="bg-card w-full rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 sticky top-0 bg-card pb-2">
+              <div>
+                <h2 className="text-xl font-bold">{text.completeProfile}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">We only need your name and phone to hold the appointment.</p>
               </div>
-              <input type="date" value={registrationForm.birthDate} onChange={(e) => setRegistrationForm(p => ({ ...p, birthDate: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-muted/30 text-sm border border-muted" />
+              <button
+                onClick={() => {
+                  if (registrationSubmitting) return
+                  setShowRegistrationModal(false)
+                  setRegistrationError(null)
+                }}
+                className="text-muted-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <Button onClick={async () => {
-                if (!registrationForm.fullName || !registrationForm.phone) return alert(text.fillInfoError);
+
+            <div className="space-y-3">
+              <label className="block text-sm space-y-1">
+                <span className="text-muted-foreground">{text.fullName}</span>
+                <input
+                  type="text"
+                  value={registrationForm.fullName}
+                  onChange={(e) => {
+                    setRegistrationError(null)
+                    setRegistrationForm((p) => ({ ...p, fullName: e.target.value }))
+                  }}
+                  placeholder={text.fullName}
+                  className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                />
+              </label>
+              <label className="block text-sm space-y-1">
+                <span className="text-muted-foreground">{text.phone}</span>
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={registrationForm.phone}
+                  onChange={(e) => {
+                    setRegistrationError(null)
+                    setRegistrationForm((p) => ({ ...p, phone: e.target.value }))
+                  }}
+                  placeholder="05xx xxx xx xx"
+                  className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                />
+                <p className="text-[11px] text-muted-foreground">We use this for confirmation and reminder messages.</p>
+              </label>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/10">
+              <button
+                type="button"
+                onClick={() => setRegistrationExpanded((prev) => !prev)}
+                className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
+              >
+                <span>Optional details</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${registrationExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              {registrationExpanded ? (
+                <div className="space-y-3 border-t border-border px-4 py-3">
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Gender</span>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'female' }))} variant={'female' === registrationForm.gender ? 'default' : 'outline'} className="flex-1">Woman</Button>
+                      <Button onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'male' }))} variant={'male' === registrationForm.gender ? 'default' : 'outline'} className="flex-1">Man</Button>
+                    </div>
+                  </div>
+                  <label className="block text-sm space-y-1">
+                    <span className="text-muted-foreground">Birth date</span>
+                    <input
+                      type="date"
+                      value={registrationForm.birthDate}
+                      onChange={(e) => setRegistrationForm((p) => ({ ...p, birthDate: e.target.value }))}
+                      className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                    />
+                  </label>
+                  <label className="flex items-start gap-3 rounded-xl bg-background px-3 py-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={registrationForm.acceptMarketing}
+                      onChange={(e) => setRegistrationForm((p) => ({ ...p, acceptMarketing: e.target.checked }))}
+                      className="mt-0.5"
+                    />
+                    <span className="text-muted-foreground">I agree to receive campaign and reminder messages.</span>
+                  </label>
+                </div>
+              ) : null}
+            </div>
+
+            {registrationError ? (
+              <p className="rounded-xl border border-red-300/40 bg-red-500/10 px-3 py-2 text-sm text-red-700">{registrationError}</p>
+            ) : null}
+
+            <Button
+              onClick={async () => {
+                if (!registrationCanContinue) {
+                  setRegistrationError(text.fillInfoError)
+                  return
+                }
+                setRegistrationSubmitting(true)
+                setRegistrationError(null)
                 try {
                   const res = await registerCustomer({
                     ...registrationForm,
@@ -3236,18 +3330,25 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     originPhone,
                     instagramId: originInstagramId,
                     magicToken: stableMagicToken,
-                  });
-                  if (res.customerId) { 
-                      setCustomerId(res.customerId); 
-                      setCustomerName(registrationForm.fullName);
-                      setIsKnownCustomer(true); 
-                      setShowRegistrationModal(false); 
-                      setShowConfirmationModal(true); 
+                  })
+                  if (res.customerId) {
+                    setCustomerId(res.customerId)
+                    setCustomerName(registrationForm.fullName)
+                    setIsKnownCustomer(true)
+                    setShowRegistrationModal(false)
+                    setShowConfirmationModal(true)
                   }
                 } catch (err: any) {
-                  alert(err.message || text.genericError);
+                  setRegistrationError(err?.message || text.genericError)
+                } finally {
+                  setRegistrationSubmitting(false)
                 }
-            }} className="w-full rounded-full py-2 bg-primary text-primary-foreground font-semibold">{text.registerContinue}</Button>
+              }}
+              disabled={!registrationCanContinue || registrationSubmitting}
+              className="w-full rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
+            >
+              {registrationSubmitting ? text.loading : text.registerContinue}
+            </Button>
           </div>
         </div>
       )}
