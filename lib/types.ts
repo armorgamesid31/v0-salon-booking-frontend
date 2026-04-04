@@ -98,6 +98,8 @@ export interface BookingContext {
   customerLanguage?: string | null
   originChannel?: 'WHATSAPP' | 'INSTAGRAM' | string | null
   originPhone?: string | null
+  originDisplayPhone?: string | null
+  originProfileName?: string | null
   originInstagramId?: string | null
   salonId: string
   salonName: string

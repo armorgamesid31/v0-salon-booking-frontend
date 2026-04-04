@@ -35,6 +35,8 @@ import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee, Act
 import {
   getBookingContextByToken,
   registerCustomer,
+  requestCustomerPhoneVerification,
+  confirmCustomerPhoneVerification,
   getSalon,
   getServices,
   getStaffForService,
@@ -63,6 +65,13 @@ import { BOOKING_TEXT, DEFAULT_LANGUAGE, detectBrowserLanguage, LOCALE_MAP, norm
 import { DUMMY_SALON } from '@/lib/constants'
 import { extractTenantSlug } from '@/lib/tenant'
 import { getRuntimeContent, getRuntimeText, type RuntimeContentMap } from '@/lib/runtime-content'
+import {
+  countryIsoToPrefix,
+  formatPhoneForDisplayFromDigits,
+  getDefaultCountryForLanguage,
+  getPhoneCountryOptions,
+  parsePhoneInput,
+} from '@/lib/phone'
 
 // Fixed icons helper
 const getIconComponent = (categoryKey: string) => {
@@ -121,7 +130,10 @@ type WaitlistModalState = {
   notes: string
   customerName: string
   customerPhone: string
+  customerCountryIso: string
 }
+
+type RegistrationStep = 'form' | 'whatsapp-confirm' | 'otp'
 
 type SelectedServiceEntry = {
   entryId: string
@@ -163,25 +175,6 @@ const getMagicToken = (params: URLSearchParams): string | null => {
 }
 
 const TOKEN_STORAGE_KEY = 'booking_magic_token'
-
-const REGISTRATION_COUNTRY_OPTIONS = [
-  { code: '90', label: { tr: 'Turkiye (+90)', en: 'Turkey (+90)' } },
-  { code: '49', label: { tr: 'Almanya (+49)', en: 'Germany (+49)' } },
-  { code: '44', label: { tr: 'Birlesik Krallik (+44)', en: 'United Kingdom (+44)' } },
-  { code: '1', label: { tr: 'ABD / Kanada (+1)', en: 'US / Canada (+1)' } },
-  { code: '34', label: { tr: 'Ispanya (+34)', en: 'Spain (+34)' } },
-  { code: '33', label: { tr: 'Fransa (+33)', en: 'France (+33)' } },
-  { code: '966', label: { tr: 'Suudi Arabistan (+966)', en: 'Saudi Arabia (+966)' } },
-] as const
-
-function defaultCountryCodeForLanguage(language: LanguageCode): string {
-  if (language === 'tr') return '90'
-  if (language === 'de') return '49'
-  if (language === 'es') return '34'
-  if (language === 'fr') return '33'
-  if (language === 'ar') return '966'
-  return '1'
-}
 
 const looksLikeToken = (value: string | null | undefined): value is string => {
   const candidate = (value || '').trim()
@@ -235,41 +228,6 @@ const toDateOption = (isoDate: string, language: LanguageCode): DateOption => {
     label: new Intl.DateTimeFormat(LOCALE_MAP[language], { weekday: 'short' }).format(date),
     fullDate: isoDate,
     status: 'loading',
-  }
-}
-
-const normalizeRegistrationPhone = (rawValue: string, countryCode: string) => {
-  const digits = (rawValue || '').replace(/\D/g, '')
-  let localDigits = digits
-  if (countryCode === '90') {
-    if (localDigits.startsWith('90')) localDigits = localDigits.slice(2)
-    if (localDigits.startsWith('0')) localDigits = localDigits.slice(1)
-    localDigits = localDigits.slice(0, 10)
-    const a = localDigits.slice(0, 3)
-    const b = localDigits.slice(3, 6)
-    const c = localDigits.slice(6, 8)
-    const d = localDigits.slice(8, 10)
-    const display = [a ? `(${a}` : '', a && a.length === 3 ? ')' : '', b, c, d]
-      .filter(Boolean)
-      .join(a && a.length === 3 ? ' ' : '')
-      .replace(/\)\s?$/, ')')
-      .trim()
-    return {
-      localDigits,
-      display: display.replace(/\)\s?(\d{0,3})/, ') $1').replace(/\s+/g, ' ').trim(),
-      e164Digits: localDigits.length ? `${countryCode}${localDigits}` : '',
-    }
-  }
-
-  if (localDigits.startsWith(countryCode)) {
-    localDigits = localDigits.slice(countryCode.length)
-  }
-  localDigits = localDigits.replace(/^0+/, '').slice(0, 14)
-  const grouped = localDigits.replace(/(\d{3})(?=\d)/g, '$1 ').trim()
-  return {
-    localDigits,
-    display: grouped,
-    e164Digits: localDigits.length ? `${countryCode}${localDigits}` : '',
   }
 }
 
@@ -368,6 +326,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [salonId, setSalonId] = useState<string>('')
   const [originChannel, setOriginChannel] = useState<string | null>(null)
   const [originPhone, setOriginPhone] = useState<string | null>(null)
+  const [originDisplayPhone, setOriginDisplayPhone] = useState<string | null>(null)
+  const [originProfileName, setOriginProfileName] = useState<string | null>(null)
   const [originInstagramId, setOriginInstagramId] = useState<string | null>(null)
   const [salonData, setSalonData] = useState<any>(null)
   const [availableServices, setAvailableServices] = useState<ServiceCategory[]>([])
@@ -392,8 +352,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [registrationStep, setRegistrationStep] = useState<RegistrationStep>('form')
   const [registrationError, setRegistrationError] = useState<string | null>(null)
   const [registrationSubmitting, setRegistrationSubmitting] = useState(false)
+  const [registrationVerificationId, setRegistrationVerificationId] = useState<string | null>(null)
+  const [registrationOtpCode, setRegistrationOtpCode] = useState('')
+  const [registrationOtpSending, setRegistrationOtpSending] = useState(false)
+  const [registrationWhatsappConfirmChecked, setRegistrationWhatsappConfirmChecked] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [feedbackModal, setFeedbackModal] = useState<{
@@ -429,6 +394,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     notes: '',
     customerName: '',
     customerPhone: '',
+    customerCountryIso: 'TR',
   })
   const [waitlistOfferToken, setWaitlistOfferToken] = useState<string | null>(null)
   const [waitlistOffer, setWaitlistOffer] = useState<WaitlistOfferDetails | null>(null)
@@ -447,7 +413,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
     phone: '',
-    countryCode: '90',
+    countryIso: 'TR',
     gender: 'female' as 'female' | 'male',
     birthDate: '',
     acceptMarketing: false,
@@ -506,22 +472,28 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return dateOptions.find((option) => option.fullDate === selectedDate)?.status || null
   }, [dateOptions, selectedDate])
 
+  const phoneCountryOptions = useMemo(() => getPhoneCountryOptions(language), [language])
   const registrationPhoneMeta = useMemo(
-    () => normalizeRegistrationPhone(registrationForm.phone, registrationForm.countryCode),
-    [registrationForm.countryCode, registrationForm.phone],
+    () => parsePhoneInput(registrationForm.phone, registrationForm.countryIso),
+    [registrationForm.countryIso, registrationForm.phone],
+  )
+  const waitlistPhoneMeta = useMemo(
+    () => parsePhoneInput(waitlistModal.customerPhone, waitlistModal.customerCountryIso),
+    [waitlistModal.customerCountryIso, waitlistModal.customerPhone],
   )
   const registrationCountryLabel = useMemo(() => {
-    const option = REGISTRATION_COUNTRY_OPTIONS.find((item) => item.code === registrationForm.countryCode) || REGISTRATION_COUNTRY_OPTIONS[0]
-    return option.label[language === 'tr' ? 'tr' : 'en']
-  }, [language, registrationForm.countryCode])
+    const option = phoneCountryOptions.find((item) => item.iso === registrationForm.countryIso)
+    return option?.label || `${registrationForm.countryIso}${countryIsoToPrefix(registrationForm.countryIso) ? ` (${countryIsoToPrefix(registrationForm.countryIso)})` : ''}`
+  }, [phoneCountryOptions, registrationForm.countryIso])
   const registrationCanContinue = useMemo(() => {
     return (
       registrationForm.fullName.trim().length >= 2 &&
-      registrationPhoneMeta.localDigits.length >= 10 &&
+      registrationPhoneMeta.isValid &&
+      registrationPhoneMeta.isMobile &&
       Boolean(registrationForm.birthDate) &&
       Boolean(registrationForm.gender)
     )
-  }, [registrationForm.birthDate, registrationForm.fullName, registrationForm.gender, registrationPhoneMeta.localDigits.length])
+  }, [registrationForm.birthDate, registrationForm.fullName, registrationForm.gender, registrationPhoneMeta.isMobile, registrationPhoneMeta.isValid])
 
   const waitlistDefaultStart = useMemo(() => {
     if (selectedDisplaySlot?.startTime) return selectedDisplaySlot.startTime
@@ -559,8 +531,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       ...prev,
       customerName: customerName || registrationForm.fullName,
       customerPhone: registrationForm.phone,
+      customerCountryIso: registrationForm.countryIso,
     }))
-  }, [customerName, registrationForm.fullName, registrationForm.phone])
+  }, [customerName, registrationForm.countryIso, registrationForm.fullName, registrationForm.phone])
 
   useEffect(() => {
     if (!waitlistModal.open) return
@@ -586,8 +559,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [searchParams, forcedLanguage])
 
   useEffect(() => {
-    const preferredCountryCode = defaultCountryCodeForLanguage(language)
-    setRegistrationForm((prev) => (prev.countryCode === preferredCountryCode ? prev : { ...prev, countryCode: preferredCountryCode, phone: '' }))
+    const preferredCountryIso = getDefaultCountryForLanguage(language)
+    setRegistrationForm((prev) => (prev.countryIso === preferredCountryIso ? prev : { ...prev, countryIso: preferredCountryIso, phone: '' }))
+    setWaitlistModal((prev) => (prev.customerCountryIso === preferredCountryIso ? prev : { ...prev, customerCountryIso: preferredCountryIso }))
   }, [language])
 
   useEffect(() => {
@@ -721,6 +695,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setIsKnownCustomer(context.isKnownCustomer)
     setOriginChannel(context.originChannel || null)
     setOriginPhone(context.originPhone || null)
+    setOriginDisplayPhone(context.originDisplayPhone || context.originPhone || null)
+    setOriginProfileName(context.originProfileName || null)
     setOriginInstagramId(context.originInstagramId || null)
     setActivePackages(context.activePackages || [])
     setActiveCampaigns(context.campaigns || [])
@@ -740,7 +716,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       setRegistrationForm((prev) => ({
         ...prev,
         fullName: context.customerName || prev.fullName,
-        phone: context.customerPhone || prev.phone,
+        phone: formatPhoneForDisplayFromDigits(context.customerPhone || '', prev.countryIso) || prev.phone,
         gender: normalizedGender || prev.gender,
       }))
     }
@@ -1562,9 +1538,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     if (!selectedDate || !selectedServiceGroups.length) return
 
     const customerNameValue = (waitlistModal.customerName || '').trim()
-    const customerPhoneValue = (waitlistModal.customerPhone || '').trim()
-    if (!customerNameValue || !customerPhoneValue) {
+    if (!customerNameValue || !waitlistModal.customerPhone.trim()) {
       setWaitlistModal((prev) => ({ ...prev, error: 'Name and phone are required for the waitlist.' }))
+      return
+    }
+    if (!waitlistPhoneMeta.isValid || !waitlistPhoneMeta.isMobile || !waitlistPhoneMeta.normalizedDigits) {
+      setWaitlistModal((prev) => ({ ...prev, error: 'Please enter a valid mobile number.' }))
       return
     }
     if (waitlistModal.timeWindowStart >= waitlistModal.timeWindowEnd) {
@@ -1586,7 +1565,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         })),
         customerId,
         customerName: customerNameValue,
-        customerPhone: customerPhoneValue,
+        customerPhone: waitlistPhoneMeta.normalizedDigits,
+        customerCountryIso: waitlistModal.customerCountryIso,
+        customerRawPhone: waitlistModal.customerPhone,
+        customerNormalizedPhone: waitlistPhoneMeta.normalizedDigits,
         notes: waitlistModal.notes.trim() || null,
       })
 
@@ -1604,6 +1586,100 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         submitting: false,
         error: error?.message || 'Waitlist request could not be created.',
       }))
+    }
+  }
+
+  const finalizeRegisteredCustomer = (customerIdValue: string) => {
+    setCustomerId(customerIdValue)
+    setCustomerName(registrationForm.fullName)
+    setIsKnownCustomer(true)
+    setShowRegistrationModal(false)
+    setRegistrationStep('form')
+    setRegistrationVerificationId(null)
+    setRegistrationOtpCode('')
+    setRegistrationWhatsappConfirmChecked(false)
+    setShowConfirmationModal(true)
+  }
+
+  const submitRegistration = async (confirmDifferentWhatsappNumber = false) => {
+    if (!registrationCanContinue) {
+      setRegistrationError(text.fillInfoError)
+      return
+    }
+    if (!registrationPhoneMeta.e164 || !registrationPhoneMeta.normalizedDigits || !registrationPhoneMeta.isMobile) {
+      setRegistrationError('Please enter a valid mobile number.')
+      return
+    }
+
+    setRegistrationSubmitting(true)
+    setRegistrationError(null)
+    try {
+      const res = await registerCustomer({
+        fullName: registrationForm.fullName,
+        rawPhone: registrationForm.phone,
+        normalizedPhone: registrationPhoneMeta.normalizedDigits,
+        countryIso: registrationForm.countryIso,
+        gender: registrationForm.gender,
+        birthDate: registrationForm.birthDate,
+        acceptMarketing: registrationForm.acceptMarketing,
+        originChannel,
+        originPhone,
+        instagramId: originInstagramId,
+        magicToken: stableMagicToken,
+        confirmDifferentWhatsappNumber,
+      })
+
+      if (res.status === 'registered') {
+        finalizeRegisteredCustomer(res.customerId)
+        return
+      }
+
+      if (res.status === 'requires_whatsapp_confirmation') {
+        setRegistrationWhatsappConfirmChecked(false)
+        setRegistrationStep('whatsapp-confirm')
+        return
+      }
+
+      setRegistrationVerificationId(res.verificationId)
+      setRegistrationOtpCode('')
+      setRegistrationStep('otp')
+    } catch (err: any) {
+      setRegistrationError(err?.message || text.genericError)
+    } finally {
+      setRegistrationSubmitting(false)
+    }
+  }
+
+  const resendRegistrationCode = async () => {
+    if (!registrationVerificationId) return
+    setRegistrationOtpSending(true)
+    setRegistrationError(null)
+    try {
+      await requestCustomerPhoneVerification(registrationVerificationId)
+    } catch (err: any) {
+      setRegistrationError(err?.message || text.genericError)
+    } finally {
+      setRegistrationOtpSending(false)
+    }
+  }
+
+  const confirmRegistrationCode = async () => {
+    if (!registrationVerificationId || registrationOtpCode.trim().length < 6) {
+      setRegistrationError('Please enter the 6-digit code.')
+      return
+    }
+    setRegistrationSubmitting(true)
+    setRegistrationError(null)
+    try {
+      const result = await confirmCustomerPhoneVerification({
+        verificationId: registrationVerificationId,
+        code: registrationOtpCode.trim(),
+      })
+      finalizeRegisteredCustomer(String(result.customerId))
+    } catch (err: any) {
+      setRegistrationError(err?.message || text.genericError)
+    } finally {
+      setRegistrationSubmitting(false)
     }
   }
 
@@ -1689,22 +1765,23 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             }
         } else {
             if (res.code === 'SLOT_NOT_AVAILABLE' && res.alternatives) {
-              const availableSet = new Set(res.alternatives.availableDates || [])
+              const alternatives = res.alternatives
+              const availableSet = new Set(alternatives.availableDates || [])
               setDateOptions((prev) =>
                 prev.map((option) => ({
                   ...option,
                   status: availableSet.has(option.fullDate)
                     ? 'available'
-                    : option.fullDate === res.alternatives.date
+                    : option.fullDate === alternatives.date
                       ? 'full'
                       : option.status,
                 })),
               )
-              if (res.alternatives.date) {
-                setSelectedDate(res.alternatives.date)
+              if (alternatives.date) {
+                setSelectedDate(alternatives.date)
               }
-              setAvailableSlots(res.alternatives.displaySlots || [])
-              setAvailabilityLockToken(res.alternatives.lockToken?.id || null)
+              setAvailableSlots(alternatives.displaySlots || [])
+              setAvailabilityLockToken(alternatives.lockToken?.id || null)
               setSelectedDisplaySlot(null)
               setSelectedTimeSlot(null)
             }
@@ -2640,7 +2717,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       document.querySelector('[data-scroll-target="date-time"]')?.scrollIntoView({ behavior: "smooth" })
                     } else {
                       if (isKnownCustomer) setShowConfirmationModal(true)
-                      else setShowRegistrationModal(true)
+                      else {
+                        setRegistrationStep('form')
+                        setRegistrationError(null)
+                        setRegistrationVerificationId(null)
+                        setRegistrationOtpCode('')
+                        setRegistrationWhatsappConfirmChecked(false)
+                        setShowRegistrationModal(true)
+                      }
                     }
                   }} className={`px-6 py-3 font-bold text-sm rounded-full ${selectedDate && selectedTimeSlot && selectedDisplaySlot ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground cursor-not-allowed'}`} disabled={!selectedDate || !selectedTimeSlot || !selectedDisplaySlot}>{text.confirmAppointment}</Button>
               </div>
@@ -3118,12 +3202,32 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               </label>
               <label className="block text-sm space-y-1">
                 <span className="text-muted-foreground">Phone</span>
-                <input
-                  type="tel"
-                  value={waitlistModal.customerPhone}
-                  onChange={(event) => setWaitlistModal((prev) => ({ ...prev, customerPhone: event.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
+                <div className="flex gap-2">
+                  <select
+                    value={waitlistModal.customerCountryIso}
+                    onChange={(event) => setWaitlistModal((prev) => ({ ...prev, customerCountryIso: event.target.value, customerPhone: '' }))}
+                    className="w-[48%] rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    {phoneCountryOptions.map((option) => (
+                      <option key={option.iso} value={option.iso}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={waitlistModal.customerPhone}
+                    onChange={(event) => {
+                      const next = parsePhoneInput(event.target.value, waitlistModal.customerCountryIso)
+                      setWaitlistModal((prev) => ({ ...prev, customerPhone: next.display || event.target.value }))
+                    }}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    placeholder={waitlistModal.customerCountryIso === 'TR' ? '(531) 200 68 07' : 'Phone number'}
+                  />
+                </div>
+                {waitlistModal.customerPhone && (!waitlistPhoneMeta.isValid || !waitlistPhoneMeta.isMobile) ? (
+                  <p className="text-xs text-red-600">Please enter a valid mobile number.</p>
+                ) : null}
               </label>
               <label className="block text-sm space-y-1">
                 <span className="text-muted-foreground">Note (optional)</span>
@@ -3306,6 +3410,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   if (registrationSubmitting) return
                   setShowRegistrationModal(false)
                   setRegistrationError(null)
+                  setRegistrationStep('form')
+                  setRegistrationVerificationId(null)
+                  setRegistrationOtpCode('')
+                  setRegistrationWhatsappConfirmChecked(false)
                 }}
                 className="text-muted-foreground"
               >
@@ -3313,142 +3421,202 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <span className="text-sm text-muted-foreground">{text.fullName}</span>
-                <input
-                  type="text"
-                  value={registrationForm.fullName}
-                  onChange={(e) => {
-                    setRegistrationError(null)
-                    setRegistrationForm((p) => ({ ...p, fullName: e.target.value }))
-                  }}
-                  placeholder={text.fullName}
-                  className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-sm text-muted-foreground">{text.phone}</span>
-                <div className="flex gap-2">
-                  <select
-                    value={registrationForm.countryCode}
-                    onChange={(e) => {
-                      setRegistrationError(null)
-                      setRegistrationForm((p) => ({ ...p, countryCode: e.target.value, phone: '' }))
-                    }}
-                    className="w-[42%] px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
-                  >
-                    {REGISTRATION_COUNTRY_OPTIONS.map((option) => (
-                      <option key={option.code} value={option.code}>
-                        {option.label[language === 'tr' ? 'tr' : 'en']}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    value={registrationForm.phone}
-                    onChange={(e) => {
-                      setRegistrationError(null)
-                      const next = normalizeRegistrationPhone(e.target.value, registrationForm.countryCode)
-                      setRegistrationForm((p) => ({ ...p, phone: next.display }))
-                    }}
-                    placeholder={registrationForm.countryCode === '90' ? '(531) 200 68 07' : 'Phone number'}
-                    className="flex-1 px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  {registrationCountryLabel} selected. You can type 053..., 531... or 90... We will save it in the correct format.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Gender</span>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'female' }))}
-                      variant={registrationForm.gender === 'female' ? 'default' : 'outline'}
-                      className="flex-1"
-                    >
-                      Woman
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'male' }))}
-                      variant={registrationForm.gender === 'male' ? 'default' : 'outline'}
-                      className="flex-1"
-                    >
-                      Man
-                    </Button>
+            {registrationStep === 'form' ? (
+              <div className="space-y-3">
+                {(originChannel === 'WHATSAPP' || originChannel === 'INSTAGRAM') && (originProfileName || originDisplayPhone || originPhone) ? (
+                  <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                    <p className="font-semibold">
+                      {originChannel === 'WHATSAPP' ? 'This link came from WhatsApp.' : 'This link came from Instagram.'}
+                    </p>
+                    {originProfileName ? <p className="mt-1 text-muted-foreground">Profile: {originProfileName}</p> : null}
+                    {originDisplayPhone || originPhone ? (
+                      <p className="text-muted-foreground">Number: {formatPhoneForDisplayFromDigits(originDisplayPhone || originPhone || '', registrationForm.countryIso) || originDisplayPhone || originPhone}</p>
+                    ) : null}
                   </div>
-                </div>
+                ) : null}
 
                 <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Birth date</span>
+                  <span className="text-sm text-muted-foreground">{text.fullName}</span>
                   <input
-                    type="date"
-                    value={registrationForm.birthDate}
-                    onChange={(e) => setRegistrationForm((p) => ({ ...p, birthDate: e.target.value }))}
+                    type="text"
+                    value={registrationForm.fullName}
+                    onChange={(e) => {
+                      setRegistrationError(null)
+                      setRegistrationForm((p) => ({ ...p, fullName: e.target.value }))
+                    }}
+                    placeholder={text.fullName}
                     className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
                   />
                 </div>
-              </div>
 
-              <label className="flex items-start gap-3 rounded-2xl border border-border bg-muted/10 px-4 py-3 text-sm">
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">{text.phone}</span>
+                  <div className="flex gap-2">
+                    <select
+                      value={registrationForm.countryIso}
+                      onChange={(e) => {
+                        setRegistrationError(null)
+                        setRegistrationForm((p) => ({ ...p, countryIso: e.target.value, phone: '' }))
+                      }}
+                      className="w-[48%] px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                    >
+                      {phoneCountryOptions.map((option) => (
+                        <option key={option.iso} value={option.iso}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={registrationForm.phone}
+                      onChange={(e) => {
+                        setRegistrationError(null)
+                        const next = parsePhoneInput(e.target.value, registrationForm.countryIso)
+                        setRegistrationForm((p) => ({ ...p, phone: next.display || e.target.value }))
+                      }}
+                      placeholder={registrationForm.countryIso === 'TR' ? '(531) 200 68 07' : 'Phone number'}
+                      className="flex-1 px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {registrationCountryLabel} selected. We only accept valid mobile numbers for this country.
+                  </p>
+                  {registrationForm.phone && (!registrationPhoneMeta.isValid || !registrationPhoneMeta.isMobile) ? (
+                    <p className="text-xs text-red-600">Please enter a valid mobile number for the selected country.</p>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Gender</span>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'female' }))}
+                        variant={registrationForm.gender === 'female' ? 'default' : 'outline'}
+                        className="flex-1"
+                      >
+                        Woman
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'male' }))}
+                        variant={registrationForm.gender === 'male' ? 'default' : 'outline'}
+                        className="flex-1"
+                      >
+                        Man
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Birth date</span>
+                    <input
+                      type="date"
+                      value={registrationForm.birthDate}
+                      onChange={(e) => setRegistrationForm((p) => ({ ...p, birthDate: e.target.value }))}
+                      className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {registrationStep === 'whatsapp-confirm' ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm">
+                  <p className="font-semibold text-foreground">The number you entered does not match the WhatsApp number that opened this link.</p>
+                  {originProfileName ? <p className="mt-2 text-muted-foreground">WhatsApp profile: {originProfileName}</p> : null}
+                  {originDisplayPhone || originPhone ? (
+                    <p className="text-muted-foreground">WhatsApp number: {formatPhoneForDisplayFromDigits(originDisplayPhone || originPhone || '', registrationForm.countryIso) || originDisplayPhone || originPhone}</p>
+                  ) : null}
+                  <p className="text-muted-foreground">Entered number: {registrationPhoneMeta.display || registrationForm.phone}</p>
+                </div>
+                <label className="flex items-start gap-3 rounded-2xl border border-border bg-muted/10 px-4 py-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={registrationWhatsappConfirmChecked}
+                    onChange={(e) => setRegistrationWhatsappConfirmChecked(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-muted-foreground">I understand that I am registering with a different number and it will not be auto-verified from WhatsApp.</span>
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRegistrationStep('form')}
+                    className="flex-1 rounded-full"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!registrationWhatsappConfirmChecked || registrationSubmitting}
+                    onClick={() => void submitRegistration(true)}
+                    className="flex-1 rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
+                  >
+                    {registrationSubmitting ? text.loading : 'Continue with this number'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {registrationStep === 'otp' ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+                  We sent a 6-digit verification code to your WhatsApp number. Please enter it to finish your registration.
+                </div>
                 <input
-                  type="checkbox"
-                  checked={registrationForm.acceptMarketing}
-                  onChange={(e) => setRegistrationForm((p) => ({ ...p, acceptMarketing: e.target.checked }))}
-                  className="mt-0.5"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={registrationOtpCode}
+                  onChange={(e) => {
+                    setRegistrationError(null)
+                    setRegistrationOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                  }}
+                  placeholder="123456"
+                  className="w-full px-3 py-3 rounded-xl bg-muted/30 text-center tracking-[0.4em] text-lg border border-muted"
                 />
-                <span className="text-muted-foreground">I agree to receive campaign and reminder messages.</span>
-              </label>
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={registrationOtpSending}
+                    onClick={() => void resendRegistrationCode()}
+                    className="flex-1 rounded-full"
+                  >
+                    {registrationOtpSending ? text.loading : 'Resend code'}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={registrationSubmitting || registrationOtpCode.length !== 6}
+                    onClick={() => void confirmRegistrationCode()}
+                    className="flex-1 rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
+                  >
+                    {registrationSubmitting ? text.loading : 'Verify and continue'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             {registrationError ? (
               <p className="rounded-xl border border-red-300/40 bg-red-500/10 px-3 py-2 text-sm text-red-700">{registrationError}</p>
             ) : null}
-
-            <Button
-              type="button"
-              onClick={async () => {
-                if (!registrationCanContinue) {
-                  setRegistrationError(text.fillInfoError)
-                  return
-                }
-                setRegistrationSubmitting(true)
-                setRegistrationError(null)
-                try {
-                  const res = await registerCustomer({
-                    ...registrationForm,
-                    phone: registrationPhoneMeta.e164Digits,
-                    originChannel,
-                    originPhone,
-                    instagramId: originInstagramId,
-                    magicToken: stableMagicToken,
-                  })
-                  if (res.customerId) {
-                    setCustomerId(res.customerId)
-                    setCustomerName(registrationForm.fullName)
-                    setIsKnownCustomer(true)
-                    setShowRegistrationModal(false)
-                    setShowConfirmationModal(true)
-                  }
-                } catch (err: any) {
-                  setRegistrationError(err?.message || text.genericError)
-                } finally {
-                  setRegistrationSubmitting(false)
-                }
-              }}
-              disabled={!registrationCanContinue || registrationSubmitting}
-              className="w-full rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
-            >
-              {registrationSubmitting ? text.loading : text.registerContinue}
-            </Button>
+            {registrationStep === 'form' ? (
+              <Button
+                type="button"
+                onClick={() => void submitRegistration(false)}
+                disabled={!registrationCanContinue || registrationSubmitting}
+                className="w-full rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
+              >
+                {registrationSubmitting ? text.loading : text.registerContinue}
+              </Button>
+            ) : null}
           </div>
         </div>
       )}

@@ -315,7 +315,9 @@ export async function createAppointment(
 export async function registerCustomer(
   data: {
     fullName: string;
-    phone: string;
+    rawPhone: string;
+    normalizedPhone: string;
+    countryIso: string;
     gender: string;
     birthDate: string;
     acceptMarketing: boolean;
@@ -323,18 +325,68 @@ export async function registerCustomer(
     originPhone?: string | null;
     instagramId?: string | null;
     magicToken?: string | null;
+    confirmDifferentWhatsappNumber?: boolean;
   }
-): Promise<{ customerId: string; success: boolean }> {
+): Promise<
+  | { status: 'registered'; customerId: string; success: true }
+  | {
+      status: 'requires_whatsapp_confirmation'
+      success: false
+      whatsappPhone?: string | null
+      originProfileName?: string | null
+      enteredPhone?: string | null
+    }
+  | { status: 'verification_code_sent'; success: false; verificationId: string }
+> {
   const url = `${API_BASE_URL}/api/customers/register`
   const result = await fetchFromAPI<any>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  return { 
-    customerId: result.customerId.toString(), 
-    success: true 
+  if (result.status === 'registered' && result.customerId) {
+    return {
+      status: 'registered',
+      customerId: result.customerId.toString(),
+      success: true,
+    }
   }
+  if (result.status === 'requires_whatsapp_confirmation') {
+    return {
+      status: 'requires_whatsapp_confirmation',
+      success: false,
+      whatsappPhone: result.whatsappPhone || null,
+      originProfileName: result.originProfileName || null,
+      enteredPhone: result.enteredPhone || null,
+    }
+  }
+  return {
+    status: 'verification_code_sent',
+    success: false,
+    verificationId: String(result.verificationId || ''),
+  }
+}
+
+export async function requestCustomerPhoneVerification(verificationId: string) {
+  return fetchFromAPI<{ status: 'verification_code_sent'; verificationId: string }>(
+    `${API_BASE_URL}/api/customers/verify-phone/request`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verificationId }),
+    },
+  )
+}
+
+export async function confirmCustomerPhoneVerification(input: { verificationId: string; code: string }) {
+  return fetchFromAPI<{ status: 'registered'; customerId: number }>(
+    `${API_BASE_URL}/api/customers/verify-phone/confirm`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
 }
 
 export async function getAvailableDates(input: {
@@ -410,6 +462,9 @@ export async function createWaitlistRequest(input: {
   customerId?: string | null
   customerName: string
   customerPhone: string
+  customerCountryIso: string
+  customerRawPhone: string
+  customerNormalizedPhone: string
   notes?: string | null
 }): Promise<{ item: WaitlistItem }> {
   return fetchFromAPI(`${API_BASE_URL}/api/waitlist`, {
@@ -425,6 +480,9 @@ export async function createWaitlistRequest(input: {
       customerId: input.customerId ? Number(input.customerId) : null,
       customerName: input.customerName,
       customerPhone: input.customerPhone,
+      customerCountryIso: input.customerCountryIso,
+      customerRawPhone: input.customerRawPhone,
+      customerNormalizedPhone: input.customerNormalizedPhone,
       notes: input.notes || null,
     }),
   })
@@ -497,6 +555,8 @@ export async function getBookingContextByToken(token: string): Promise<BookingCo
       customerLanguage: data.customerLanguage || data.language || null,
       originChannel: data.originChannel || null,
       originPhone: data.originPhone || null,
+      originDisplayPhone: data.originDisplayPhone || null,
+      originProfileName: data.originProfileName || null,
       originInstagramId: data.originInstagramId || null,
       salonId: data.salonId.toString(),
       salonName: data.salonName,
