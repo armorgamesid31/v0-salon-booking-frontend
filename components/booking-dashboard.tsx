@@ -164,6 +164,25 @@ const getMagicToken = (params: URLSearchParams): string | null => {
 
 const TOKEN_STORAGE_KEY = 'booking_magic_token'
 
+const REGISTRATION_COUNTRY_OPTIONS = [
+  { code: '90', label: { tr: 'Turkiye (+90)', en: 'Turkey (+90)' } },
+  { code: '49', label: { tr: 'Almanya (+49)', en: 'Germany (+49)' } },
+  { code: '44', label: { tr: 'Birlesik Krallik (+44)', en: 'United Kingdom (+44)' } },
+  { code: '1', label: { tr: 'ABD / Kanada (+1)', en: 'US / Canada (+1)' } },
+  { code: '34', label: { tr: 'Ispanya (+34)', en: 'Spain (+34)' } },
+  { code: '33', label: { tr: 'Fransa (+33)', en: 'France (+33)' } },
+  { code: '966', label: { tr: 'Suudi Arabistan (+966)', en: 'Saudi Arabia (+966)' } },
+] as const
+
+function defaultCountryCodeForLanguage(language: LanguageCode): string {
+  if (language === 'tr') return '90'
+  if (language === 'de') return '49'
+  if (language === 'es') return '34'
+  if (language === 'fr') return '33'
+  if (language === 'ar') return '966'
+  return '1'
+}
+
 const looksLikeToken = (value: string | null | undefined): value is string => {
   const candidate = (value || '').trim()
   return /^[A-Za-z0-9_-]{8,}$/.test(candidate)
@@ -216,6 +235,41 @@ const toDateOption = (isoDate: string, language: LanguageCode): DateOption => {
     label: new Intl.DateTimeFormat(LOCALE_MAP[language], { weekday: 'short' }).format(date),
     fullDate: isoDate,
     status: 'loading',
+  }
+}
+
+const normalizeRegistrationPhone = (rawValue: string, countryCode: string) => {
+  const digits = (rawValue || '').replace(/\D/g, '')
+  let localDigits = digits
+  if (countryCode === '90') {
+    if (localDigits.startsWith('90')) localDigits = localDigits.slice(2)
+    if (localDigits.startsWith('0')) localDigits = localDigits.slice(1)
+    localDigits = localDigits.slice(0, 10)
+    const a = localDigits.slice(0, 3)
+    const b = localDigits.slice(3, 6)
+    const c = localDigits.slice(6, 8)
+    const d = localDigits.slice(8, 10)
+    const display = [a ? `(${a}` : '', a && a.length === 3 ? ')' : '', b, c, d]
+      .filter(Boolean)
+      .join(a && a.length === 3 ? ' ' : '')
+      .replace(/\)\s?$/, ')')
+      .trim()
+    return {
+      localDigits,
+      display: display.replace(/\)\s?(\d{0,3})/, ') $1').replace(/\s+/g, ' ').trim(),
+      e164Digits: localDigits.length ? `${countryCode}${localDigits}` : '',
+    }
+  }
+
+  if (localDigits.startsWith(countryCode)) {
+    localDigits = localDigits.slice(countryCode.length)
+  }
+  localDigits = localDigits.replace(/^0+/, '').slice(0, 14)
+  const grouped = localDigits.replace(/(\d{3})(?=\d)/g, '$1 ').trim()
+  return {
+    localDigits,
+    display: grouped,
+    e164Digits: localDigits.length ? `${countryCode}${localDigits}` : '',
   }
 }
 
@@ -338,7 +392,6 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
-  const [registrationExpanded, setRegistrationExpanded] = useState(false)
   const [registrationError, setRegistrationError] = useState<string | null>(null)
   const [registrationSubmitting, setRegistrationSubmitting] = useState(false)
   const [showConfirmationModal, setShowConfirmationModal] = useState(false)
@@ -394,6 +447,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [registrationForm, setRegistrationForm] = useState({
     fullName: '',
     phone: '',
+    countryCode: '90',
     gender: 'female' as 'female' | 'male',
     birthDate: '',
     acceptMarketing: false,
@@ -452,10 +506,22 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return dateOptions.find((option) => option.fullDate === selectedDate)?.status || null
   }, [dateOptions, selectedDate])
 
-  const registrationPhoneDigits = useMemo(() => (registrationForm.phone || '').replace(/\D/g, ''), [registrationForm.phone])
+  const registrationPhoneMeta = useMemo(
+    () => normalizeRegistrationPhone(registrationForm.phone, registrationForm.countryCode),
+    [registrationForm.countryCode, registrationForm.phone],
+  )
+  const registrationCountryLabel = useMemo(() => {
+    const option = REGISTRATION_COUNTRY_OPTIONS.find((item) => item.code === registrationForm.countryCode) || REGISTRATION_COUNTRY_OPTIONS[0]
+    return option.label[language === 'tr' ? 'tr' : 'en']
+  }, [language, registrationForm.countryCode])
   const registrationCanContinue = useMemo(() => {
-    return registrationForm.fullName.trim().length >= 2 && registrationPhoneDigits.length >= 10
-  }, [registrationForm.fullName, registrationPhoneDigits])
+    return (
+      registrationForm.fullName.trim().length >= 2 &&
+      registrationPhoneMeta.localDigits.length >= 10 &&
+      Boolean(registrationForm.birthDate) &&
+      Boolean(registrationForm.gender)
+    )
+  }, [registrationForm.birthDate, registrationForm.fullName, registrationForm.gender, registrationPhoneMeta.localDigits.length])
 
   const waitlistDefaultStart = useMemo(() => {
     if (selectedDisplaySlot?.startTime) return selectedDisplaySlot.startTime
@@ -518,6 +584,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     const lang = normalizeLanguage(queryLang || savedLang || detectBrowserLanguage())
     setLanguage(lang)
   }, [searchParams, forcedLanguage])
+
+  useEffect(() => {
+    const preferredCountryCode = defaultCountryCodeForLanguage(language)
+    setRegistrationForm((prev) => (prev.countryCode === preferredCountryCode ? prev : { ...prev, countryCode: preferredCountryCode, phone: '' }))
+  }, [language])
 
   useEffect(() => {
     let active = true
@@ -3225,9 +3296,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             <div className="flex items-start justify-between gap-3 sticky top-0 bg-card pb-2">
               <div>
                 <h2 className="text-xl font-bold">{text.completeProfile}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">We only need your name and phone to hold the appointment.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Register once. After this, your future appointments can be completed with a single tap.
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   if (registrationSubmitting) return
                   setShowRegistrationModal(false)
@@ -3240,8 +3314,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             </div>
 
             <div className="space-y-3">
-              <label className="block text-sm space-y-1">
-                <span className="text-muted-foreground">{text.fullName}</span>
+              <div className="space-y-1">
+                <span className="text-sm text-muted-foreground">{text.fullName}</span>
                 <input
                   type="text"
                   value={registrationForm.fullName}
@@ -3252,63 +3326,87 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   placeholder={text.fullName}
                   className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
                 />
-              </label>
-              <label className="block text-sm space-y-1">
-                <span className="text-muted-foreground">{text.phone}</span>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={registrationForm.phone}
-                  onChange={(e) => {
-                    setRegistrationError(null)
-                    setRegistrationForm((p) => ({ ...p, phone: e.target.value }))
-                  }}
-                  placeholder="05xx xxx xx xx"
-                  className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
-                />
-                <p className="text-[11px] text-muted-foreground">We use this for confirmation and reminder messages.</p>
-              </label>
-            </div>
+              </div>
 
-            <div className="rounded-2xl border border-border bg-muted/10">
-              <button
-                type="button"
-                onClick={() => setRegistrationExpanded((prev) => !prev)}
-                className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium"
-              >
-                <span>Optional details</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${registrationExpanded ? 'rotate-180' : ''}`} />
-              </button>
-              {registrationExpanded ? (
-                <div className="space-y-3 border-t border-border px-4 py-3">
-                  <div className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Gender</span>
-                    <div className="flex gap-2">
-                      <Button onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'female' }))} variant={'female' === registrationForm.gender ? 'default' : 'outline'} className="flex-1">Woman</Button>
-                      <Button onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'male' }))} variant={'male' === registrationForm.gender ? 'default' : 'outline'} className="flex-1">Man</Button>
-                    </div>
-                  </div>
-                  <label className="block text-sm space-y-1">
-                    <span className="text-muted-foreground">Birth date</span>
-                    <input
-                      type="date"
-                      value={registrationForm.birthDate}
-                      onChange={(e) => setRegistrationForm((p) => ({ ...p, birthDate: e.target.value }))}
-                      className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
-                    />
-                  </label>
-                  <label className="flex items-start gap-3 rounded-xl bg-background px-3 py-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={registrationForm.acceptMarketing}
-                      onChange={(e) => setRegistrationForm((p) => ({ ...p, acceptMarketing: e.target.checked }))}
-                      className="mt-0.5"
-                    />
-                    <span className="text-muted-foreground">I agree to receive campaign and reminder messages.</span>
-                  </label>
+              <div className="space-y-1">
+                <span className="text-sm text-muted-foreground">{text.phone}</span>
+                <div className="flex gap-2">
+                  <select
+                    value={registrationForm.countryCode}
+                    onChange={(e) => {
+                      setRegistrationError(null)
+                      setRegistrationForm((p) => ({ ...p, countryCode: e.target.value, phone: '' }))
+                    }}
+                    className="w-[42%] px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                  >
+                    {REGISTRATION_COUNTRY_OPTIONS.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.label[language === 'tr' ? 'tr' : 'en']}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={registrationForm.phone}
+                    onChange={(e) => {
+                      setRegistrationError(null)
+                      const next = normalizeRegistrationPhone(e.target.value, registrationForm.countryCode)
+                      setRegistrationForm((p) => ({ ...p, phone: next.display }))
+                    }}
+                    placeholder={registrationForm.countryCode === '90' ? '(531) 200 68 07' : 'Phone number'}
+                    className="flex-1 px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                  />
                 </div>
-              ) : null}
+                <p className="text-[11px] text-muted-foreground">
+                  {registrationCountryLabel} selected. You can type 053..., 531... or 90... We will save it in the correct format.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">Gender</span>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'female' }))}
+                      variant={registrationForm.gender === 'female' ? 'default' : 'outline'}
+                      className="flex-1"
+                    >
+                      Woman
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setRegistrationForm((p) => ({ ...p, gender: 'male' }))}
+                      variant={registrationForm.gender === 'male' ? 'default' : 'outline'}
+                      className="flex-1"
+                    >
+                      Man
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-sm text-muted-foreground">Birth date</span>
+                  <input
+                    type="date"
+                    value={registrationForm.birthDate}
+                    onChange={(e) => setRegistrationForm((p) => ({ ...p, birthDate: e.target.value }))}
+                    className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 rounded-2xl border border-border bg-muted/10 px-4 py-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={registrationForm.acceptMarketing}
+                  onChange={(e) => setRegistrationForm((p) => ({ ...p, acceptMarketing: e.target.checked }))}
+                  className="mt-0.5"
+                />
+                <span className="text-muted-foreground">I agree to receive campaign and reminder messages.</span>
+              </label>
             </div>
 
             {registrationError ? (
@@ -3316,6 +3414,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             ) : null}
 
             <Button
+              type="button"
               onClick={async () => {
                 if (!registrationCanContinue) {
                   setRegistrationError(text.fillInfoError)
@@ -3326,6 +3425,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 try {
                   const res = await registerCustomer({
                     ...registrationForm,
+                    phone: registrationPhoneMeta.e164Digits,
                     originChannel,
                     originPhone,
                     instagramId: originInstagramId,
