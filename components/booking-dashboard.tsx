@@ -38,15 +38,19 @@ import {
   getSalon,
   getServices,
   getStaffForService,
+  getAvailableDates,
   checkAvailability,
   createAppointment,
   enrollReferralCampaign,
   getReferralShareLink,
   previewBookingPricing,
+  getBookingRescheduleOptions,
   previewBookingReschedule,
   commitBookingReschedule,
   cancelBookingByToken,
   submitBookingFeedback,
+  type AvailabilityDisplaySlot,
+  type AvailabilityServiceSelection,
   type ReschedulePreviewResponse,
 } from '@/lib/api'
 import LanguageSelector from '@/components/language-selector'
@@ -80,9 +84,24 @@ type RescheduleModalState = {
   date: string
   time: string
   loading: boolean
+  suggestionsLoading: boolean
+  suggestedSlots: Array<{
+    time: string
+    startTime: string
+    endTime: string
+    requiresManualSelection: boolean
+    preview: ReschedulePreviewResponse
+  }>
   preview: ReschedulePreviewResponse | null
   assignments: Record<number, number>
   error: string | null
+}
+
+type DateOption = {
+  key: string
+  day: number
+  label: string
+  fullDate: string
 }
 
 type SelectedServiceEntry = {
@@ -168,6 +187,16 @@ const toInputTime = (iso: string): string => {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${hours}:${minutes}`
+}
+
+const toDateOption = (isoDate: string, language: LanguageCode): DateOption => {
+  const date = new Date(`${isoDate}T00:00:00`)
+  return {
+    key: isoDate,
+    day: date.getDate(),
+    label: new Intl.DateTimeFormat(LOCALE_MAP[language], { weekday: 'short' }).format(date),
+    fullDate: isoDate,
+  }
 }
 
 const appointmentStatusMeta = (
@@ -283,7 +312,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [campaignShareLinks, setCampaignShareLinks] = useState<Array<{ campaignId: string; token: string; status: string }>>([])
   const [recentAppointments, setRecentAppointments] = useState<BookingContextAppointment[]>([])
   const [rescheduleModal, setRescheduleModal] = useState<RescheduleModalState | null>(null)
-  const [availableSlots, setAvailableSlots] = useState<{time: string, available: boolean}[]>([])
+  const [availableSlots, setAvailableSlots] = useState<AvailabilityDisplaySlot[]>([])
   const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE)
   const [runtimeContent, setRuntimeContent] = useState<RuntimeContentMap>({})
   const [welcomeMessage, setWelcomeMessage] = useState('')
@@ -310,6 +339,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [campaignsOpen, setCampaignsOpen] = useState(false)
   const [appointmentsOpen, setAppointmentsOpen] = useState(false)
   const [expandedAppointmentGroupKey, setExpandedAppointmentGroupKey] = useState<string | null>(null)
+  const [dateOptions, setDateOptions] = useState<DateOption[]>([])
+  const [availabilityLockToken, setAvailabilityLockToken] = useState<string | null>(null)
+  const [selectedDisplaySlot, setSelectedDisplaySlot] = useState<AvailabilityDisplaySlot | null>(null)
   const [pricingPreview, setPricingPreview] = useState<null | {
     subtotal: number
     discountTotal: number
@@ -451,6 +483,26 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     )
   }, [availableServices])
 
+  const selectedServiceGroups = useMemo<AvailabilityServiceSelection[][]>(() => {
+    return Array.from({ length: numberOfPeople }, (_, index) => {
+      const personIndex = index + 1
+      return selectedServices
+        .filter((entry) => entry.personIndex === personIndex)
+        .map((entry) => {
+          const specialistIds = selectedSpecialistOptionIds[entry.entryId] || (selectedSpecialistIds[entry.entryId] ? [selectedSpecialistIds[entry.entryId]] : [])
+          const normalizedIds = specialistIds
+            .map((id) => Number(id))
+            .filter((id, listIndex, list) => Number.isInteger(id) && id > 0 && list.indexOf(id) === listIndex)
+
+          return {
+            serviceId: Number(entry.service.id),
+            allowedStaffIds: normalizedIds.length ? normalizedIds : null,
+          }
+        })
+        .filter((selection) => Number.isInteger(selection.serviceId) && selection.serviceId > 0)
+    })
+  }, [numberOfPeople, selectedServices, selectedSpecialistIds, selectedSpecialistOptionIds])
+
   useEffect(() => {
     setPackageUsageByKey({})
   }, [activePackages.length, customerId])
@@ -569,34 +621,93 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       }
   }, [selectedGender, salonId])
 
-  // Fetch Slots
   useEffect(() => {
-    if (selectedDate && selectedServices.length > 0 && salonId) {
-        const today = new Date()
-        const year = today.getFullYear()
-        const month = String(today.getMonth() + 1).padStart(2, '0')
-        const day = String(selectedDate).padStart(2, '0')
-        const dateStr = `${year}-${month}-${day}`
+    let active = true
 
-        const serviceGroups = Array.from({ length: numberOfPeople }, (_, index) => {
-          const personIndex = index + 1
-          return selectedServices
-            .filter((entry) => entry.personIndex === personIndex)
-            .map((entry) => Number(entry.service.id))
-            .filter((id) => Number.isInteger(id) && id > 0)
-        })
-
-        const fallbackServiceId = selectedServices[0].service.id
-        checkAvailability(salonId, fallbackServiceId, dateStr, numberOfPeople, serviceGroups)
-            .then(res => {
-                if (res.available && res.slots) {
-                    setAvailableSlots(res.slots.map(s => ({ time: s, available: true })))
-                } else {
-                    setAvailableSlots([])
-                }
-            })
+    if (!selectedServices.length || !salonId) {
+      setDateOptions([])
+      setSelectedDate(null)
+      setAvailableSlots([])
+      setAvailabilityLockToken(null)
+      setSelectedDisplaySlot(null)
+      setSelectedTimeSlot(null)
+      return
     }
-  }, [selectedDate, selectedServices, numberOfPeople, salonId])
+
+    const startDate = new Date()
+    startDate.setHours(0, 0, 0, 0)
+    const endDate = new Date(startDate)
+    endDate.setDate(endDate.getDate() + 29)
+
+    void getAvailableDates({
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      groups: selectedServiceGroups
+        .map((services, index) => ({ personId: `p${index + 1}`, services }))
+        .filter((group) => group.services.length > 0),
+    })
+      .then((result) => {
+        if (!active) return
+        const nextOptions = (result.availableDates || []).map((dateValue) => toDateOption(dateValue, language))
+        setDateOptions(nextOptions)
+        setSelectedDate((prev) => {
+          if (prev && nextOptions.some((option) => option.fullDate === prev)) {
+            return prev
+          }
+          return nextOptions[0]?.fullDate || null
+        })
+        if (!nextOptions.length) {
+          setAvailableSlots([])
+          setAvailabilityLockToken(null)
+          setSelectedDisplaySlot(null)
+          setSelectedTimeSlot(null)
+        }
+      })
+      .catch(() => {
+        if (!active) return
+        setDateOptions([])
+        setSelectedDate(null)
+        setAvailableSlots([])
+        setAvailabilityLockToken(null)
+        setSelectedDisplaySlot(null)
+        setSelectedTimeSlot(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [language, numberOfPeople, salonId, selectedServiceGroups, selectedServices.length])
+
+  useEffect(() => {
+    let active = true
+
+    if (!selectedDate || !selectedServices.length || !salonId) {
+      setAvailableSlots([])
+      setAvailabilityLockToken(null)
+      setSelectedDisplaySlot(null)
+      setSelectedTimeSlot(null)
+      return
+    }
+
+    const fallbackServiceId = selectedServices[0].service.id
+    void checkAvailability(salonId, fallbackServiceId, selectedDate, numberOfPeople, selectedServiceGroups).then((result) => {
+      if (!active) return
+      setAvailableSlots(result.displaySlots || [])
+      setAvailabilityLockToken(result.lockToken?.id || null)
+      setSelectedDisplaySlot((prev) => {
+        if (!prev) return null
+        return result.displaySlots.find((slot) => slot.displayKey === prev.displayKey) || null
+      })
+      setSelectedTimeSlot((prev) => {
+        if (!prev) return null
+        return result.displaySlots.some((slot) => slot.label === prev) ? prev : null
+      })
+    })
+
+    return () => {
+      active = false
+    }
+  }, [numberOfPeople, salonId, selectedDate, selectedServiceGroups, selectedServices])
 
   useEffect(() => {
     setSelectedServices((prev) => {
@@ -637,9 +748,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         const dateIso =
           selectedDate && selectedTimeSlot
             ? (() => {
-                const d = new Date()
-                d.setMonth(d.getMonth())
-                d.setDate(Number(selectedDate))
+                const d = new Date(`${selectedDate}T00:00:00`)
                 const [h, m] = selectedTimeSlot.split(':').map((n) => Number(n))
                 d.setHours(h || 0, m || 0, 0, 0)
                 return d.toISOString()
@@ -1227,15 +1336,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }
 
   const handleConfirmAppointment = async () => {
-    if (!customerId || !selectedDate || !selectedTimeSlot || selectedServices.length === 0) return;
+    if (!customerId || !selectedDate || !selectedTimeSlot || !selectedDisplaySlot || !availabilityLockToken || selectedServices.length === 0) return;
     
     setIsBooking(true);
     try {
-        const today = new Date()
-        const year = today.getFullYear()
-        const month = String(today.getMonth() + 1).padStart(2, '0')
-        const day = String(selectedDate).padStart(2, '0')
-        const dateStr = `${year}-${month}-${day}`
+        const dateStr = selectedDate
 
         const res = await createAppointment(salonId, customerId, {
             services: selectedServices.map(entry => ({
@@ -1252,8 +1357,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               .map((entry) => ({
                 serviceId: entry.service.id,
                 customerPackageId: String(entry.packageId),
-              })),
+            })),
             referralShareToken: searchParams.get('ref') || undefined,
+            availabilityLockToken,
+            selectedSlots: selectedDisplaySlot.personSlots.map((slot) => ({
+              personId: slot.personId,
+              slotKey: slot.slotKey,
+            })),
             date: dateStr,
             time: selectedTimeSlot,
             numberOfPeople,
@@ -1277,10 +1387,25 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             setSelectedSpecialistOptionIds({})
             setSelectedDate(null);
             setSelectedTimeSlot(null);
+            setSelectedDisplaySlot(null);
+            setAvailabilityLockToken(null);
             if (stableMagicToken) {
               await reloadBookingContext();
             }
         } else {
+            if (res.code === 'SLOT_NOT_AVAILABLE' && res.alternatives) {
+              const replacementDateOptions = (res.alternatives.availableDates || []).map((dateValue) => toDateOption(dateValue, language))
+              if (replacementDateOptions.length) {
+                setDateOptions(replacementDateOptions)
+              }
+              if (res.alternatives.date) {
+                setSelectedDate(res.alternatives.date)
+              }
+              setAvailableSlots(res.alternatives.displaySlots || [])
+              setAvailabilityLockToken(res.alternatives.lockToken?.id || null)
+              setSelectedDisplaySlot(null)
+              setSelectedTimeSlot(null)
+            }
             alert(res.error || text.bookingFailed);
         }
     } catch (err) {
@@ -1329,11 +1454,51 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       date: toInputDate(first.startTime),
       time: toInputTime(first.startTime),
       loading: false,
+      suggestionsLoading: false,
+      suggestedSlots: [],
       preview: null,
       assignments: {},
       error: null,
     })
   }
+
+  const loadRescheduleOptions = async () => {
+    if (!rescheduleModal || !stableMagicToken || !rescheduleModal.date) return
+    setRescheduleModal((prev) => (prev ? { ...prev, suggestionsLoading: true } : prev))
+    try {
+      const assignments = Object.entries(rescheduleModal.assignments)
+        .map(([appointmentId, staffId]) => ({
+          appointmentId: Number(appointmentId),
+          staffId: Number(staffId),
+        }))
+        .filter((row) => Number.isInteger(row.appointmentId) && row.appointmentId > 0 && Number.isInteger(row.staffId) && row.staffId > 0)
+
+      const options = await getBookingRescheduleOptions({
+        token: stableMagicToken,
+        appointmentIds: rescheduleModal.appointmentIds,
+        date: rescheduleModal.date,
+        assignments,
+      })
+
+      setRescheduleModal((prev) =>
+        prev
+          ? {
+              ...prev,
+              suggestionsLoading: false,
+              suggestedSlots: options.slots || [],
+            }
+          : prev,
+      )
+    } catch {
+      setRescheduleModal((prev) => (prev ? { ...prev, suggestionsLoading: false, suggestedSlots: [] } : prev))
+    }
+  }
+
+  useEffect(() => {
+    if (!rescheduleModal?.date || !stableMagicToken) return
+    void loadRescheduleOptions()
+  }, [rescheduleModal?.date, stableMagicToken])
+
 
   const runReschedulePreview = async () => {
     if (!rescheduleModal || !stableMagicToken) return
@@ -1529,12 +1694,6 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
   }
 
-  const dateOptions = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date()
-      d.setDate(d.getDate() + i)
-      const dayLabel = new Intl.DateTimeFormat(LOCALE_MAP[language], { weekday: 'short' }).format(d)
-      return { day: d.getDate(), label: dayLabel }
-  })
 
   const filteredCategories = availableServices.map((cat) => ({
     ...cat,
@@ -2034,7 +2193,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4"><Calendar className="w-4 h-4 text-primary" /> {text.selectDate}</h3>
               <div className="flex gap-2 pb-2 overflow-x-auto">
                 {dateOptions.map((opt) => (
-                  <button key={opt.day} onClick={() => setSelectedDate(opt.day.toString())} className={`px-3 py-3 rounded-lg font-semibold text-sm flex flex-col items-center gap-1 ${selectedDate === opt.day.toString() ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                  <button key={opt.key} onClick={() => setSelectedDate(opt.fullDate)} className={`px-3 py-3 rounded-lg font-semibold text-sm flex flex-col items-center gap-1 ${selectedDate === opt.fullDate ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                     <span className="text-xs">{opt.label}</span>
                     <span className="text-base font-bold">{opt.day}</span>
                   </button>
@@ -2050,7 +2209,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 ) : (
                     <div className="grid grid-cols-4 gap-2">
                         {availableSlots.map((slot) => (
-                            <button key={slot.time} onClick={() => setSelectedTimeSlot(slot.time)} className={`p-2 rounded-lg text-xs font-semibold ${selectedTimeSlot === slot.time ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{slot.time}</button>
+                            <button key={slot.displayKey} onClick={() => { setSelectedTimeSlot(slot.label); setSelectedDisplaySlot(slot) }} className={`p-2 rounded-lg text-xs font-semibold ${selectedDisplaySlot?.displayKey === slot.displayKey ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{slot.label}</button>
                         ))}
                     </div>
                 )}
@@ -2077,13 +2236,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   ) : null}
                 </div>
                 <Button onClick={() => {
-                    if (!selectedDate || !selectedTimeSlot) {
+                    if (!selectedDate || !selectedTimeSlot || !selectedDisplaySlot) {
                       document.querySelector('[data-scroll-target="date-time"]')?.scrollIntoView({ behavior: "smooth" })
                     } else {
                       if (isKnownCustomer) setShowConfirmationModal(true)
                       else setShowRegistrationModal(true)
                     }
-                  }} className={`px-6 py-3 font-bold text-sm rounded-full ${selectedDate && selectedTimeSlot ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground cursor-not-allowed'}`} disabled={!selectedDate || !selectedTimeSlot}>{text.confirmAppointment}</Button>
+                  }} className={`px-6 py-3 font-bold text-sm rounded-full ${selectedDate && selectedTimeSlot && selectedDisplaySlot ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground cursor-not-allowed'}`} disabled={!selectedDate || !selectedTimeSlot || !selectedDisplaySlot}>{text.confirmAppointment}</Button>
               </div>
             </div>
           </div>
@@ -2324,7 +2483,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   type="date"
                   value={rescheduleModal.date}
                   onChange={(event) =>
-                    setRescheduleModal((prev) => (prev ? { ...prev, date: event.target.value } : prev))
+                    setRescheduleModal((prev) => (prev ? { ...prev, date: event.target.value, preview: null, error: null } : prev))
                   }
                   className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
                 />
@@ -2335,12 +2494,51 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   type="time"
                   value={rescheduleModal.time}
                   onChange={(event) =>
-                    setRescheduleModal((prev) => (prev ? { ...prev, time: event.target.value } : prev))
+                    setRescheduleModal((prev) => (prev ? { ...prev, time: event.target.value, preview: null, error: null } : prev))
                   }
                   className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
                 />
               </label>
             </div>
+
+            {rescheduleModal.suggestionsLoading ? (
+              <div className="rounded-lg border border-border bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+                {text.dashboard.checkingLabel}
+              </div>
+            ) : rescheduleModal.suggestedSlots.length ? (
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {language === 'tr' ? 'Onerilen saatler' : 'Suggested slots'}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {rescheduleModal.suggestedSlots.map((slot) => (
+                    <button
+                      key={slot.startTime}
+                      type="button"
+                      onClick={() =>
+                        setRescheduleModal((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                time: slot.time,
+                                preview: slot.preview,
+                                error: slot.preview.hasConflicts && slot.preview.conflicts.length
+                                  ? slot.preview.conflicts[0].reason || text.dashboard.rescheduleSlotUnavailable
+                                  : null,
+                              }
+                            : prev,
+                        )
+                      }
+                      className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
+                        rescheduleModal.time === slot.time ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted/10 text-foreground'
+                      }`}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <button
               type="button"
@@ -2611,7 +2809,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 <div>
                     <p className="text-xs text-muted-foreground uppercase font-bold">{text.dateAndTime}</p>
                     <p className="text-base font-bold">
-                      {selectedDate ? new Date(new Date().getFullYear(), new Date().getMonth(), Number(selectedDate)).toLocaleDateString(LOCALE_MAP[language], { day: '2-digit', month: 'short' }) : '-'} - {selectedTimeSlot}
+                      {selectedDate ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString(LOCALE_MAP[language], { day: '2-digit', month: 'short' }) : '-'} - {selectedTimeSlot}
                     </p>
                 </div>
                 <div>

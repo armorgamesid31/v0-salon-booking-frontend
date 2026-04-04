@@ -18,11 +18,13 @@ import type {
 
 class ApiError extends Error {
   status: number
+  payload: any
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, payload?: any) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.payload = payload
   }
 }
 
@@ -43,7 +45,7 @@ async function fetchFromAPI<T>(url: string, options?: RequestInit): Promise<T> {
   const data = isJson ? await response.json().catch(() => ({})) : null
 
   if (!response.ok) {
-    throw new ApiError(data?.message || `API error: ${response.status}`, response.status)
+    throw new ApiError(data?.message || `API error: ${response.status}`, response.status, data)
   }
   return data as T
 }
@@ -134,6 +136,63 @@ export async function getStaffForService(serviceId: string): Promise<Employee[]>
   }
 }
 
+export type AvailabilityServiceSelection = {
+  serviceId: number
+  allowedStaffIds?: number[] | null
+}
+
+export type AvailabilityGroupInput = {
+  personId: string
+  services: AvailabilityServiceSelection[]
+}
+
+export type AvailabilityDisplayPersonSlot = {
+  personId: string
+  slotKey: string
+  startTime: string
+  endTime: string
+  staffId: number
+  serviceSequence: Array<{
+    serviceId: number
+    start: string
+    end: string
+    staffId: number
+  }>
+}
+
+export type AvailabilityDisplaySlot = {
+  displayKey: string
+  label: string
+  startTime: string
+  endTime: string
+  personSlots: AvailabilityDisplayPersonSlot[]
+}
+
+export type AvailabilitySlotsResult = {
+  available: boolean
+  date: string
+  displaySlots: AvailabilityDisplaySlot[]
+  lockToken?: { id: string; expiresAt: string } | null
+}
+
+export type BookingAlternatives = {
+  date: string | null
+  availableDates: string[]
+  displaySlots: AvailabilityDisplaySlot[]
+  lockToken?: { id: string; expiresAt: string } | null
+}
+
+export type RescheduleOptionsResponse = {
+  date: string
+  slots: Array<{
+    time: string
+    startTime: string
+    endTime: string
+    requiresManualSelection: boolean
+    preview: ReschedulePreviewResponse
+  }>
+}
+
 export async function createAppointment(
   salonId: string,
   customerId: string,
@@ -144,9 +203,14 @@ export async function createAppointment(
     date: string
     time: string
     numberOfPeople: number
+    availabilityLockToken?: string | null
+    selectedSlots?: Array<{ personId: string; slotKey: string }>
     customerInfo: { name: string; phone: string; email?: string }
   }
-): Promise<ApiResponse<Appointment & { pricingBreakdown?: any; appliedCampaigns?: any[] }>> {
+): Promise<ApiResponse<Appointment & { pricingBreakdown?: any; appliedCampaigns?: any[] }> & {
+  code?: string
+  alternatives?: BookingAlternatives
+}> {
     try {
       const url = `${API_BASE_URL}/api/bookings`
       
@@ -180,6 +244,8 @@ export async function createAppointment(
             customerPackageId: row.customerPackageId,
           })),
           referralShareToken: data.referralShareToken || null,
+          availabilityLockToken: data.availabilityLockToken || null,
+          selectedSlots: Array.isArray(data.selectedSlots) ? data.selectedSlots : [],
           startTime: start.toISOString(),
           customerName: data.customerInfo.name,
           customerPhone: data.customerInfo.phone,
@@ -188,6 +254,13 @@ export async function createAppointment(
       })
       return { data: result }
   } catch (error) {
+    if (error instanceof ApiError) {
+      return {
+        error: error.message,
+        code: typeof error.payload?.code === 'string' ? error.payload.code : undefined,
+        alternatives: error.payload?.alternatives,
+      }
+    }
     return {
       error: error instanceof Error ? error.message : 'Failed to create appointment',
     }
@@ -219,24 +292,46 @@ export async function registerCustomer(
   }
 }
 
+export async function getAvailableDates(input: {
+  startDate: string
+  endDate: string
+  groups: AvailabilityGroupInput[]
+}): Promise<{ availableDates: string[]; unavailableDates: string[] }> {
+  const url = `${API_BASE_URL}/availability/dates`
+  return fetchFromAPI(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
 export async function checkAvailability(
   salonId: string,
   serviceId: string,
   date: string,
   numberOfPeople: number,
-  serviceGroups?: number[][]
-): Promise<{ available: boolean; slots?: string[] }> {
+  serviceGroups?: AvailabilityServiceSelection[][]
+): Promise<AvailabilitySlotsResult> {
   try {
     const url = `${API_BASE_URL}/availability/slots`
     const peopleCount = Math.max(1, Number(numberOfPeople) || 1)
     const groups = Array.from({ length: peopleCount }, (_, index) => {
       const candidate = serviceGroups?.[index]
       const normalized = Array.isArray(candidate) && candidate.length > 0
-        ? candidate.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
-        : [parseInt(serviceId)]
+        ? candidate
+            .map((selection) => ({
+              serviceId: Number(selection.serviceId),
+              allowedStaffIds: Array.isArray(selection.allowedStaffIds)
+                ? selection.allowedStaffIds
+                    .map((id) => Number(id))
+                    .filter((id, listIndex, list) => Number.isInteger(id) && id > 0 && list.indexOf(id) === listIndex)
+                : null,
+            }))
+            .filter((selection) => Number.isInteger(selection.serviceId) && selection.serviceId > 0)
+        : [{ serviceId: parseInt(serviceId, 10), allowedStaffIds: null }]
       return {
         personId: `p${index + 1}`,
-        services: normalized.length ? normalized : [parseInt(serviceId)],
+        services: normalized.length ? normalized : [{ serviceId: parseInt(serviceId, 10), allowedStaffIds: null }],
       }
     })
     const data = await fetchFromAPI<any>(url, {
@@ -247,18 +342,16 @@ export async function checkAvailability(
         groups,
       }),
     })
-    
-    const personGroup = data.groups?.[0]
-    if (personGroup && personGroup.slots.length > 0) {
-      return {
-        available: true,
-        slots: personGroup.slots.map((s: any) => s.startTime)
-      }
+
+    return {
+      available: Array.isArray(data.displaySlots) && data.displaySlots.length > 0,
+      date: data.date || date,
+      displaySlots: Array.isArray(data.displaySlots) ? data.displaySlots : [],
+      lockToken: data.lockToken || null,
     }
-    return { available: false }
   } catch (error) {
     console.error('checkAvailability error:', error)
-    return { available: false }
+    return { available: false, date, displaySlots: [], lockToken: null }
   }
 }
 
@@ -468,6 +561,20 @@ export async function previewBookingReschedule(input: {
 }): Promise<ReschedulePreviewResponse> {
   const url = `${API_BASE_URL}/api/bookings/reschedule-preview`
   return fetchFromAPI<ReschedulePreviewResponse>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export async function getBookingRescheduleOptions(input: {
+  token: string
+  appointmentIds: number[]
+  date: string
+  assignments?: Array<{ appointmentId: number; staffId: number }>
+}): Promise<RescheduleOptionsResponse> {
+  const url = `${API_BASE_URL}/api/bookings/reschedule-options`
+  return fetchFromAPI<RescheduleOptionsResponse>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
