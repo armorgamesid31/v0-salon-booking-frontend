@@ -102,6 +102,7 @@ type DateOption = {
   day: number
   label: string
   fullDate: string
+  status: 'loading' | 'available' | 'full'
 }
 
 type SelectedServiceEntry = {
@@ -196,6 +197,7 @@ const toDateOption = (isoDate: string, language: LanguageCode): DateOption => {
     day: date.getDate(),
     label: new Intl.DateTimeFormat(LOCALE_MAP[language], { weekday: 'short' }).format(date),
     fullDate: isoDate,
+    status: 'loading',
   }
 }
 
@@ -405,6 +407,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       },
     }
   }, [language, runtimeContent])
+
+  const selectedDateStatus = useMemo(() => {
+    if (!selectedDate) return null
+    return dateOptions.find((option) => option.fullDate === selectedDate)?.status || null
+  }, [dateOptions, selectedDate])
 
   useEffect(() => {
     const fromSearchParams = getMagicToken(searchParams)
@@ -638,40 +645,60 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     startDate.setHours(0, 0, 0, 0)
     const endDate = new Date(startDate)
     endDate.setDate(endDate.getDate() + 29)
-
-    void getAvailableDates({
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      groups: selectedServiceGroups
-        .map((services, index) => ({ personId: `p${index + 1}`, services }))
-        .filter((group) => group.services.length > 0),
+    const allDates = Array.from({ length: 30 }, (_, index) => {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + index)
+      return date.toISOString().split('T')[0]
     })
-      .then((result) => {
-        if (!active) return
-        const nextOptions = (result.availableDates || []).map((dateValue) => toDateOption(dateValue, language))
-        setDateOptions(nextOptions)
-        setSelectedDate((prev) => {
-          if (prev && nextOptions.some((option) => option.fullDate === prev)) {
-            return prev
-          }
-          return nextOptions[0]?.fullDate || null
-        })
-        if (!nextOptions.length) {
-          setAvailableSlots([])
-          setAvailabilityLockToken(null)
-          setSelectedDisplaySlot(null)
-          setSelectedTimeSlot(null)
+    const groups = selectedServiceGroups
+      .map((services, index) => ({ personId: `p${index + 1}`, services }))
+      .filter((group) => group.services.length > 0)
+
+    setDateOptions(allDates.map((dateValue) => toDateOption(dateValue, language)))
+    setSelectedDate((prev) => (prev && allDates.includes(prev) ? prev : allDates[0] || null))
+    setAvailableSlots([])
+    setAvailabilityLockToken(null)
+    setSelectedDisplaySlot(null)
+    setSelectedTimeSlot(null)
+
+    const fetchChunk = async (chunkDates: string[]) => {
+      if (!chunkDates.length) return
+      const result = await getAvailableDates({
+        startDate: chunkDates[0],
+        endDate: chunkDates[chunkDates.length - 1],
+        groups,
+      })
+      if (!active) return
+
+      const availableSet = new Set(result.availableDates || [])
+      const unavailableSet = new Set(result.unavailableDates || [])
+      setDateOptions((prev) =>
+        prev.map((option) => {
+          if (!chunkDates.includes(option.fullDate)) return option
+          if (availableSet.has(option.fullDate)) return { ...option, status: 'available' as const }
+          if (unavailableSet.has(option.fullDate)) return { ...option, status: 'full' as const }
+          return option
+        }),
+      )
+    }
+
+    void (async () => {
+      try {
+        const chunks = Array.from({ length: Math.ceil(allDates.length / 7) }, (_, index) =>
+          allDates.slice(index * 7, index * 7 + 7),
+        )
+
+        const [firstChunk, ...remainingChunks] = chunks
+        if (firstChunk?.length) {
+          await fetchChunk(firstChunk)
         }
-      })
-      .catch(() => {
+
+        await Promise.all(remainingChunks.map((chunk) => fetchChunk(chunk)))
+      } catch {
         if (!active) return
-        setDateOptions([])
-        setSelectedDate(null)
-        setAvailableSlots([])
-        setAvailabilityLockToken(null)
-        setSelectedDisplaySlot(null)
-        setSelectedTimeSlot(null)
-      })
+        setDateOptions((prev) => prev.map((option) => ({ ...option, status: 'loading' })))
+      }
+    })()
 
     return () => {
       active = false
@@ -1394,10 +1421,17 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             }
         } else {
             if (res.code === 'SLOT_NOT_AVAILABLE' && res.alternatives) {
-              const replacementDateOptions = (res.alternatives.availableDates || []).map((dateValue) => toDateOption(dateValue, language))
-              if (replacementDateOptions.length) {
-                setDateOptions(replacementDateOptions)
-              }
+              const availableSet = new Set(res.alternatives.availableDates || [])
+              setDateOptions((prev) =>
+                prev.map((option) => ({
+                  ...option,
+                  status: availableSet.has(option.fullDate)
+                    ? 'available'
+                    : option.fullDate === res.alternatives.date
+                      ? 'full'
+                      : option.status,
+                })),
+              )
               if (res.alternatives.date) {
                 setSelectedDate(res.alternatives.date)
               }
@@ -2193,9 +2227,32 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4"><Calendar className="w-4 h-4 text-primary" /> {text.selectDate}</h3>
               <div className="flex gap-2 pb-2 overflow-x-auto">
                 {dateOptions.map((opt) => (
-                  <button key={opt.key} onClick={() => setSelectedDate(opt.fullDate)} className={`px-3 py-3 rounded-lg font-semibold text-sm flex flex-col items-center gap-1 ${selectedDate === opt.fullDate ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                  <button
+                    key={opt.key}
+                    onClick={() => setSelectedDate(opt.fullDate)}
+                    className={`min-w-[56px] px-3 py-3 rounded-lg font-semibold text-sm flex flex-col items-center gap-1 border ${
+                      selectedDate === opt.fullDate
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : opt.status === 'available'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                          : opt.status === 'full'
+                            ? 'border-amber-200 bg-amber-50 text-amber-900'
+                            : 'border-border bg-muted text-muted-foreground'
+                    }`}
+                  >
                     <span className="text-xs">{opt.label}</span>
                     <span className="text-base font-bold">{opt.day}</span>
+                    <span className={`text-[10px] font-medium leading-none ${
+                      selectedDate === opt.fullDate
+                        ? 'text-primary-foreground/80'
+                        : opt.status === 'available'
+                          ? 'text-emerald-700'
+                          : opt.status === 'full'
+                            ? 'text-amber-700'
+                            : 'text-muted-foreground'
+                    }`}>
+                      {opt.status === 'available' ? 'Open' : opt.status === 'full' ? 'Full' : '...'}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -2205,7 +2262,16 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               <div className="mb-4 space-y-3 px-4 max-w-2xl mx-auto">
                 <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> {text.selectTime}</h3>
                 {availableSlots.length === 0 ? (
-                    <div className="p-8 text-center bg-muted/20 rounded-xl border border-dashed border-muted"><AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" /><p className="text-sm text-muted-foreground">{text.noAppointment}</p></div>
+                    <div className="p-8 text-center bg-muted/20 rounded-xl border border-dashed border-muted">
+                      <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        {selectedDateStatus === 'loading'
+                          ? 'Checking available hours for this day...'
+                          : selectedDateStatus === 'full'
+                            ? 'No free slot on this day yet. This day can later be used for the waitlist.'
+                            : text.noAppointment}
+                      </p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-4 gap-2">
                         {availableSlots.map((slot) => (
