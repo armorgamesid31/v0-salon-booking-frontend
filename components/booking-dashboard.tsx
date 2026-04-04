@@ -117,6 +117,7 @@ type WaitlistModalState = {
   error: string | null
   timeWindowStart: string
   timeWindowEnd: string
+  allowNearbyMatches: boolean
   notes: string
   customerName: string
   customerPhone: string
@@ -368,6 +369,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     error: null,
     timeWindowStart: '10:00',
     timeWindowEnd: '18:00',
+    allowNearbyMatches: false,
     notes: '',
     customerName: '',
     customerPhone: '',
@@ -1471,6 +1473,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       error: null,
       timeWindowStart: waitlistDefaultStart,
       timeWindowEnd: waitlistDefaultEnd,
+      allowNearbyMatches: prev.allowNearbyMatches,
       customerName: customerName || registrationForm.fullName,
       customerPhone: registrationForm.phone,
     }))
@@ -1496,6 +1499,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         date: selectedDate,
         timeWindowStart: waitlistModal.timeWindowStart,
         timeWindowEnd: waitlistModal.timeWindowEnd,
+        allowNearbyMatches: waitlistModal.allowNearbyMatches,
+        nearbyToleranceMinutes: 60,
         groups: selectedServiceGroups.map((services, index) => ({
           personId: `p${index + 1}`,
           services,
@@ -2505,19 +2510,28 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             ? 'No free slot on this day yet. This day can later be used for the waitlist.'
                             : text.noAppointment}
                       </p>
-                      {selectedDateStatus === 'full' ? (
-                        <div className="mt-4">
-                          <Button type="button" variant="outline" onClick={openWaitlistModal}>
-                            Join Waitlist For This Day
-                          </Button>
-                        </div>
-                      ) : null}
+                      <div className="mt-4">
+                        <Button type="button" variant="outline" onClick={openWaitlistModal}>
+                          Join Waitlist
+                        </Button>
+                      </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-4 gap-2">
-                        {availableSlots.map((slot) => (
-                            <button key={slot.displayKey} onClick={() => { setSelectedTimeSlot(slot.label); setSelectedDisplaySlot(slot) }} className={`p-2 rounded-lg text-xs font-semibold ${selectedDisplaySlot?.displayKey === slot.displayKey ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{slot.label}</button>
-                        ))}
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-4 gap-2">
+                          {availableSlots.map((slot) => (
+                              <button key={slot.displayKey} onClick={() => { setSelectedTimeSlot(slot.label); setSelectedDisplaySlot(slot) }} className={`p-2 rounded-lg text-xs font-semibold ${selectedDisplaySlot?.displayKey === slot.displayKey ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>{slot.label}</button>
+                          ))}
+                      </div>
+                      <div className="rounded-xl border border-border bg-muted/10 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Need a different time?</p>
+                          <p className="text-xs text-muted-foreground">You can join the waitlist for a specific time window, even if this day still has other open slots.</p>
+                        </div>
+                        <Button type="button" variant="outline" onClick={openWaitlistModal}>
+                          Join Waitlist
+                        </Button>
+                      </div>
                     </div>
                 )}
               </div>
@@ -2987,6 +3001,21 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 />
               </label>
             </div>
+
+            <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/10 p-3">
+              <input
+                type="checkbox"
+                checked={waitlistModal.allowNearbyMatches}
+                onChange={(event) => setWaitlistModal((prev) => ({ ...prev, allowNearbyMatches: event.target.checked }))}
+                className="mt-1"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Nearby time is okay too</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  If checked, we can also offer a slot up to 60 minutes earlier or later. We still try your exact time window first.
+                </span>
+              </span>
+            </label>
 
             <div className="space-y-2 rounded-xl border border-border bg-muted/10 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selected services</p>

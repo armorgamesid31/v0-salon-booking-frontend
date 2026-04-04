@@ -186,6 +186,8 @@ export type WaitlistItem = {
   timeWindowStart: string
   timeWindowEnd: string
   notes: string | null
+  allowNearbyMatches: boolean
+  nearbyToleranceMinutes: number
   createdAt: string
   latestOffer: null | {
     id: number
@@ -402,6 +404,8 @@ export async function createWaitlistRequest(input: {
   date: string
   timeWindowStart: string
   timeWindowEnd: string
+  allowNearbyMatches?: boolean
+  nearbyToleranceMinutes?: number
   groups: AvailabilityGroupInput[]
   customerId?: string | null
   customerName: string
@@ -415,6 +419,8 @@ export async function createWaitlistRequest(input: {
       date: input.date,
       timeWindowStart: input.timeWindowStart,
       timeWindowEnd: input.timeWindowEnd,
+      allowNearbyMatches: Boolean(input.allowNearbyMatches),
+      nearbyToleranceMinutes: Number.isFinite(input.nearbyToleranceMinutes as number) ? input.nearbyToleranceMinutes : 60,
       groups: input.groups,
       customerId: input.customerId ? Number(input.customerId) : null,
       customerName: input.customerName,
