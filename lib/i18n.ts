@@ -69,6 +69,7 @@ export const BOOKING_TEXT: Record<
       packageExpiresLabel: (dateLabel: string) => string
       packageNoExpiry: string
       packageNoActive: string
+      packagePolicyNote: string
       packageQuotaHintUse: string
       packageQuotaHintEmpty: string
       packageAdd: string
@@ -161,6 +162,7 @@ export const BOOKING_TEXT: Record<
       packageExpiresLabel: (dateLabel) => `Bitis: ${dateLabel}`,
       packageNoExpiry: 'Bitis tarihi yok',
       packageNoActive: 'Aktif paket bulunamadi.',
+      packagePolicyNote: 'Sadece aktif paketler listelenir. Ozel kombin paketleri salon tarafinda olusturulur.',
       packageQuotaHintUse: 'Bu hak secili randevuya uygulanir',
       packageQuotaHintEmpty: 'Hak kalmadi',
       packageAdd: 'Ekle',
@@ -252,6 +254,7 @@ export const BOOKING_TEXT: Record<
       packageExpiresLabel: (dateLabel) => `Expires: ${dateLabel}`,
       packageNoExpiry: 'No expiry date',
       packageNoActive: 'No active package found.',
+      packagePolicyNote: 'Only active packages are listed here. Custom combinations are created by the salon.',
       packageQuotaHintUse: 'This balance will be used for current booking',
       packageQuotaHintEmpty: 'No quota left',
       packageAdd: 'Add',

@@ -2298,6 +2298,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       </div>
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-wide text-primary">{text.dashboard.packagesTitle}</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">{text.dashboard.packagePolicyNote}</p>
                       </div>
                     </div>
                     <div className="inline-flex items-center gap-1.5">
