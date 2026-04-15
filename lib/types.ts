@@ -116,6 +116,7 @@ export interface BookingContext {
     startsAt?: string | null
     endsAt?: string | null
     priority?: number
+    config?: any
   }>
   campaignWallet?: Array<{
     campaignId: string
@@ -132,6 +133,7 @@ export interface BookingContext {
     status: string
     expiresAt?: string | null
   }>
+  completedCount?: number
 }
 
 export interface BookingContextAppointment {

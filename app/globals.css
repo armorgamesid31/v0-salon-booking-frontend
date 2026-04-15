@@ -48,6 +48,9 @@
     --sidebar-accent-foreground: 240 3% 15%;
     --sidebar-border: 0 2% 86%;
     --sidebar-ring: 197 100% 50%;
+    --luxury-emerald: 160 84% 15%;
+    --luxury-emerald-foreground: 0 0% 100%;
+    --luxury-emerald-light: 160 40% 95%;
   }
 
   .dark {

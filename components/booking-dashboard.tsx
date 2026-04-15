@@ -30,7 +30,9 @@ import {
   Ban,
   PencilLine,
   Star,
+  Gift,
 } from 'lucide-react'
+import LoyaltyStampCard from '@/components/LoyaltyStampCard'
 import type { ServiceItem as ImportedServiceItem, ServiceCategory, Employee, ActiveCustomerPackage, BookingContextAppointment } from '@/lib/types'
 import {
   getBookingContextByToken,
@@ -336,11 +338,10 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     id: string
     name: string
     type: string
-    deliveryMode: 'AUTO' | 'MANUAL'
-    startsAt?: string | null
-    endsAt?: string | null
     priority?: number
+    config?: any
   }>>([])
+  const [completedCount, setCompletedCount] = useState(0)
   const [campaignWallet, setCampaignWallet] = useState<Array<{ campaignId: string; availableAmount: number }>>([])
   const [campaignEnrollments, setCampaignEnrollments] = useState<Array<{ campaignId: string; status: string }>>([])
   const [campaignShareLinks, setCampaignShareLinks] = useState<Array<{ campaignId: string; token: string; status: string }>>([])
@@ -700,6 +701,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setOriginInstagramId(context.originInstagramId || null)
     setActivePackages(context.activePackages || [])
     setActiveCampaigns(context.campaigns || [])
+    setCompletedCount(context.completedCount || 0)
     setCampaignWallet(context.campaignWallet || [])
     setCampaignEnrollments((context.campaignEnrollments || []).map((item) => ({ campaignId: item.campaignId, status: item.status })))
     setCampaignShareLinks((context.campaignShareLinks || []).map((item) => ({ campaignId: item.campaignId, token: item.token, status: item.status })))
@@ -750,6 +752,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         setCustomerName('')
         setActivePackages([])
         setActiveCampaigns([])
+        setCompletedCount(0)
         setCampaignWallet([])
         setCampaignEnrollments([])
         setCampaignShareLinks([])
@@ -764,6 +767,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       setCustomerName('')
       setActivePackages([])
       setActiveCampaigns([])
+      setCompletedCount(0)
       setCampaignWallet([])
       setCampaignEnrollments([])
       setCampaignShareLinks([])
@@ -2219,7 +2223,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         <Megaphone className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Campaigns</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Hediyeler ve Avantajlar</p>
                       </div>
                     </div>
                     <div className="inline-flex items-center gap-1.5">
@@ -2237,6 +2241,25 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         const share = campaignShareLinks.find((item) => String(item.campaignId) === String(campaign.id))
                         const wallet = campaignWallet.find((item) => String(item.campaignId) === String(campaign.id))
                         const isReferral = String(campaign.type).toUpperCase() === 'REFERRAL'
+                        const isLoyalty = String(campaign.type).toUpperCase() === 'LOYALTY'
+
+                        if (isLoyalty) {
+                          const threshold = Math.max(1, Number(campaign.config?.rewardThreshold || 5))
+                          const rewardValue = Math.max(0, Number(campaign.config?.rewardValue || 0))
+                          const rewardType = campaign.config?.rewardType || 'FIXED'
+
+                          return (
+                            <LoyaltyStampCard
+                              key={campaign.id}
+                              campaignName={campaign.name}
+                              completedCount={completedCount}
+                              threshold={threshold}
+                              rewardValue={rewardValue}
+                              rewardType={rewardType}
+                            />
+                          )
+                        }
+
                         return (
                           <div key={campaign.id} className="rounded-xl border border-primary/20 bg-background/80 p-3 space-y-2">
                             <div className="flex items-center justify-between gap-2">
@@ -2257,7 +2280,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   disabled={campaignActionBusyId === `join:${campaign.id}`}
                                   onClick={() => void handleCampaignJoin(campaign.id)}
                                 >
-                                  {enrollment ? 'Joined' : 'Join'}
+                                  {enrollment ? 'Katıldınız' : 'Katıl'}
                                 </Button>
                                 <Button
                                   type="button"
@@ -2266,7 +2289,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   disabled={campaignActionBusyId === `share:${campaign.id}`}
                                   onClick={() => void handleCampaignShare(campaign.id)}
                                 >
-                                  Share
+                                  Paylaş
                                 </Button>
                                 {share?.token ? (
                                   <span className="text-[10px] text-muted-foreground truncate">#{share.token.slice(0, 12)}</span>
