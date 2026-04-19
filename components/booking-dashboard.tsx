@@ -2129,7 +2129,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     </div>
                 )}
             </div>
-            <h1 className="text-xl font-bold">{salonData.name}</h1>
+            {!(salonData.logoUrl && !logoError) ? <h1 className="text-xl font-bold">{salonData.name}</h1> : null}
           </div>
           <div className="text-center">
             <p className="text-sm md:text-base text-foreground">{welcomeMessage}</p>
