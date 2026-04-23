@@ -1710,6 +1710,54 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
   }
 
+  const resolveBookingViolationMessage = (input: { code?: string; error?: string; details?: any }) => {
+    const rawCode = String(input.code || input.details?.code || '').trim().toUpperCase()
+    const rawPenaltyAction = String(
+      input.details?.penaltyAction ||
+        input.details?.attendanceAction ||
+        input.details?.policyAction ||
+        '',
+    )
+      .trim()
+      .toLowerCase()
+    const reason =
+      String(input.details?.reason || input.details?.message || input.error || '')
+        .trim()
+
+    const tr = language === 'tr'
+
+    if (
+      rawPenaltyAction === 'full_block' ||
+      rawCode.includes('BLACKLIST') ||
+      rawCode.includes('BLOCKED') ||
+      rawCode.includes('FULL_BLOCK')
+    ) {
+      return tr
+        ? reason || 'Bu hesap için yaptırım nedeniyle yeni randevu oluşturulamıyor.'
+        : reason || 'New booking is blocked due to policy enforcement on this account.'
+    }
+
+    if (rawPenaltyAction === 'manual_approval' || rawCode.includes('MANUAL_APPROVAL')) {
+      return tr
+        ? reason || 'Bu hesap için salon onayı gerekiyor. Lütfen salon ile iletişime geçin.'
+        : reason || 'This account requires manual salon approval before booking.'
+    }
+
+    if (rawPenaltyAction === 'possible_block' || rawCode.includes('POSSIBLE_BLOCK')) {
+      return tr
+        ? reason || 'Bu hesap yaptırım eşiğine yakın. Randevu için ek doğrulama gerekebilir.'
+        : reason || 'This account is near enforcement threshold. Extra verification may be required.'
+    }
+
+    if (rawPenaltyAction === 'simple_warning' || rawCode.includes('SIMPLE_WARNING')) {
+      return tr
+        ? reason || 'Bu hesap için uyarı uygulanıyor. Lütfen randevu kurallarına dikkat edin.'
+        : reason || 'A warning policy is active for this account. Please follow booking rules.'
+    }
+
+    return input.error || text.bookingFailed
+  }
+
   const handleConfirmAppointment = async () => {
     if (!customerId || !selectedDate || !selectedTimeSlot || !selectedDisplaySlot || !availabilityLockToken || selectedServices.length === 0) return;
     
@@ -1789,7 +1837,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               setSelectedDisplaySlot(null)
               setSelectedTimeSlot(null)
             }
-            alert(res.error || text.bookingFailed);
+            alert(resolveBookingViolationMessage(res));
         }
     } catch (err) {
         alert(text.genericError);

@@ -255,6 +255,7 @@ export async function createAppointment(
 ): Promise<ApiResponse<Appointment & { pricingBreakdown?: any; appliedCampaigns?: any[] }> & {
   code?: string
   alternatives?: BookingAlternatives
+  details?: any
 }> {
     try {
       const url = `${API_BASE_URL}/api/bookings`
@@ -304,6 +305,7 @@ export async function createAppointment(
         error: error.message,
         code: typeof error.payload?.code === 'string' ? error.payload.code : undefined,
         alternatives: error.payload?.alternatives,
+        details: error.payload,
       }
     }
     return {
