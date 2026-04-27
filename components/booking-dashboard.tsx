@@ -23,7 +23,6 @@ import {
   Hand,
   Lightbulb,
   MessageCircle,
-  Megaphone,
   ClipboardList,
   CalendarCheck2,
   RefreshCcw,
@@ -494,6 +493,110 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       },
     }
   }, [language, runtimeContent])
+  const isTurkish = language === 'tr'
+  const bookingUiText = useMemo(
+    () => ({
+      waitlistOfferTitle: isTurkish ? 'Bekleme Listesi Teklifi' : 'Waitlist Offer',
+      waitlistOfferLoading: isTurkish ? 'Teklifiniz yükleniyor...' : 'Loading your offer...',
+      waitlistOfferExpiresAtPrefix: isTurkish ? 'Bu teklif' : 'This offer stays active until',
+      waitlistOfferProcessing: isTurkish ? 'İşleniyor...' : 'Processing...',
+      waitlistOfferAccept: isTurkish ? 'Teklifi Kabul Et' : 'Accept Offer',
+      waitlistOfferReject: isTurkish ? 'Reddet' : 'Reject',
+      waitlistOfferCurrentStatus: isTurkish ? 'Güncel durum' : 'Current status',
+      waitlistOfferMissing: isTurkish ? 'Bu bağlantı için aktif teklif bulunamadı.' : 'No active offer found for this link.',
+      campaignsTitle: isTurkish ? 'Hediyeler ve Avantajlar' : 'Gifts & Benefits',
+      campaignsSubtitle: isTurkish ? 'Size özel kampanyaları yönetin' : 'Manage your personalized campaigns',
+      noActiveCampaign: isTurkish ? 'Aktif kampanya bulunmuyor.' : 'No active campaign.',
+      campaignWallet: isTurkish ? 'Cüzdan bakiyesi' : 'Wallet',
+      campaignJoin: isTurkish ? 'Katıl' : 'Join',
+      campaignJoined: isTurkish ? 'Katıldınız' : 'Joined',
+      campaignShare: isTurkish ? 'Paylaş' : 'Share',
+      dateStatusOpen: isTurkish ? 'Açık' : 'Open',
+      dateStatusFull: isTurkish ? 'Dolu' : 'Full',
+      checkingDayAvailability: isTurkish ? 'Bu gün için saatler kontrol ediliyor...' : 'Checking available hours for this day...',
+      noSlotForDay: isTurkish ? 'Bu gün için boş slot yok. Daha sonra bekleme listesi için değerlendirilebilir.' : 'No free slot on this day yet. This day can later be used for the waitlist.',
+      joinWaitlist: isTurkish ? 'Bekleme Listesine Katıl' : 'Join Waitlist',
+      needDifferentTime: isTurkish ? 'Farklı bir saat mi istiyorsunuz?' : 'Need a different time?',
+      waitlistHint: isTurkish
+        ? 'Bu günde başka boş saatler olsa bile belirli bir saat aralığı için bekleme listesine katılabilirsiniz.'
+        : 'You can join the waitlist for a specific time window, even if this day still has other open slots.',
+      discountLabel: isTurkish ? 'İndirim' : 'Discount',
+      noCampaignDiscount: isTurkish ? 'Kampanya indirimi yok' : 'No campaign discount',
+      personSelect: isTurkish ? 'Kişi Seç' : 'Select Person',
+      personSelectDescription: isTurkish ? 'Hizmetin ekleneceği kişiyi seçin:' : 'Choose the person for:',
+      specialistByPerson: isTurkish ? 'Kişi bazlı uzman tercihi' : 'Specialist preference by person',
+      anySpecialist: isTurkish ? 'Fark Etmez' : 'Any Specialist',
+      previous: isTurkish ? 'Geri' : 'Back',
+      nextPerson: isTurkish ? 'Sonraki Kişi' : 'Next Person',
+      suggestedSlots: isTurkish ? 'Önerilen saatler' : 'Suggested slots',
+      cancelTitle: isTurkish ? 'Randevu İptali' : 'Cancel Appointment',
+      keepAppointment: isTurkish ? 'Randevuyu Koru' : 'Keep Appointment',
+      cancelling: isTurkish ? 'İptal ediliyor...' : 'Cancelling...',
+      feedbackTitle: isTurkish ? 'Randevunu Değerlendir' : 'Rate Your Appointment',
+      feedbackDescription: isTurkish ? 'Deneyimini paylaşarak salonun gelişmesine yardımcı olabilirsin.' : 'Share your experience to help the salon improve.',
+      feedbackCommentPlaceholder: isTurkish ? 'İsteğe bağlı yorum' : 'Optional comment',
+      feedbackSubmit: isTurkish ? 'Değerlendirmeyi Gönder' : 'Submit Review',
+      registerOnceDescription: isTurkish
+        ? 'Bir kez kayıt ol. Sonraki randevularını tek dokunuşla tamamlayabilirsin.'
+        : 'Register once. After this, your future appointments can be completed with a single tap.',
+      phoneNumberPlaceholder: isTurkish ? 'Telefon numarası' : 'Phone number',
+      selectedCountryInfo: isTurkish
+        ? 'seçildi. Bu ülke için yalnızca geçerli mobil numaralar kabul edilir.'
+        : 'selected. We only accept valid mobile numbers for this country.',
+      validMobileForCountry: isTurkish ? 'Lütfen seçilen ülke için geçerli bir mobil numara girin.' : 'Please enter a valid mobile number for the selected country.',
+      gender: isTurkish ? 'Cinsiyet' : 'Gender',
+      woman: isTurkish ? 'Kadın' : 'Woman',
+      man: isTurkish ? 'Erkek' : 'Man',
+      birthDate: isTurkish ? 'Doğum tarihi' : 'Birth date',
+      whatsappMismatchTitle: isTurkish
+        ? 'Girdiğiniz numara, bu bağlantıyı açan WhatsApp numarasıyla eşleşmiyor.'
+        : 'The number you entered does not match the WhatsApp number that opened this link.',
+      whatsappProfile: isTurkish ? 'WhatsApp profili' : 'WhatsApp profile',
+      whatsappNumber: isTurkish ? 'WhatsApp numarası' : 'WhatsApp number',
+      enteredNumber: isTurkish ? 'Girilen numara' : 'Entered number',
+      whatsappMismatchAcknowledge: isTurkish
+        ? 'Farklı bir numara ile kayıt olduğumu ve WhatsApp üzerinden otomatik doğrulanmayacağını anlıyorum.'
+        : 'I understand that I am registering with a different number and it will not be auto-verified from WhatsApp.',
+      continueWithNumber: isTurkish ? 'Bu numarayla devam et' : 'Continue with this number',
+      otpSentInfo: isTurkish
+        ? 'WhatsApp numaranıza 6 haneli doğrulama kodu gönderdik. Kaydı tamamlamak için kodu girin.'
+        : 'We sent a 6-digit verification code to your WhatsApp number. Please enter it to finish your registration.',
+      resendCode: isTurkish ? 'Kodu tekrar gönder' : 'Resend code',
+      verifyAndContinue: isTurkish ? 'Doğrula ve devam et' : 'Verify and continue',
+      waitlistTitle: isTurkish ? 'Bekleme Listesine Katıl' : 'Join Waitlist',
+      waitlistDescription: isTurkish
+        ? 'Bu gün ve saat aralığını kaydediyoruz. Bir boşluk açılırsa 15 dakika geçerli teklif göndeririz.'
+        : 'We will keep this specific day and time window on file. If a slot opens, we will send you an offer valid for 15 minutes.',
+      day: isTurkish ? 'Gün' : 'Day',
+      people: isTurkish ? 'Kişi' : 'People',
+      from: isTurkish ? 'Başlangıç' : 'From',
+      to: isTurkish ? 'Bitiş' : 'To',
+      nearbyTimeOkay: isTurkish ? 'Yakın saat de uygundur' : 'Nearby time is okay too',
+      nearbyTimeDescription: isTurkish
+        ? 'İşaretlerseniz 60 dakika daha erken veya geç saatleri de önerebiliriz. Önce seçtiğiniz aralığı deneriz.'
+        : 'If checked, we can also offer a slot up to 60 minutes earlier or later. We still try your exact time window first.',
+      selectedServices: isTurkish ? 'Seçilen hizmetler' : 'Selected services',
+      fullName: isTurkish ? 'Ad Soyad' : 'Full name',
+      phone: isTurkish ? 'Telefon' : 'Phone',
+      noteOptional: isTurkish ? 'Not (opsiyonel)' : 'Note (optional)',
+      notePlaceholder: isTurkish ? 'Örn: 17:00 sonrası benim için daha uygun.' : 'For example: after 17:00 is easier for me.',
+      close: isTurkish ? 'Kapat' : 'Close',
+      saving: isTurkish ? 'Kaydediliyor...' : 'Saving...',
+      waitlistNamePhoneRequired: isTurkish ? 'Bekleme listesi için ad soyad ve telefon zorunludur.' : 'Name and phone are required for the waitlist.',
+      waitlistValidMobile: isTurkish ? 'Lütfen geçerli bir mobil numara girin.' : 'Please enter a valid mobile number.',
+      waitlistValidTimeWindow: isTurkish ? 'Lütfen geçerli bir saat aralığı seçin.' : 'Please choose a valid time window.',
+      waitlistJoined: isTurkish ? 'Bekleme listesine başarıyla katıldınız. Uygun slot açılırsa size bilgi vereceğiz.' : 'You joined the waitlist successfully. We will contact you if a slot opens.',
+      waitlistSlotOpened: isTurkish ? 'Uygun bir slot açıldı ve size teklif gönderildi.' : 'A matching slot opened immediately and an offer was sent.',
+      waitlistCreateFailed: isTurkish ? 'Bekleme listesi talebi oluşturulamadı.' : 'Waitlist request could not be created.',
+      waitlistOfferLoadFailed: isTurkish ? 'Bekleme listesi teklifi yüklenemedi.' : 'Failed to load waitlist offer.',
+      offerAcceptedMessage: isTurkish ? 'Teklif kabul edildi. Randevunuz oluşturuldu.' : 'Offer accepted. Your appointment has been created.',
+      offerRejectedMessage: isTurkish ? 'Teklif reddedildi. Sıradaki kişiye geçiyoruz.' : 'Offer rejected. We will continue with the next person on the list.',
+      offerProcessFailed: isTurkish ? 'Teklif işlenemedi.' : 'This offer could not be processed.',
+      validMobileForRegistration: isTurkish ? 'Lütfen geçerli bir mobil numara girin.' : 'Please enter a valid mobile number.',
+      enterSixDigitCode: isTurkish ? 'Lütfen 6 haneli kodu girin.' : 'Please enter the 6-digit code.',
+    }),
+    [isTurkish],
+  )
 
   const selectedDateStatus = useMemo(() => {
     if (!selectedDate) return null
@@ -612,7 +715,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       .catch((error: any) => {
         if (!active) return
         setWaitlistOffer(null)
-        setWaitlistOfferError(error?.message || 'Failed to load waitlist offer.')
+        setWaitlistOfferError(error?.message || bookingUiText.waitlistOfferLoadFailed)
       })
       .finally(() => {
         if (active) setWaitlistOfferLoading(false)
@@ -621,7 +724,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     return () => {
       active = false
     }
-  }, [waitlistOfferToken])
+  }, [waitlistOfferToken, bookingUiText.waitlistOfferLoadFailed])
 
   useEffect(() => {
     let active = true
@@ -1048,13 +1151,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(shareToken)}` : shareToken
       if (navigator?.share) {
         await navigator.share({
-          title: 'Referral campaign',
-          text: 'Join with my referral link',
+          title: isTurkish ? 'Referans kampanyası' : 'Referral campaign',
+          text: isTurkish ? 'Referans linkimle katıl' : 'Join with my referral link',
           url: shareUrl,
         })
       } else if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl)
-        alert('Share link copied.')
+        alert(isTurkish ? 'Paylaşım linki kopyalandı.' : 'Share link copied.')
       } else {
         alert(shareUrl)
       }
@@ -1094,7 +1197,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }
 
   const personLabel = (personIndex: number) =>
-    language === 'tr' ? `Kisi ${personIndex}` : `Person ${personIndex}`
+    language === 'tr' ? `Kişi ${personIndex}` : `Person ${personIndex}`
 
   const handleServiceToggle = async (service: any, categoryName: string, personIndex?: number) => {
     const serviceData: ImportedServiceItem = {
@@ -1234,7 +1337,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       }
     }
 
-    if (personIndex && isPackageServiceSelected(packageId, serviceId, targetPersonIndex)) {
+    if (isPackageServiceSelected(packageId, serviceId, targetPersonIndex)) {
       setSelectedServices((prev) => {
         const idx = prev.findIndex(
           (entry) =>
@@ -1573,15 +1676,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
     const customerNameValue = (waitlistModal.customerName || '').trim()
     if (!customerNameValue || !waitlistModal.customerPhone.trim()) {
-      setWaitlistModal((prev) => ({ ...prev, error: 'Name and phone are required for the waitlist.' }))
+      setWaitlistModal((prev) => ({ ...prev, error: bookingUiText.waitlistNamePhoneRequired }))
       return
     }
     if (!waitlistPhoneMeta.isValid || !waitlistPhoneMeta.isMobile || !waitlistPhoneMeta.normalizedDigits) {
-      setWaitlistModal((prev) => ({ ...prev, error: 'Please enter a valid mobile number.' }))
+      setWaitlistModal((prev) => ({ ...prev, error: bookingUiText.waitlistValidMobile }))
       return
     }
     if (waitlistModal.timeWindowStart >= waitlistModal.timeWindowEnd) {
-      setWaitlistModal((prev) => ({ ...prev, error: 'Please choose a valid time window.' }))
+      setWaitlistModal((prev) => ({ ...prev, error: bookingUiText.waitlistValidTimeWindow }))
       return
     }
 
@@ -1611,14 +1714,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         submitting: false,
         successMessage:
           response.item.latestOffer?.status === 'SENT'
-            ? 'A matching slot opened immediately and an offer was sent.'
-            : 'You joined the waitlist successfully. We will contact you if a slot opens.',
+            ? bookingUiText.waitlistSlotOpened
+            : bookingUiText.waitlistJoined,
       }))
     } catch (error: any) {
       setWaitlistModal((prev) => ({
         ...prev,
         submitting: false,
-        error: error?.message || 'Waitlist request could not be created.',
+        error: error?.message || bookingUiText.waitlistCreateFailed,
       }))
     }
   }
@@ -1641,7 +1744,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       return
     }
     if (!registrationPhoneMeta.e164 || !registrationPhoneMeta.normalizedDigits || !registrationPhoneMeta.isMobile) {
-      setRegistrationError('Please enter a valid mobile number.')
+      setRegistrationError(bookingUiText.validMobileForRegistration)
       return
     }
 
@@ -1701,7 +1804,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const confirmRegistrationCode = async () => {
     if (!registrationVerificationId || registrationOtpCode.trim().length < 6) {
-      setRegistrationError('Please enter the 6-digit code.')
+      setRegistrationError(bookingUiText.enterSixDigitCode)
       return
     }
     setRegistrationSubmitting(true)
@@ -1726,17 +1829,17 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     try {
       if (decision === 'accept') {
         await acceptWaitlistOffer(waitlistOfferToken)
-        setWaitlistOfferActionMessage('Offer accepted. Your appointment has been created.')
+        setWaitlistOfferActionMessage(bookingUiText.offerAcceptedMessage)
         const refreshed = await getWaitlistOffer(waitlistOfferToken).catch(() => null)
         if (refreshed) setWaitlistOffer(refreshed)
       } else {
         await rejectWaitlistOffer(waitlistOfferToken)
-        setWaitlistOfferActionMessage('Offer rejected. We will continue with the next person on the list.')
+        setWaitlistOfferActionMessage(bookingUiText.offerRejectedMessage)
         const refreshed = await getWaitlistOffer(waitlistOfferToken).catch(() => null)
         if (refreshed) setWaitlistOffer(refreshed)
       }
     } catch (error: any) {
-      setWaitlistOfferActionMessage(error?.message || 'This offer could not be processed.')
+      setWaitlistOfferActionMessage(error?.message || bookingUiText.offerProcessFailed)
     } finally {
       setWaitlistOfferActionLoading(false)
     }
@@ -1784,7 +1887,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     if (rawPenaltyAction === 'simple_warning' || rawCode.includes('SIMPLE_WARNING')) {
       return tr
         ? reason || 'Bu hesap için uyarı uygulanıyor. Lütfen randevu kurallarına dikkat edin.'
-        : reason || 'A warning policy is active for this account. Please follow booking rules.'
+        : reason || (isTurkish
+          ? 'Bu hesap için uyarı politikası aktif. Lütfen rezervasyon kurallarını takip edin.'
+          : 'A warning policy is active for this account. Please follow booking rules.')
     }
 
     return input.error || text.bookingFailed
@@ -2227,9 +2332,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   <Clock className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">Waitlist Offer</p>
+                  <p className="text-sm font-semibold text-foreground">{bookingUiText.waitlistOfferTitle}</p>
                   {waitlistOfferLoading ? (
-                    <p className="mt-1 text-sm text-muted-foreground">Loading your offer...</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{bookingUiText.waitlistOfferLoading}</p>
                   ) : waitlistOfferError ? (
                     <p className="mt-1 text-sm text-red-600">{waitlistOfferError}</p>
                   ) : waitlistOffer ? (
@@ -2238,7 +2343,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         {waitlistOffer.slotDate} • {waitlistOffer.slotStartTime} - {waitlistOffer.slotEndTime}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        This offer stays active until {new Date(waitlistOffer.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+                        {bookingUiText.waitlistOfferExpiresAtPrefix} {new Date(waitlistOffer.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button
@@ -2246,7 +2351,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                           disabled={waitlistOfferActionLoading || !['PENDING', 'SENT'].includes(waitlistOffer.status)}
                           onClick={() => void handleWaitlistOfferDecision('accept')}
                         >
-                          {waitlistOfferActionLoading ? 'Processing...' : 'Accept Offer'}
+                          {waitlistOfferActionLoading ? bookingUiText.waitlistOfferProcessing : bookingUiText.waitlistOfferAccept}
                         </Button>
                         <Button
                           type="button"
@@ -2254,13 +2359,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                           disabled={waitlistOfferActionLoading || !['PENDING', 'SENT'].includes(waitlistOffer.status)}
                           onClick={() => void handleWaitlistOfferDecision('reject')}
                         >
-                          Reject
+                          {bookingUiText.waitlistOfferReject}
                         </Button>
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">Current status: {waitlistOffer.status}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{bookingUiText.waitlistOfferCurrentStatus}: {waitlistOffer.status}</p>
                     </>
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">No active offer found for this link.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{bookingUiText.waitlistOfferMissing}</p>
                   )}
                   {waitlistOfferActionMessage ? (
                     <p className="mt-2 text-sm text-emerald-700">{waitlistOfferActionMessage}</p>
@@ -2294,18 +2399,19 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               </div>
 
               {isKnownCustomer ? (
-                <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-background p-4 space-y-3">
+                <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-amber-50 via-background to-rose-50 p-4 space-y-3">
                   <button
                     type="button"
                     onClick={() => setCampaignsOpen((prev) => !prev)}
                     className="w-full flex items-center justify-between gap-2"
                   >
                     <div className="flex items-start gap-2 text-left">
-                      <div className="mt-0.5 rounded-lg bg-primary/15 p-1.5 text-primary">
-                        <Megaphone className="h-4 w-4" />
+                      <div className="mt-0.5 rounded-lg bg-amber-200/40 p-1.5 text-amber-700">
+                        <Gift className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Hediyeler ve Avantajlar</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">{bookingUiText.campaignsTitle}</p>
+                        <p className="text-[10px] text-muted-foreground">{bookingUiText.campaignsSubtitle}</p>
                       </div>
                     </div>
                     <div className="inline-flex items-center gap-1.5">
@@ -2343,15 +2449,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         }
 
                         return (
-                          <div key={campaign.id} className="rounded-xl border border-primary/20 bg-background/80 p-3 space-y-2">
+                          <div key={campaign.id} className="rounded-xl border border-amber-300/30 bg-background/90 p-3 space-y-2 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-sm font-semibold text-foreground">{campaign.name}</p>
-                              <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                              <span className="rounded-full border border-amber-200/60 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                                 {campaign.type}
                               </span>
                             </div>
                             {wallet && wallet.availableAmount > 0 ? (
-                              <p className="text-[11px] text-emerald-700 font-semibold">Wallet: {wallet.availableAmount.toFixed(0)}₺</p>
+                              <p className="text-[11px] text-emerald-700 font-semibold">{bookingUiText.campaignWallet}: {wallet.availableAmount.toFixed(0)}₺</p>
                             ) : null}
                             {isReferral ? (
                               <div className="flex items-center gap-2">
@@ -2362,7 +2468,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   disabled={campaignActionBusyId === `join:${campaign.id}`}
                                   onClick={() => void handleCampaignJoin(campaign.id)}
                                 >
-                                  {enrollment ? 'Katıldınız' : 'Katıl'}
+                                  {enrollment ? bookingUiText.campaignJoined : bookingUiText.campaignJoin}
                                 </Button>
                                 <Button
                                   type="button"
@@ -2371,7 +2477,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                                   disabled={campaignActionBusyId === `share:${campaign.id}`}
                                   onClick={() => void handleCampaignShare(campaign.id)}
                                 >
-                                  Paylaş
+                                  {bookingUiText.campaignShare}
                                 </Button>
                                 {share?.token ? (
                                   <span className="text-[10px] text-muted-foreground truncate">#{share.token.slice(0, 12)}</span>
@@ -2384,7 +2490,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     </div>
                   ) : campaignsOpen ? (
                     <div className="rounded-lg border border-dashed border-primary/25 bg-background/70 px-3 py-3 text-xs text-muted-foreground">
-                      No active campaign.
+                      {bookingUiText.noActiveCampaign}
                     </div>
                   ) : null}
                 </div>
@@ -2752,7 +2858,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                             ? 'text-amber-700'
                             : 'text-muted-foreground'
                     }`}>
-                      {opt.status === 'available' ? 'Open' : opt.status === 'full' ? 'Full' : '...'}
+                      {opt.status === 'available' ? bookingUiText.dateStatusOpen : opt.status === 'full' ? bookingUiText.dateStatusFull : '...'}
                     </span>
                   </button>
                 ))}
@@ -2767,14 +2873,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">
                         {selectedDateStatus === 'loading'
-                          ? 'Checking available hours for this day...'
+                          ? bookingUiText.checkingDayAvailability
                           : selectedDateStatus === 'full'
-                            ? 'No free slot on this day yet. This day can later be used for the waitlist.'
+                            ? bookingUiText.noSlotForDay
                             : text.noAppointment}
                       </p>
                       <div className="mt-4">
                         <Button type="button" variant="outline" onClick={openWaitlistModal}>
-                          Join Waitlist
+                          {bookingUiText.joinWaitlist}
                         </Button>
                       </div>
                     </div>
@@ -2787,11 +2893,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       </div>
                       <div className="rounded-xl border border-border bg-muted/10 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-foreground">Need a different time?</p>
-                          <p className="text-xs text-muted-foreground">You can join the waitlist for a specific time window, even if this day still has other open slots.</p>
+                          <p className="text-sm font-semibold text-foreground">{bookingUiText.needDifferentTime}</p>
+                          <p className="text-xs text-muted-foreground">{bookingUiText.waitlistHint}</p>
                         </div>
                         <Button type="button" variant="outline" onClick={openWaitlistModal}>
-                          Join Waitlist
+                          {bookingUiText.joinWaitlist}
                         </Button>
                       </div>
                     </div>
@@ -2811,9 +2917,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   {pricingPreview ? (
                     <div className="text-[11px] text-muted-foreground">
                       {pricingPreview.discountTotal > 0 ? (
-                        <span>Discount: -{pricingPreview.discountTotal.toFixed(0)}₺</span>
+                        <span>{bookingUiText.discountLabel}: -{pricingPreview.discountTotal.toFixed(0)}₺</span>
                       ) : (
-                        <span>No campaign discount</span>
+                        <span>{bookingUiText.noCampaignDiscount}</span>
                       )}
                     </div>
                   ) : null}
@@ -2842,13 +2948,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         <div className="fixed inset-0 bg-black/50 flex items-end z-50 animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">{language === 'tr' ? 'Kisi Sec' : 'Select Person'}</h3>
+              <h3 className="text-lg font-bold text-foreground">{bookingUiText.personSelect}</h3>
               <button type="button" onClick={() => setPersonPicker(null)} className="text-muted-foreground">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              {language === 'tr' ? 'Hizmetin eklenecegi kisiyi secin:' : 'Choose the person for:'} {personPicker.serviceName || `#${personPicker.serviceId}`}
+              {bookingUiText.personSelectDescription} {personPicker.serviceName || `#${personPicker.serviceId}`}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {Array.from({ length: numberOfPeople }, (_, index) => (
@@ -2874,7 +2980,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             >
               {personPicker.requiresSpecialist
                 ? language === 'tr'
-                  ? 'Uzman Secimine Devam Et'
+                  ? 'Uzman Seçimine Devam Et'
                   : 'Continue to Specialist Selection'
                 : text.add}
             </Button>
@@ -2892,7 +2998,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              {(language === 'tr' ? 'Kisi bazli uzman tercihi' : 'Specialist preference by person')} • {personLabel(specialistBatchModal.entries[specialistBatchModal.cursor]?.personIndex || 1)}
+              {bookingUiText.specialistByPerson} • {personLabel(specialistBatchModal.entries[specialistBatchModal.cursor]?.personIndex || 1)}
             </p>
             <div className="overflow-hidden rounded-xl border border-border/70 bg-muted/10">
               <div
@@ -2915,7 +3021,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                           choice.mode === 'ANY' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-foreground'
                         }`}
                       >
-                        <span>{language === 'tr' ? 'Fark Etmez' : 'Any Specialist'}</span>
+                        <span>{bookingUiText.anySpecialist}</span>
                       </button>
                       {specialistBatchModal.staff.map((staff) => (
                         <button
@@ -2959,11 +3065,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={goToPreviousSpecialistPerson}
                 className="flex-1 rounded-full"
               >
-                {language === 'tr' ? 'Geri' : 'Back'}
+                {bookingUiText.previous}
               </Button>
               {specialistBatchModal.cursor < specialistBatchModal.entries.length - 1 ? (
                 <Button type="button" onClick={goToNextSpecialistPerson} className="flex-1 rounded-full bg-primary text-primary-foreground">
-                  {language === 'tr' ? 'Sonraki Kisi' : 'Next Person'}
+                  {bookingUiText.nextPerson}
                 </Button>
               ) : (
                 <Button type="button" onClick={commitSpecialistBatchSelection} className="flex-1 rounded-full bg-primary text-primary-foreground">
@@ -2998,7 +3104,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   !selectedSpecialistOptionIds[specialistModal.entryId]?.length ? 'border-primary bg-primary/10' : 'border-muted'
                 }`}
               >
-                <span className="text-sm font-medium text-foreground">{language === 'tr' ? 'Fark Etmez' : 'Any Specialist'}</span>
+                <span className="text-sm font-medium text-foreground">{bookingUiText.anySpecialist}</span>
               </button>
               {specialistModal.staff.map((staff) => (
                 <button
@@ -3098,7 +3204,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             ) : rescheduleModal.suggestedSlots.length ? (
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {language === 'tr' ? 'Onerilen saatler' : 'Suggested slots'}
+                  {bookingUiText.suggestedSlots}
                 </p>
                 <div className="grid grid-cols-4 gap-2">
                   {rescheduleModal.suggestedSlots.map((slot) => (
@@ -3229,7 +3335,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         <div className="fixed inset-0 bg-black/50 flex items-end z-[64] animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">Join Waitlist</h3>
+              <h3 className="text-lg font-bold text-foreground">{bookingUiText.waitlistTitle}</h3>
               <button
                 type="button"
                 onClick={() => (waitlistModal.submitting ? undefined : setWaitlistModal((prev) => ({ ...prev, open: false })))}
@@ -3239,20 +3345,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               </button>
             </div>
             <p className="text-sm text-muted-foreground">
-              We will keep this specific day and time window on file. If a slot opens, we will send you an offer valid for 15 minutes.
+              {bookingUiText.waitlistDescription}
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="space-y-1 text-sm">
-                <span className="text-muted-foreground">Day</span>
+                <span className="text-muted-foreground">{bookingUiText.day}</span>
                 <input value={selectedDate || ''} disabled className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm" />
               </label>
               <label className="space-y-1 text-sm">
-                <span className="text-muted-foreground">People</span>
+                <span className="text-muted-foreground">{bookingUiText.people}</span>
                 <input value={String(numberOfPeople)} disabled className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm" />
               </label>
               <label className="space-y-1 text-sm">
-                <span className="text-muted-foreground">From</span>
+                <span className="text-muted-foreground">{bookingUiText.from}</span>
                 <input
                   type="time"
                   value={waitlistModal.timeWindowStart}
@@ -3261,7 +3367,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 />
               </label>
               <label className="space-y-1 text-sm">
-                <span className="text-muted-foreground">To</span>
+                <span className="text-muted-foreground">{bookingUiText.to}</span>
                 <input
                   type="time"
                   value={waitlistModal.timeWindowEnd}
@@ -3279,15 +3385,15 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 className="mt-1"
               />
               <span className="text-sm">
-                <span className="font-medium text-foreground">Nearby time is okay too</span>
+                <span className="font-medium text-foreground">{bookingUiText.nearbyTimeOkay}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  If checked, we can also offer a slot up to 60 minutes earlier or later. We still try your exact time window first.
+                  {bookingUiText.nearbyTimeDescription}
                 </span>
               </span>
             </label>
 
             <div className="space-y-2 rounded-xl border border-border bg-muted/10 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selected services</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{bookingUiText.selectedServices}</p>
               <div className="flex flex-wrap gap-2">
                 {selectedServices.map((entry) => (
                   <span key={entry.entryId} className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium">
@@ -3299,7 +3405,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
             <div className="space-y-3">
               <label className="block text-sm space-y-1">
-                <span className="text-muted-foreground">Full name</span>
+                <span className="text-muted-foreground">{bookingUiText.fullName}</span>
                 <input
                   value={waitlistModal.customerName}
                   onChange={(event) => setWaitlistModal((prev) => ({ ...prev, customerName: event.target.value }))}
@@ -3307,7 +3413,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 />
               </label>
               <label className="block text-sm space-y-1">
-                <span className="text-muted-foreground">Phone</span>
+                <span className="text-muted-foreground">{bookingUiText.phone}</span>
                 <div className="flex gap-2">
                   <select
                     value={waitlistModal.customerCountryIso}
@@ -3328,20 +3434,20 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                       setWaitlistModal((prev) => ({ ...prev, customerPhone: next.display || event.target.value }))
                     }}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    placeholder={waitlistModal.customerCountryIso === 'TR' ? '(531) 200 68 07' : 'Phone number'}
+                    placeholder={waitlistModal.customerCountryIso === 'TR' ? '(531) 200 68 07' : bookingUiText.phoneNumberPlaceholder}
                   />
                 </div>
                 {waitlistModal.customerPhone && (!waitlistPhoneMeta.isValid || !waitlistPhoneMeta.isMobile) ? (
-                  <p className="text-xs text-red-600">Please enter a valid mobile number.</p>
+                  <p className="text-xs text-red-600">{bookingUiText.waitlistValidMobile}</p>
                 ) : null}
               </label>
               <label className="block text-sm space-y-1">
-                <span className="text-muted-foreground">Note (optional)</span>
+                <span className="text-muted-foreground">{bookingUiText.noteOptional}</span>
                 <textarea
                   value={waitlistModal.notes}
                   onChange={(event) => setWaitlistModal((prev) => ({ ...prev, notes: event.target.value }))}
                   className="w-full min-h-[88px] rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  placeholder="For example: after 17:00 is easier for me."
+                  placeholder={bookingUiText.notePlaceholder}
                 />
               </label>
             </div>
@@ -3361,7 +3467,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={() => setWaitlistModal((prev) => ({ ...prev, open: false }))}
                 className="flex-1 rounded-full"
               >
-                Close
+                {bookingUiText.close}
               </Button>
               <Button
                 type="button"
@@ -3369,7 +3475,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={() => void submitWaitlistRequest()}
                 className="flex-1 rounded-full bg-primary text-primary-foreground"
               >
-                {waitlistModal.submitting ? 'Saving...' : 'Join Waitlist'}
+                {waitlistModal.submitting ? bookingUiText.saving : bookingUiText.joinWaitlist}
               </Button>
             </div>
           </div>
@@ -3380,7 +3486,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         <div className="fixed inset-0 bg-black/50 flex items-end z-[64] animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">{language === 'tr' ? 'Randevu Iptali' : 'Cancel Appointment'}</h3>
+              <h3 className="text-lg font-bold text-foreground">{bookingUiText.cancelTitle}</h3>
               <button
                 type="button"
                 onClick={() => (cancelConfirmModal.loading ? undefined : setCancelConfirmModal(null))}
@@ -3403,7 +3509,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={() => setCancelConfirmModal(null)}
                 className="flex-1 rounded-full"
               >
-                {language === 'tr' ? 'Vazgec' : 'Keep Appointment'}
+                {bookingUiText.keepAppointment}
               </Button>
               <Button
                 type="button"
@@ -3413,7 +3519,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 }}
                 className="flex-1 rounded-full bg-rose-600 text-white hover:bg-rose-700"
               >
-                {cancelConfirmModal.loading ? (language === 'tr' ? 'Iptal ediliyor...' : 'Cancelling...') : text.dashboard.actionCancel}
+                {cancelConfirmModal.loading ? bookingUiText.cancelling : text.dashboard.actionCancel}
               </Button>
             </div>
           </div>
@@ -3424,7 +3530,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
         <div className="fixed inset-0 bg-black/50 flex items-end z-[65] animate-in fade-in">
           <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">Rate Your Appointment</h3>
+              <h3 className="text-lg font-bold text-foreground">{bookingUiText.feedbackTitle}</h3>
               <button
                 type="button"
                 onClick={() => (feedbackModal.saving ? undefined : setFeedbackModal(null))}
@@ -3435,7 +3541,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Share your experience to help the salon improve.
+              {bookingUiText.feedbackDescription}
             </p>
 
             <div className="flex items-center gap-2">
@@ -3463,7 +3569,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               onChange={(event) =>
                 setFeedbackModal((prev) => (prev ? { ...prev, review: event.target.value } : prev))
               }
-              placeholder="Optional comment"
+              placeholder={bookingUiText.feedbackCommentPlaceholder}
               rows={4}
               className="w-full rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm"
             />
@@ -3482,7 +3588,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 onClick={() => setFeedbackModal(null)}
                 className="flex-1 rounded-full"
               >
-                Close
+                {bookingUiText.close}
               </Button>
               <Button
                 type="button"
@@ -3492,7 +3598,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                 }}
                 className="flex-1 rounded-full bg-primary text-primary-foreground"
               >
-                {feedbackModal.saving ? 'Saving...' : 'Submit Review'}
+                {feedbackModal.saving ? bookingUiText.saving : bookingUiText.feedbackSubmit}
               </Button>
             </div>
           </div>
@@ -3507,7 +3613,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
               <div>
                 <h2 className="text-xl font-bold">{text.completeProfile}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Register once. After this, your future appointments can be completed with a single tap.
+                  {bookingUiText.registerOnceDescription}
                 </p>
               </div>
               <button
@@ -3597,21 +3703,21 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         const next = parsePhoneInput(e.target.value, registrationForm.countryIso)
                         setRegistrationForm((p) => ({ ...p, phone: next.display || e.target.value }))
                       }}
-                      placeholder={registrationForm.countryIso === 'TR' ? '(531) 200 68 07' : 'Phone number'}
+                      placeholder={registrationForm.countryIso === 'TR' ? '(531) 200 68 07' : bookingUiText.phoneNumberPlaceholder}
                       className="flex-1 px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    {registrationCountryLabel} selected. We only accept valid mobile numbers for this country.
+                    {registrationCountryLabel} {bookingUiText.selectedCountryInfo}
                   </p>
                   {registrationForm.phone && (!registrationPhoneMeta.isValid || !registrationPhoneMeta.isMobile) ? (
-                    <p className="text-xs text-red-600">Please enter a valid mobile number for the selected country.</p>
+                    <p className="text-xs text-red-600">{bookingUiText.validMobileForCountry}</p>
                   ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Gender</span>
+                    <span className="text-sm text-muted-foreground">{bookingUiText.gender}</span>
                     <div className="flex gap-2">
                       <Button
                         type="button"
@@ -3619,7 +3725,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         variant={registrationForm.gender === 'female' ? 'default' : 'outline'}
                         className="flex-1"
                       >
-                        Woman
+                        {bookingUiText.woman}
                       </Button>
                       <Button
                         type="button"
@@ -3627,13 +3733,13 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                         variant={registrationForm.gender === 'male' ? 'default' : 'outline'}
                         className="flex-1"
                       >
-                        Man
+                        {bookingUiText.man}
                       </Button>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Birth date</span>
+                    <span className="text-sm text-muted-foreground">{bookingUiText.birthDate}</span>
                     <input
                       type="date"
                       value={registrationForm.birthDate}
@@ -3648,12 +3754,12 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             {registrationStep === 'whatsapp-confirm' ? (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-amber-300/40 bg-amber-500/10 px-4 py-3 text-sm">
-                  <p className="font-semibold text-foreground">The number you entered does not match the WhatsApp number that opened this link.</p>
-                  {originProfileName ? <p className="mt-2 text-muted-foreground">WhatsApp profile: {originProfileName}</p> : null}
+                  <p className="font-semibold text-foreground">{bookingUiText.whatsappMismatchTitle}</p>
+                  {originProfileName ? <p className="mt-2 text-muted-foreground">{bookingUiText.whatsappProfile}: {originProfileName}</p> : null}
                   {originDisplayPhone || originPhone ? (
-                    <p className="text-muted-foreground">WhatsApp number: {formatPhoneForDisplayFromDigits(originDisplayPhone || originPhone || '', registrationForm.countryIso) || originDisplayPhone || originPhone}</p>
+                    <p className="text-muted-foreground">{bookingUiText.whatsappNumber}: {formatPhoneForDisplayFromDigits(originDisplayPhone || originPhone || '', registrationForm.countryIso) || originDisplayPhone || originPhone}</p>
                   ) : null}
-                  <p className="text-muted-foreground">Entered number: {registrationPhoneMeta.display || registrationForm.phone}</p>
+                  <p className="text-muted-foreground">{bookingUiText.enteredNumber}: {registrationPhoneMeta.display || registrationForm.phone}</p>
                 </div>
                 <label className="flex items-start gap-3 rounded-2xl border border-border bg-muted/10 px-4 py-3 text-sm">
                   <input
@@ -3662,7 +3768,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     onChange={(e) => setRegistrationWhatsappConfirmChecked(e.target.checked)}
                     className="mt-0.5"
                   />
-                  <span className="text-muted-foreground">I understand that I am registering with a different number and it will not be auto-verified from WhatsApp.</span>
+                  <span className="text-muted-foreground">{bookingUiText.whatsappMismatchAcknowledge}</span>
                 </label>
                 <div className="flex gap-2">
                   <Button
@@ -3679,7 +3785,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     onClick={() => void submitRegistration(true)}
                     className="flex-1 rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
                   >
-                    {registrationSubmitting ? text.loading : 'Continue with this number'}
+                    {registrationSubmitting ? text.loading : bookingUiText.continueWithNumber}
                   </Button>
                 </div>
               </div>
@@ -3688,7 +3794,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             {registrationStep === 'otp' ? (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-                  We sent a 6-digit verification code to your WhatsApp number. Please enter it to finish your registration.
+                  {bookingUiText.otpSentInfo}
                 </div>
                 <input
                   type="text"
@@ -3711,7 +3817,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     onClick={() => void resendRegistrationCode()}
                     className="flex-1 rounded-full"
                   >
-                    {registrationOtpSending ? text.loading : 'Resend code'}
+                    {registrationOtpSending ? text.loading : bookingUiText.resendCode}
                   </Button>
                   <Button
                     type="button"
@@ -3719,7 +3825,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                     onClick={() => void confirmRegistrationCode()}
                     className="flex-1 rounded-full py-3 bg-primary text-primary-foreground font-semibold disabled:opacity-60"
                   >
-                    {registrationSubmitting ? text.loading : 'Verify and continue'}
+                    {registrationSubmitting ? text.loading : bookingUiText.verifyAndContinue}
                   </Button>
                 </div>
               </div>
@@ -3817,7 +3923,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 }
 
 const SalonDashboard = ({ forcedLanguage }: BookingDashboardProps) => (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Yükleniyor...</div>}>
         <SalonDashboardContent forcedLanguage={forcedLanguage} />
     </Suspense>
 )
