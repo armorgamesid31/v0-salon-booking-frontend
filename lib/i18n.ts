@@ -45,6 +45,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: string
     confirmSelection: string
     completeProfile: string
+    firstName: string
+    lastName: string
     fullName: string
     phone: string
     registerContinue: string
@@ -138,6 +140,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Uzman Sec',
     confirmSelection: 'Secimi Onayla',
     completeProfile: 'Kaydini Tamamla',
+    firstName: 'Ad',
+    lastName: 'Soyad',
     fullName: 'Ad Soyad',
     phone: 'Telefon',
     registerContinue: 'Kayit Ol ve Devam Et',
@@ -230,6 +234,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Choose Specialist',
     confirmSelection: 'Confirm Selection',
     completeProfile: 'Complete Your Profile',
+    firstName: 'First Name',
+    lastName: 'Last Name',
     fullName: 'Full Name',
     phone: 'Phone',
     registerContinue: 'Register and Continue',
@@ -322,6 +328,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Elegir especialista',
     confirmSelection: 'Confirmar seleccion',
     completeProfile: 'Completa tu perfil',
+    firstName: 'Nombre',
+    lastName: 'Apellido',
     fullName: 'Nombre completo',
     phone: 'Telefono',
     registerContinue: 'Registrarse y continuar',
@@ -354,6 +362,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Choisir un specialiste',
     confirmSelection: 'Confirmer le choix',
     completeProfile: 'Completer votre profil',
+    firstName: 'Prenom',
+    lastName: 'Nom',
     fullName: 'Nom complet',
     phone: 'Telephone',
     registerContinue: 'S inscrire et continuer',
@@ -386,6 +396,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Spezialist wahlen',
     confirmSelection: 'Auswahl bestatigen',
     completeProfile: 'Profil vervollstandigen',
+    firstName: 'Vorname',
+    lastName: 'Nachname',
     fullName: 'Vollstandiger Name',
     phone: 'Telefon',
     registerContinue: 'Registrieren und fortfahren',
@@ -418,6 +430,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Escolher especialista',
     confirmSelection: 'Confirmar selecao',
     completeProfile: 'Complete seu cadastro',
+    firstName: 'Nome',
+    lastName: 'Sobrenome',
     fullName: 'Nome completo',
     phone: 'Telefone',
     registerContinue: 'Cadastrar e continuar',
@@ -450,6 +464,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Vybrat specialista',
     confirmSelection: 'Podtverdit vybor',
     completeProfile: 'Zavershite registraciyu',
+    firstName: 'Imya',
+    lastName: 'Familiya',
     fullName: 'Polnoe imya',
     phone: 'Telefon',
     registerContinue: 'Zaregistrirovatsya i prodolzhit',
@@ -482,6 +498,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Xuanze zhuanjia',
     confirmSelection: 'Que ren xuanze',
     completeProfile: 'Wanshan xinxi',
+    firstName: 'Ming',
+    lastName: 'Xing',
     fullName: 'Xingming',
     phone: 'Dianhua',
     registerContinue: 'Zhuce bing jixu',
@@ -514,6 +532,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Ikhtar al-mukhtass',
     confirmSelection: 'Ta kid al-ikhtiyar',
     completeProfile: 'Akmil bayanatak',
+    firstName: 'Al-ism',
+    lastName: 'Al-kunya',
     fullName: 'Al-ism al-kamil',
     phone: 'Raqm al-hatif',
     registerContinue: 'Tasjil wa mutaba a',
@@ -546,6 +566,8 @@ export const BOOKING_TEXT: Record<
     selectSpecialist: 'Specialist chunen',
     confirmSelection: 'Chayan pushti karein',
     completeProfile: 'Apni jankari puri karein',
+    firstName: 'Pehla naam',
+    lastName: 'Upnaam',
     fullName: 'Pura naam',
     phone: 'Phone',
     registerContinue: 'Register karke aage badhein',

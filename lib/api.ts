@@ -50,6 +50,13 @@ async function fetchFromAPI<T>(url: string, options?: RequestInit): Promise<T> {
   return data as T
 }
 
+function composeFullName(firstName?: string, lastName?: string, fallbackName?: string): string {
+  const first = typeof firstName === 'string' ? firstName.trim() : ''
+  const last = typeof lastName === 'string' ? lastName.trim() : ''
+  const fallback = typeof fallbackName === 'string' ? fallbackName.trim() : ''
+  return `${first} ${last}`.trim() || fallback
+}
+
 export async function getSalonStrict(): Promise<Salon | null> {
   const url = `${API_BASE_URL}/api/salon/public`
   try {
@@ -250,7 +257,7 @@ export async function createAppointment(
     numberOfPeople: number
     availabilityLockToken?: string | null
     selectedSlots?: Array<{ personId: string; slotKey: string }>
-    customerInfo: { name: string; phone: string; email?: string }
+    customerInfo: { firstName: string; lastName: string; name?: string; phone: string; email?: string }
   }
 ): Promise<ApiResponse<Appointment & { pricingBreakdown?: any; appliedCampaigns?: any[] }> & {
   code?: string
@@ -293,8 +300,10 @@ export async function createAppointment(
           availabilityLockToken: data.availabilityLockToken || null,
           selectedSlots: Array.isArray(data.selectedSlots) ? data.selectedSlots : [],
           startTime: start.toISOString(),
-          customerName: data.customerInfo.name,
+          customerName: composeFullName(data.customerInfo.firstName, data.customerInfo.lastName, data.customerInfo.name),
           customerPhone: data.customerInfo.phone,
+          customerFirstName: data.customerInfo.firstName,
+          customerLastName: data.customerInfo.lastName,
           source: 'CUSTOMER'
         }),
       })
@@ -316,7 +325,9 @@ export async function createAppointment(
 
 export async function registerCustomer(
   data: {
-    fullName: string;
+    firstName: string;
+    lastName: string;
+    fullName?: string;
     rawPhone: string;
     normalizedPhone: string;
     countryIso: string;

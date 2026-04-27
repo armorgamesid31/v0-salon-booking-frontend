@@ -178,6 +178,27 @@ const getMagicToken = (params: URLSearchParams): string | null => {
 
 const TOKEN_STORAGE_KEY = 'booking_magic_token'
 
+const normalizeNamePart = (value: string) => value.trim().replace(/\s+/g, ' ')
+
+const composeCustomerName = (firstName: string, lastName: string, fallback = '') => {
+  const first = normalizeNamePart(firstName)
+  const last = normalizeNamePart(lastName)
+  const resolvedFallback = normalizeNamePart(fallback)
+  return `${first} ${last}`.trim() || resolvedFallback
+}
+
+const splitCustomerName = (fullName: string) => {
+  const normalized = normalizeNamePart(fullName)
+  if (!normalized) {
+    return { firstName: '', lastName: '' }
+  }
+  const parts = normalized.split(' ')
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' }
+  }
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') }
+}
+
 const looksLikeToken = (value: string | null | undefined): value is string => {
   const candidate = (value || '').trim()
   return /^[A-Za-z0-9_-]{8,}$/.test(candidate)
@@ -412,13 +433,18 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   const [campaignActionBusyId, setCampaignActionBusyId] = useState<string | null>(null)
 
   const [registrationForm, setRegistrationForm] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     phone: '',
     countryIso: 'TR',
     gender: 'female' as 'female' | 'male',
     birthDate: '',
     acceptMarketing: false,
   })
+  const registrationFullName = useMemo(
+    () => composeCustomerName(registrationForm.firstName, registrationForm.lastName),
+    [registrationForm.firstName, registrationForm.lastName],
+  )
   const text = useMemo(() => {
     const fallback = BOOKING_TEXT[language]
     const dashboardFallback = fallback.dashboard || BOOKING_TEXT.en.dashboard!
@@ -441,7 +467,8 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       selectSpecialist: getRuntimeText(runtimeContent, 'common.selectSpecialist', fallback.selectSpecialist),
       confirmSelection: getRuntimeText(runtimeContent, 'common.confirmSelection', fallback.confirmSelection),
       completeProfile: getRuntimeText(runtimeContent, 'common.completeProfile', fallback.completeProfile),
-      fullName: getRuntimeText(runtimeContent, 'common.fullName', fallback.fullName),
+      firstName: getRuntimeText(runtimeContent, 'common.firstName', fallback.firstName),
+      lastName: getRuntimeText(runtimeContent, 'common.lastName', fallback.lastName),
       phone: getRuntimeText(runtimeContent, 'common.phone', fallback.phone),
       registerContinue: getRuntimeText(runtimeContent, 'common.registerContinue', fallback.registerContinue),
       approvalTitle: getRuntimeText(runtimeContent, 'common.approvalTitle', fallback.approvalTitle),
@@ -488,13 +515,14 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   }, [phoneCountryOptions, registrationForm.countryIso])
   const registrationCanContinue = useMemo(() => {
     return (
-      registrationForm.fullName.trim().length >= 2 &&
+      registrationForm.firstName.trim().length >= 2 &&
+      registrationForm.lastName.trim().length >= 2 &&
       registrationPhoneMeta.isValid &&
       registrationPhoneMeta.isMobile &&
       Boolean(registrationForm.birthDate) &&
       Boolean(registrationForm.gender)
     )
-  }, [registrationForm.birthDate, registrationForm.fullName, registrationForm.gender, registrationPhoneMeta.isMobile, registrationPhoneMeta.isValid])
+  }, [registrationForm.birthDate, registrationForm.firstName, registrationForm.gender, registrationForm.lastName, registrationPhoneMeta.isMobile, registrationPhoneMeta.isValid])
 
   const waitlistDefaultStart = useMemo(() => {
     if (selectedDisplaySlot?.startTime) return selectedDisplaySlot.startTime
@@ -530,11 +558,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
   useEffect(() => {
     setWaitlistModal((prev) => ({
       ...prev,
-      customerName: customerName || registrationForm.fullName,
+      customerName: customerName || registrationFullName,
       customerPhone: registrationForm.phone,
       customerCountryIso: registrationForm.countryIso,
     }))
-  }, [customerName, registrationForm.countryIso, registrationForm.fullName, registrationForm.phone])
+  }, [customerName, registrationForm.countryIso, registrationForm.phone, registrationFullName])
 
   useEffect(() => {
     if (!waitlistModal.open) return
@@ -715,9 +743,11 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     }
     if (!context.isKnownCustomer) {
       const normalizedGender = context.customerGender === 'male' ? 'male' : 'female'
+      const splitName = splitCustomerName(context.customerName || '')
       setRegistrationForm((prev) => ({
         ...prev,
-        fullName: context.customerName || prev.fullName,
+        firstName: splitName.firstName || prev.firstName,
+        lastName: splitName.lastName || prev.lastName,
         phone: formatPhoneForDisplayFromDigits(context.customerPhone || '', prev.countryIso) || prev.phone,
         gender: normalizedGender || prev.gender,
       }))
@@ -1533,7 +1563,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
       timeWindowStart: waitlistDefaultStart,
       timeWindowEnd: waitlistDefaultEnd,
       allowNearbyMatches: prev.allowNearbyMatches,
-      customerName: customerName || registrationForm.fullName,
+      customerName: customerName || registrationFullName,
       customerPhone: registrationForm.phone,
     }))
   }
@@ -1595,7 +1625,7 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
 
   const finalizeRegisteredCustomer = (customerIdValue: string) => {
     setCustomerId(customerIdValue)
-    setCustomerName(registrationForm.fullName)
+    setCustomerName(registrationFullName)
     setIsKnownCustomer(true)
     setShowRegistrationModal(false)
     setRegistrationStep('form')
@@ -1619,7 +1649,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
     setRegistrationError(null)
     try {
       const res = await registerCustomer({
-        fullName: registrationForm.fullName,
+        firstName: registrationForm.firstName,
+        lastName: registrationForm.lastName,
+        fullName: registrationFullName,
         rawPhone: registrationForm.phone,
         normalizedPhone: registrationPhoneMeta.normalizedDigits,
         countryIso: registrationForm.countryIso,
@@ -1791,7 +1823,9 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
             time: selectedTimeSlot,
             numberOfPeople,
             customerInfo: {
-                name: customerName || registrationForm.fullName,
+                firstName: registrationForm.firstName,
+                lastName: registrationForm.lastName,
+                name: customerName || registrationFullName,
                 phone: registrationForm.phone
             }
         });
@@ -3507,18 +3541,33 @@ const SalonDashboardContent = ({ forcedLanguage }: BookingDashboardProps) => {
                   </div>
                 ) : null}
 
-                <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">{text.fullName}</span>
-                  <input
-                    type="text"
-                    value={registrationForm.fullName}
-                    onChange={(e) => {
-                      setRegistrationError(null)
-                      setRegistrationForm((p) => ({ ...p, fullName: e.target.value }))
-                    }}
-                    placeholder={text.fullName}
-                    className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">{text.firstName}</span>
+                    <input
+                      type="text"
+                      value={registrationForm.firstName}
+                      onChange={(e) => {
+                        setRegistrationError(null)
+                        setRegistrationForm((p) => ({ ...p, firstName: e.target.value }))
+                      }}
+                      placeholder={text.firstName}
+                      className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-sm text-muted-foreground">{text.lastName}</span>
+                    <input
+                      type="text"
+                      value={registrationForm.lastName}
+                      onChange={(e) => {
+                        setRegistrationError(null)
+                        setRegistrationForm((p) => ({ ...p, lastName: e.target.value }))
+                      }}
+                      placeholder={text.lastName}
+                      className="w-full px-3 py-3 rounded-xl bg-muted/30 text-sm border border-muted"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">
